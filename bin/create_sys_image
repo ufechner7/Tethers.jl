@@ -19,10 +19,9 @@ fi
 
 echo "Updating packages..."
 if test -f "Manifest.toml"; then
-   mv Manifest.toml Manifest.toml.bak
+   rm Manifest.toml
 fi
 julia --pkgimages=no --project -e "include(\"./test/update_packages.jl\");"
-# julia --pkgimages=no --project -t 8 -e "using Pkg; Pkg.resolve()"
 
 julia --pkgimages=no --project -t 8 -e "using Pkg; Pkg.precompile()"
 if [[ $julia_major == "1.9" ]]; then
@@ -31,6 +30,3 @@ else
     julia --pkgimages=no --project -t 16 --gcthreads=8,1 -e "include(\"./test/create_sys_image.jl\");"
 fi
 mv kps-image_tmp.so bin/kps-image-${julia_major}.so
-
-echo "Precompiling the plotting libraries..."
-julia -J  bin/kps-image-${julia_major}.so --project -t 8 -e "using PyPlot"
