@@ -1,0 +1,45 @@
+#!/bin/bash
+
+export KMP_DUPLICATE_LIB_OK=TRUE
+
+if [[ $(basename $(pwd)) == "bin" ]]; then
+    cd ..
+fi
+if [[ $HOSTNAME == "tuxedi" ]]; then
+    sudo performance.sh
+fi
+
+EX=""
+
+julia_version=$(julia --version | awk '{print($3)}')
+julia_major=${julia_version:0:3} 
+if [[ $julia_major == "1.1" ]]; then
+    julia_major=${julia_version:0:4} 
+fi
+
+if [[ $julia_major == "1.9" ]]; then
+    GCT=""
+else
+    if [[ $HOSTNAME == "ufryzen" || $HOSTNAME == "TUD262682" ]]; then
+        GCT="--gcthreads=8,1"
+    else
+        GCT="--gcthreads=4,1"
+    fi
+fi
+
+if test -f "bin/kps-image-${julia_major}.so"; then
+    echo "Found system image!"
+    if [[ $HOSTNAME == "TUD262682" ]]; then
+        julia -J  bin/kps-image-${julia_major}.so --project -i -q -t 10 $GCT $EX
+    elif [[ $HOSTNAME == "ufryzen" ]]; then
+        julia -J  bin/kps-image-${julia_major}.so --project -i -q -t 16 $GCT $EX
+    else
+        julia -J  bin/kps-image-${julia_major}.so --project -i -q -t 8 $GCT $EX
+    fi
+else
+    if [[ $HOSTNAME == "ufryzen" ]]; then
+        julia --project -i -q -t 16 $GCT $EX
+    else
+        julia --project -i -q -t 8 $GCT $EX
+    fi
+fi

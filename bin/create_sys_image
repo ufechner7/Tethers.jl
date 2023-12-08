@@ -1,0 +1,36 @@
+#!/bin/bash -eu
+if [[ $(basename $(pwd)) == "bin" ]]; then
+    cd ..
+fi
+
+export KMP_DUPLICATE_LIB_OK=TRUE
+if [[ $HOSTNAME == "framework" ]]; then
+    export JULIA_IMAGE_THREADS=12
+fi
+
+julia_version=$(julia --version | awk '{print($3)}')
+julia_major=${julia_version:0:3} 
+if [[ $julia_major == "1.1" ]]; then
+    julia_major=${julia_version:0:4} 
+fi
+if test -f "kps-image-${julia_major}.so"; then
+    mv bin/kps-image-${julia_major}.so bin/kps-image-${julia_major}.so.bak
+fi
+
+echo "Updating packages..."
+if test -f "Manifest.toml"; then
+   mv Manifest.toml Manifest.toml.bak
+fi
+julia --pkgimages=no --project -e "include(\"./test/update_packages.jl\");"
+# julia --pkgimages=no --project -t 8 -e "using Pkg; Pkg.resolve()"
+
+julia --pkgimages=no --project -t 8 -e "using Pkg; Pkg.precompile()"
+if [[ $julia_major == "1.9" ]]; then
+    julia --pkgimages=no --project -t 8 -e "include(\"./test/create_sys_image.jl\");"
+else
+    julia --pkgimages=no --project -t 16 --gcthreads=8,1 -e "include(\"./test/create_sys_image.jl\");"
+fi
+mv kps-image_tmp.so bin/kps-image-${julia_major}.so
+
+echo "Precompiling the plotting libraries..."
+julia -J  bin/kps-image-${julia_major}.so --project -t 8 -e "using PyPlot"
