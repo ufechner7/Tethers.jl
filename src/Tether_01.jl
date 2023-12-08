@@ -1,9 +1,9 @@
 # Example one: Falling mass.
 using ModelingToolkit, OrdinaryDiffEq, PyPlot
 
-using PyCall
-pygui_stop_all()
-pygui_start(:qt5)
+# using PyCall
+# pygui_stop_all()
+# pygui_start(:qt5)
 
 G_EARTH  = Float64[0.0, 0.0, -9.81]    # gravitational acceleration
 
@@ -41,5 +41,5 @@ grid(true)
 twinx()
 ylabel("vel_z [m/s]") 
 plot(X, VEL_Z, color="red") 
-PyPlot.show(block=true)
+PyPlot.show(block=false)
 nothing
