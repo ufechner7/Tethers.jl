@@ -1,17 +1,19 @@
 # Example three: Falling mass, attached to non-linear spring, no compression stiffnes
-using ModelingToolkit, OrdinaryDiffEq, PyPlot
+using ModelingToolkit, OrdinaryDiffEq, PyPlot, LinearAlgebra
 
 G_EARTH  = Float64[0.0, 0.0, -9.81]    # gravitational acceleration
 
 # model
-@param mass=1.0 c_spring=50.0 damping=0.5 l0=10.0
+@parameters mass=1.0 c_spring=50.0 damping=0.5 l0=10.0
 @variables t pos(t)[1:3]=[0.0, 0.0,  0.0]
 @variables   vel(t)[1:3]=[0.0, 0.0, 50.0] 
-@variables   acc(t)[1:3]=[0.0, 0.0, -9.81] 
+@variables   acc(t)[1:3]=[0.0, 0.0, -9.81]
+@variables force(t) = 0.0
 D = Differential(t)
 
 eqs = vcat(D.(pos) ~ vel,
            D.(vel) ~ acc,
+           force ~ norm(pos) * c_spring,
            acc    .~ G_EARTH)
 
 @named sys = ODESystem(eqs, t)
