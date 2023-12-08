@@ -1,6 +1,3 @@
-# activate the test environment if needed
-using Pkg
-
 @info "Loading packages ..."
 using ModelingToolkit, OrdinaryDiffEq, PackageCompiler, PyPlot
 
