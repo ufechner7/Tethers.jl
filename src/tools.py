@@ -1,13 +1,8 @@
 # -*- coding: utf-8 -*-
-#import sys
 from assimulo.problem import Implicit_Problem #Imports the problem formulation from Assimulo
-#if sys.platform.startswith('linux'):
-#    import ctypes 
-#    ctypes.CDLL("libblas.so",ctypes.RTLD_GLOBAL)
-#    ctypes.CDLL("liblapack.so",ctypes.RTLD_GLOBAL)
 import time, math
-# from Settings import L_0, V_REEL_OUT, SEGMENTS
-L_0 = 100.0
+
+L_0 = 10.0 # initial segment length [m]
 V_REEL_OUT = 4.0
 SEGMENTS=1
 

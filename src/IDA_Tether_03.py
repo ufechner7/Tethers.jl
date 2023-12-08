@@ -5,18 +5,19 @@ for l < l_0).
 """
 import numpy as np
 import pylab as plt
+L_0 = 10.0 # initial segment length [m]
+
 from tools import ExtProblem
 from assimulo.solvers.sundials import IDA #Imports the solver IDA from Assimulo
 
 G_EARTH  = np.array([0.0, 0.0, -9.81]) # gravitational acceleration
-C_SPRING =  50                        # spring constant [N/m]; Dyema, 4mm: 200e3
+C_SPRING =  50                         # spring constant [N/m]; Dynema, 4mm: 200e3
 DAMPING  =  0.5                        # damping [Ns/m]
-L_0      = 10.0                        # initial segment length [m]
 MASS     = 1.0                         # mass per point-mass [kg]
 
 #Extend Assimulos problem definition
 class ExtendedProblem(ExtProblem):
-    # Set the initial conditons
+    # Set the initial conditions
     t0  = 0.0                   # Initial time
     pos_0 = np.array([0.0, 0.0, 0.0])     # Initial position of mass zero
     vel_0 = np.array([0.0, 0.0, 0.0])     # Initial velocity of mass zero
@@ -34,7 +35,7 @@ class ExtendedProblem(ExtProblem):
     def res(self, t, y, yd, sw):
         res_0 = y[0:3]              # the velocity of mass0 shall be zero
         res_1 = y[6:9]  - yd[3:6]   # the derivative of the position of mass1 must be equal to its velocity
-        rel_vel = yd[3:6] - yd[0:3] # calcultate the relative velocity of mass1 with respect to mass 0
+        rel_vel = yd[3:6] - yd[0:3] # calculate the relative velocity of mass1 with respect to mass 0
         segment = y[3:6] - y[0:3]   # calculate the vector from mass1 to mass0
         if not sw[0]:               # if the segment is not loose, calculate spring and damping force
             force = C_SPRING * (np.linalg.norm(segment) - L_0) * segment / np.linalg.norm(segment) \
