@@ -33,3 +33,14 @@ include("src/Tether_01.jl")
 You should see a plot similar to:
 
 ![Falling mass](docs/FallingMass.png)
+
+## Running the Python version as comparism
+From the Julia prompt execute:
+```
+include("src/RunTether.jl")
+```
+This will install Python and Matplotlib and Assimulo and execute the script `Tether_01.py`.
+
+If you compare the Python and the Julia script you can see that:
+- the Julia script is shorter and easier to read
+- Julia is about 10 times faster when running the simulation
