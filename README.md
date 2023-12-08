@@ -3,9 +3,13 @@ Tether models
 
 ## Installation
 
-Preconditions:
-- install Julia
-- install git and bash, e.g. git for Windows
+1. make sure you are running a `bash` terminal (shell) and you have at least 16GB RAM (MAC, Linux and Windows supported).  
+   On Windows, you can use [git for windows](https://gitforwindows.org/) which provides git AND a bash shell, but for using Julia from a `bash` terminal you must also install either  [Installation and usage of VSCode](@ref) or [Windows Terminal](https://learn.microsoft.com/en-us/windows/terminal/install). `Windows Terminal` is the simple and clean solution, `VSCode` the comfortable, fancy solution.
+2. install Julia 1.10 using `juliaup`, see [https://github.com/JuliaLang/juliaup](https://github.com/JuliaLang/juliaup). If `juliaup` is already installed, the following commands will do:
+```
+juliaup add 1.10
+juliaup default 1.10 
+```
 
 Check out from git:
 ```bash
