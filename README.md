@@ -32,4 +32,4 @@ include("src/Tether_01.jl")
 ```
 You should see a plot similar to:
 
-![Falling mass]("docs/FallingMass.png")
+![Falling mass](docs/FallingMass.png)
