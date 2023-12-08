@@ -1,10 +1,6 @@
 # Example one: Falling mass.
 using ModelingToolkit, OrdinaryDiffEq, PyPlot
 
-# using PyCall
-# pygui_stop_all()
-# pygui_start(:qt5)
-
 G_EARTH  = Float64[0.0, 0.0, -9.81]    # gravitational acceleration
 
 # model

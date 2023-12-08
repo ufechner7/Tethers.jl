@@ -1,5 +1,5 @@
 let 
-    include("../Tether_01.jl")
+    include("../src/Tether_01.jl")
     nothing   
 end
 
