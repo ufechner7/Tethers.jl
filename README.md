@@ -38,7 +38,9 @@ You should see a plot similar to:
 
 ![Falling mass](docs/FallingMass.png)
 
-## Running the Python version as comparism
+This example shows a mass that is thrown upwards, slows down and then falls.
+
+## Running the Python version as comparison
 From the Julia prompt execute:
 ```
 include("src/RunTether.jl")

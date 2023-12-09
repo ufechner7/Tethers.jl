@@ -33,6 +33,7 @@ VEL_Z = sol(X, idxs=vel[3])
 
 plot(X, POS_Z, color="green")
 xlabel("time [s]")
+ylabel("pos_z [m]")
 grid(true)
 twinx()
 ylabel("vel_z [m/s]") 
