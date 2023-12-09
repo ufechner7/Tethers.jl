@@ -53,7 +53,7 @@ This will install Python and Matplotlib and Assimulo and execute the script `Tet
 
 If you compare the Python and the Julia script you can see that:
 - the Julia script is shorter and easier to read
-- Julia is about 10 times faster when running the simulation
+- Julia is about 16 times faster when running the simulation
 
 ## More examples
 ### Mass, attached to a spring damper element
