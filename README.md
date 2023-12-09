@@ -1,5 +1,8 @@
 # Tethers.jl
-Tether models
+A series of example, from a simple falling mass towards a tether model, consisting of point masses connected by spring damper elements with support of reel-out and reel-in and aerodynamic
+drag attached.
+
+-- WORK IN PROGRESS --
 
 ## Installation
 
