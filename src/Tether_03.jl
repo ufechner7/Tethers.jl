@@ -1,13 +1,15 @@
-# Example two: Falling mass, attached to linear spring
+# Example two: Falling mass, attached to non-linear spring without compression stiffness,
+# initially moving upwards with 4 m/s.
 using ModelingToolkit, OrdinaryDiffEq, PyPlot, LinearAlgebra
 
 G_EARTH  = Float64[0.0, 0.0, -9.81]    # gravitational acceleration [m/s²]
 L0 = -10.0                             # initial spring length      [m]
+V0 = 4                                 # initial velocity           [m/s]
 
 # model, Z component upwards
 @parameters mass=1.0 c_spring=50.0 damping=0.5 l0=L0
 @variables t pos(t)[1:3] = [0.0, 0.0,  L0]
-@variables   vel(t)[1:3] = [0.0, 0.0,  0.0] 
+@variables   vel(t)[1:3] = [0.0, 0.0,  V0] 
 @variables   acc(t)[1:3] = G_EARTH
 @variables unit_vector(t)[1:3]  = [0.0, 0.0, -sign(L0)]
 @variables spring_force(t)[1:3] = [0.0, 0.0, 0.0]
@@ -32,6 +34,7 @@ tspan = (0.0, duration)
 ts    = 0:dt:duration
 u0 = zeros(6)
 u0[3] = L0
+u0[6] = V0
 
 prob = ODEProblem(simple_sys, u0, tspan)
 @time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, tstops=ts, saveat=ts)
