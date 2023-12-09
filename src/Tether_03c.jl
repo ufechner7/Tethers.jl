@@ -32,7 +32,7 @@ function model3(G_EARTH, L0, V0)
     simple_sys, pos, vel, c_spring
 end
 
-function solve3(simple_sys)
+function solve3(simple_sys, L0, V0)
     duration = 10.0
     dt = 0.02
     tol = 1e-6
@@ -45,10 +45,8 @@ function solve3(simple_sys)
     function condition(u, t, integrator) # Event when condition(u,t,integrator) == 0
         norm(u[1:3]) - abs(L0)
     end
-    function affect!(integrator)
-        # println(integrator.t)
-    end
-    cb = ContinuousCallback(condition, affect!; interp_points=20)
+    function affect!(integrator) end
+    cb = ContinuousCallback(condition, affect!)
 
     prob = ODEProblem(simple_sys, u0, tspan)
     solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts, callback = cb)
@@ -57,7 +55,7 @@ function solve3(simple_sys)
 end
 
 simple_sys, pos, vel, c_spring = model3(G_EARTH, L0, V0)
-sol = solve3(simple_sys)
+sol = solve3(simple_sys, L0, V0)
 
 X = sol.t
 POS_Z = sol(X, idxs=pos[3])
