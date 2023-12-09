@@ -1,37 +1,37 @@
-# Example three: Falling mass, attached to non-linear spring, no compression stiffnes
+# Example two: Falling mass, attached to linear spring
 using ModelingToolkit, OrdinaryDiffEq, PyPlot, LinearAlgebra
 
 G_EARTH  = Float64[0.0, 0.0, -9.81]    # gravitational acceleration
+L0 = 10.0                              # initial spring length
 
 # model
-@parameters mass=1.0 c_spring=50.0 damping=0.5 l0=10.0
-@variables t pos(t)[1:3]=[0.0, 0.0,  0.0]
-@variables   vel(t)[1:3]=[0.0, 0.0,  1.0] 
-@variables   acc(t)[1:3]=[0.0, 0.0, -9.81]
-@variables unit_vector(t)[1:3]=[1.0, 0.0, 0.0]
-@variables spring_force(t)[1:3]=[0.0, 0.0, 0.0]
-@variables force(t) = 0.0 norm1(t) = l0 spring_vel(t) = 0.0
+@parameters mass=1.0 c_spring=50.0 damping=0.5 l0=L0
+@variables t pos(t)[1:3] = [0.0, 0.0,  L0]
+@variables   vel(t)[1:3] = [0.0, 0.0,  0.0] 
+@variables   acc(t)[1:3] = G_EARTH
+@variables unit_vector(t)[1:3]  = [0.0, 0.0, -sign(L0)]
+@variables spring_force(t)[1:3] = [0.0, 0.0, 0.0]
+@variables force(t) = 0.0 norm1(t) = abs(l0) spring_vel(t) = 0.0
 D = Differential(t)
 
-eqs = vcat(D.(pos) ~ vel,
-           D.(vel) ~ acc,
-           norm1 ~ norm(pos),
-           unit_vector ~ -pos/norm1,
-           spring_vel ~ -unit_vector ⋅ vel,
-           spring_force ~ (c_spring * (norm1 - l0) + damping * spring_vel) .* unit_vector,
-           acc    .~ G_EARTH + spring_force/mass)
+eqs = vcat(D.(pos)      ~ vel,
+           D.(vel)      ~ acc,
+           norm1        ~ norm(pos),
+           unit_vector  ~ -pos/norm1,
+           spring_vel   ~ -unit_vector ⋅ vel,
+           spring_force ~ (c_spring * (norm1 - l0) + damping * spring_vel) * unit_vector,
+           acc          ~ G_EARTH + spring_force/mass)
 
 @named sys = ODESystem(eqs, t)
 simple_sys = structural_simplify(sys)
 
 duration = 10.0
 dt = 0.02
-tol = 1e-7
+tol = 1e-6
 tspan = (0.0, duration)
 ts    = 0:dt:duration
 u0 = zeros(6)
-u0[6] = 1.0
-u0[3] = 10
+u0[3] = L0
 
 prob = ODEProblem(simple_sys, u0, tspan)
 @time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
