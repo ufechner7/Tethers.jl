@@ -50,3 +50,15 @@ This will install Python and Matplotlib and Assimulo and execute the script `Tet
 If you compare the Python and the Julia script you can see that:
 - the Julia script is shorter and easier to read
 - Julia is about 10 times faster when running the simulation
+
+## More examples
+### Mass, attached to a spring damper element
+From the Julia prompt, run the simulation:
+```julia
+include("src/Tether_02.jl")
+```
+![Spring damper](docs/SpringDamper.png)
+
+Mass, attached to a spring damper element. One end of the spring at the origin, the second end
+attached to the mass. Mass initially below the origin, spring un-stretched. Z-axis pointing
+upwards.
