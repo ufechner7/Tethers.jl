@@ -7,11 +7,12 @@ L0 = -10.0                             # initial spring length      [m]
 V0 = 4                                 # initial velocity           [m/s]
 
 # model, Z component upwards
-@parameters mass=1.0 c_spring=50.0 damping=0.5 l0=L0
+@parameters mass=1.0 c_spring0=50.0 damping=0.5 l0=L0
 @variables t pos(t)[1:3] = [0.0, 0.0,  L0]
 @variables   vel(t)[1:3] = [0.0, 0.0,  V0] 
 @variables   acc(t)[1:3] = G_EARTH
 @variables unit_vector(t)[1:3]  = [0.0, 0.0, -sign(L0)]
+@variables c_spring(t) = c_spring0
 @variables spring_force(t)[1:3] = [0.0, 0.0, 0.0]
 @variables force(t) = 0.0 norm1(t) = abs(l0) spring_vel(t) = 0.0
 D = Differential(t)
@@ -21,6 +22,7 @@ eqs = vcat(D.(pos)      ~ vel,
            norm1        ~ norm(pos),
            unit_vector  ~ -pos/norm1,         # direction from point mass to origin
            spring_vel   ~ -unit_vector ⋅ vel,
+           c_spring     ~ c_spring0 * (norm1 > abs(l0)),
            spring_force ~ (c_spring * (norm1 - abs(l0)) + damping * spring_vel) * unit_vector,
            acc          ~ G_EARTH + spring_force/mass)
 
@@ -37,7 +39,7 @@ u0[3] = L0
 u0[6] = V0
 
 prob = ODEProblem(simple_sys, u0, tspan)
-@time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, tstops=ts, saveat=ts)
+@time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
 
 X = sol.t
 POS_Z = sol(X, idxs=pos[3])
@@ -45,6 +47,7 @@ VEL_Z = sol(X, idxs=vel[3])
 
 plot(X, POS_Z, color="green")
 xlabel("time [s]")
+plot(X, L0.+0.01 .* sol[c_spring], color="black")
 grid(true)
 twinx()
 ylabel("vel_z [m/s]") 

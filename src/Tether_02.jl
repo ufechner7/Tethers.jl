@@ -34,7 +34,7 @@ u0 = zeros(6)
 u0[3] = L0
 
 prob = ODEProblem(simple_sys, u0, tspan)
-@time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, tstops=ts, saveat=ts)
+@time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
 
 X = sol.t
 POS_Z = sol(X, idxs=pos[3])
