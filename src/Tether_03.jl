@@ -45,12 +45,17 @@ X = sol.t
 POS_Z = sol(X, idxs=pos[3])
 VEL_Z = sol(X, idxs=vel[3])
 
-plot(X, POS_Z, color="green")
+lns1 = plot(X, POS_Z, color="green", label="pos_z")
 xlabel("time [s]")
-plot(X, L0.+0.01 .* sol[c_spring], color="black")
+ylabel("pos_z [m]")
+lns2 = plot(X, L0.+0.005 .* sol[c_spring], color="grey", label="c_spring")
 grid(true)
+legend() 
 twinx()
 ylabel("vel_z [m/s]") 
-plot(X, VEL_Z, color="red") 
+lns3 = plot(X, VEL_Z, color="red", label="vel_z")
+lns = vcat(lns1, lns2, lns3)
+labs = [l.get_label() for l in lns]
+legend(lns, labs) 
 PyPlot.show(block=false)
 nothing
