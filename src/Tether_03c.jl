@@ -3,10 +3,10 @@
 using ModelingToolkit, OrdinaryDiffEq, PyPlot, LinearAlgebra
 
 G_EARTH  = Float64[0.0, 0.0, -9.81]    # gravitational acceleration [m/s²]
-L0::Float64 = -10.0                             # initial spring length      [m]
-V0::Float64 = 4                                 # initial velocity           [m/s]
+L0 = -10.0                             # initial spring length      [m]
+V0 = 4                                 # initial velocity           [m/s]
 
-function model3(G_EARTH)
+function model3(G_EARTH, L0, V0)
     # model, Z component upwards
     @parameters mass=1.0 c_spring0=50.0 damping=0.5 l0=L0
     @variables t pos(t)[1:3] = [0.0, 0.0,  L0]
@@ -48,7 +48,7 @@ function solve3(simple_sys)
     function affect!(integrator)
         # println(integrator.t)
     end
-    cb = ContinuousCallback(condition, affect!)
+    cb = ContinuousCallback(condition, affect!; interp_points=20)
 
     prob = ODEProblem(simple_sys, u0, tspan)
     solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts, callback = cb)
@@ -56,8 +56,8 @@ function solve3(simple_sys)
     sol
 end
 
-simple_sys, pos, vel, c_spring = model3(G_EARTH)
-sol=solve3(simple_sys)
+simple_sys, pos, vel, c_spring = model3(G_EARTH, L0, V0)
+sol = solve3(simple_sys)
 
 X = sol.t
 POS_Z = sol(X, idxs=pos[3])
