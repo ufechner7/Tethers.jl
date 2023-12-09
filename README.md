@@ -40,12 +40,16 @@ You should see a plot similar to:
 
 This example shows a mass that is thrown upwards, slows down and then falls.
 
+[Code](src/Tether_01.jl)
+
 ## Running the Python version as comparison
 From the Julia prompt execute:
 ```
 include("src/RunTether.jl")
 ```
 This will install Python and Matplotlib and Assimulo and execute the script `Tether_01.py`.
+
+[Code](src/Tether_01.py)
 
 If you compare the Python and the Julia script you can see that:
 - the Julia script is shorter and easier to read
@@ -63,6 +67,8 @@ Mass, attached to a spring damper element. One end of the spring at the origin, 
 attached to the mass. Mass initially below the origin, spring un-stretched. Z-axis pointing
 upwards.
 
+[Code](src/Tether_02.jl)
+
 ### Mass, attached to a non-linear spring damper element
 ```julia
 include("src/Tether_03.jl")
@@ -75,3 +81,5 @@ upwards.
 
 Initial velocity $4 m/s$ upwards. The compression stiffness is zero. The grey line shows that
 the stiffness is zero at the beginning, and has the nominal value at the end.
+
+[Code](src/Tether_03.jl)
