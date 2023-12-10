@@ -49,7 +49,7 @@ function solve3(simple_sys, L0, V0; cb=true)
             norm(u[1:3]) - abs(L0)
         end
         function affect!(integrator) end
-        cb_ = ContinuousCallback(condition, affect!)
+        cb_ = ContinuousCallback(condition, affect!; interp_points=2)
         solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts, callback = cb_)
         @time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts, callback = cb_)
     else
@@ -59,23 +59,36 @@ function solve3(simple_sys, L0, V0; cb=true)
     sol
 end
 
+function plt(sol; title="")
+    fig = figure(title)
+    X = sol.t
+    POS_Z = sol(X, idxs=pos[3])
+    VEL_Z = sol(X, idxs=vel[3])
+
+    lns1 = plot(X, POS_Z, color="green", label="pos_z")
+    xlabel("time [s]")
+    ylabel("pos_z [m]")
+    lns2 = plot(X, L0.+0.005 .* sol[c_spring], color="grey", label="c_spring")
+    grid(true)
+    twinx()
+    ylabel("vel_z [m/s]") 
+    lns3 = plot(X, VEL_Z, color="red", label="vel_z")
+    lns = vcat(lns1, lns2, lns3)
+    labs = [l.get_label() for l in lns]
+    legend(lns, labs) 
+    PyPlot.show(block=false)
+    nothing
+end
+
+println("Solving the system without callback...")
 simple_sys, pos, vel, c_spring = model3(G_EARTH, L0, V0)
-sol = solve3(simple_sys, L0, V0)
-
-X = sol.t
-POS_Z = sol(X, idxs=pos[3])
-VEL_Z = sol(X, idxs=vel[3])
-
-lns1 = plot(X, POS_Z, color="green", label="pos_z")
-xlabel("time [s]")
-ylabel("pos_z [m]")
-lns2 = plot(X, L0.+0.005 .* sol[c_spring], color="grey", label="c_spring")
-grid(true)
-twinx()
-ylabel("vel_z [m/s]") 
-lns3 = plot(X, VEL_Z, color="red", label="vel_z")
-lns = vcat(lns1, lns2, lns3)
-labs = [l.get_label() for l in lns]
-legend(lns, labs) 
-PyPlot.show(block=false)
+sol = solve3(simple_sys, L0, V0; cb=false)
+plt(sol; title="Solution without callback")
+println("Press any key...")
+readline()
+println("Solving the system with callback...")
+sol = solve3(simple_sys, L0, V0; cb=true)
+plt(sol; title="Solution with callback")
+println("If you zoom in to the points in time where pos_z crosses -10m")
+println("you should see a difference...")
 nothing
