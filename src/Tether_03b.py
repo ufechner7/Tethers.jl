@@ -14,6 +14,7 @@ G_EARTH  = np.array([0.0, 0.0, -9.81]) # gravitational acceleration
 C_SPRING =  50                         # spring constant [N/m]; Dynema, 4mm: 200e3
 DAMPING  =  0.5                        # damping [Ns/m]
 MASS     = 1.0                         # mass per point-mass [kg]
+V0       = 4.0                         # initial velocity
 
 #Extend Assimulos problem definition
 class ExtendedProblem(ExtProblem):
@@ -22,7 +23,7 @@ class ExtendedProblem(ExtProblem):
     pos_0 = np.array([0.0, 0.0, 0.0])     # Initial position of mass zero
     vel_0 = np.array([0.0, 0.0, 0.0])     # Initial velocity of mass zero
     pos_1 = np.array([0.0, 0.0,  -L_0])   # Initial position of mass one
-    vel_1 = np.array([0.0, 0.0,  10.0])    # Initial velocity of mass one
+    vel_1 = np.array([0.0, 0.0,  V0])    # Initial velocity of mass one
     acc_1 = np.array([0.0, 0.0, -9.81])   # Initial acceleration mass one
     y0  = np.append(pos_0, np.append(pos_1, vel_1)) # Initial state vector
     yd0 = np.append(vel_0, np.append(vel_1, acc_1)) # Initial state vector derivative
@@ -61,7 +62,7 @@ def run_example():
     model.name = 'Mass-Spring' # Specifies the name of problem (optional)
     sim = IDA(model) #Create the solver
     sim.verbosity = 30
-    time, y, yd = sim.simulate(10.0, 4000) #Simulate 10 seconds with 1000 communications points
+    time, y, yd = sim.simulate(10.0, 500) #Simulate 10 seconds with 500 communications points
 
     # plot the result
     pos_z = y[:,5]
@@ -70,6 +71,7 @@ def run_example():
     plt.ax1.set_xlabel('time [s]')
     plt.plot(time, pos_z, color="green")
     plt.ax1.set_ylabel('pos_z [m]')
+    plt.grid(True)
     plt.ax2 = plt.twinx()
     plt.ax2.set_ylabel('vel_z [m/s]')
     plt.plot(time, vel_z, color="red")
