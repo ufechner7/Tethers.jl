@@ -121,4 +121,5 @@ If you zoom in to the points in time where pos_z crosses -10m
 you should see a difference...
 ```
 In this example the gain of accuracy is very small, but that can be different
-in other simulations.
+in other simulations. For benchmarking we call solve twice: The first call ensures that the
+code is compiled, the second call measures the execution time of the code.
