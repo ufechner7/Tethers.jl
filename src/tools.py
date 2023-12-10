@@ -2,12 +2,13 @@
 from assimulo.problem import Implicit_Problem #Imports the problem formulation from Assimulo
 import time, math
 
-L_0      = 10.0                        # initial segment length [m]
-V0       = 4.0                         # initial velocity
 SEGMENTS = 1
 
 # Extend Assimulos problem definition
 class ExtProblem(Implicit_Problem):
+    def __init__(self, L_0, V0):
+        self.L_0 = L_0
+        self.V0  = V0
     # Responsible for handling the events.
     def handle_event(self, solver, event_info):
         """
@@ -18,10 +19,10 @@ class ExtProblem(Implicit_Problem):
         while True: #Event Iteration
             self.event_switch(solver, event_info) #Turns the switches            
             b_mode = self.state_events(solver.t, solver.y, solver.yd, solver.sw)
-            self.init_mode(solver) #Pass in the solver to the problem specified init_mode
+            self.init_mode(solver)     # Pass in the solver to the problem specified init_mode
             a_mode = self.state_events(solver.t, solver.y, solver.yd, solver.sw)            
             event_info = self.check_eIter(b_mode, a_mode)                
-            if not True in event_info: #Breaks the iteration loop
+            if not True in event_info: # Breaks the iteration loop
                 break     
     
     # Helper function for handle_event
@@ -29,10 +30,10 @@ class ExtProblem(Implicit_Problem):
         """
         Turns the switches.
         """
-        length = L_0 + (V0 * solver.t / SEGMENTS)   
-        for i in range(len(event_info)): #Loop across all event functions            
+        length = self.L_0 + (self.V0 * solver.t / SEGMENTS)   
+        for i in range(len(event_info)): # Loop across all event functions            
             if event_info[i] != 0:
-                pos_ix = 3 * i  + 3 # position index of mass i + 1
+                pos_ix = 3 * i  + 3      # position index of mass i + 1
                 last_pos_ix = pos_ix - 3        
                 # calculate the norm of the vector from mass1 to mass0 minus the initial segment length
                 solver.sw[i] = math.sqrt((solver.y[pos_ix]-solver.y[last_pos_ix])**2 

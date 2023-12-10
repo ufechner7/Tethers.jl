@@ -12,7 +12,6 @@ G_EARTH  = np.array([0.0, 0.0, -9.81]) # gravitational acceleration
 C_SPRING =  50                         # spring constant [N/m]; Dynema, 4mm: 200e3
 DAMPING  =  0.5                        # damping [Ns/m]
 MASS     = 1.0                         # mass per point-mass [kg]
-# Be careful! If you change the following two values they must also be changed in tools.py!
 L_0      = 10.0                        # initial segment length [m]
 V0       = 4.0                         # initial velocity
 
@@ -59,7 +58,7 @@ class ExtendedProblem(ExtProblem):
 
 def run_example():
     #Create an instance of the problem
-    model = ExtendedProblem()  # Create the problem
+    model = ExtendedProblem(L_0, V0)  # Create the problem
     model.name = 'Mass-Spring' # Specifies the name of problem (optional)
     sim = IDA(model)           # Create the solver
     sim.verbosity = 30
