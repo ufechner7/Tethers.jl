@@ -50,6 +50,8 @@ class ExtendedProblem(ExtProblem):
                 + DAMPING * rel_vel
         acc = force / MASS                # create the vector of the spring acceleration
         res_2 = yd[6:9] - (G_EARTH - acc) # the derivative of the velocity must be equal to the total acceleration
+        if np.linalg.norm(res_1) + np.linalg.norm(res_2) < 1e-3:
+            C_SPRINGS[index] = c_spring
         return np.append(res_0, np.append(res_1, res_2))
 
     def state_events(self, t, y, yd, sw):
