@@ -40,7 +40,7 @@ class ExtendedProblem(ExtProblem):
         res_1 = y[6:9]  - yd[3:6]   # the derivative of the position of mass1 must be equal to its velocity
         rel_vel = yd[3:6] - yd[0:3] # calculate the relative velocity of mass1 with respect to mass 0
         segment = y[3:6] - y[0:3]   # calculate the vector from mass1 to mass0
-        if not sw[0]:               # if the segment is not loose, calculate spring and damping force
+        if np.linalg.norm(segment) > L_0:               # if the segment is not loose, calculate spring and damping force
             c_spring = C_SPRING
         else:
             c_spring = 0.0
@@ -50,7 +50,7 @@ class ExtendedProblem(ExtProblem):
                 + DAMPING * rel_vel
         acc = force / MASS                # create the vector of the spring acceleration
         res_2 = yd[6:9] - (G_EARTH - acc) # the derivative of the velocity must be equal to the total acceleration
-        if np.linalg.norm(res_1) + np.linalg.norm(res_2) < 1e-3:
+        if np.linalg.norm(res_1) + np.linalg.norm(res_2) < 1e-7:
             C_SPRINGS[index] = c_spring
         return np.append(res_0, np.append(res_1, res_2))
 
@@ -60,7 +60,7 @@ class ExtendedProblem(ExtProblem):
         of any of the events has changed, we have an event.
         """
         # calculate the norm of the vector from mass1 to mass0 minus the initial segment length
-        event_0 = np.linalg.norm(y[3:6] - y[0:3]) - L_0
+        event_0 = np.linalg.norm(y[3:6]) - L_0
         return np.array([event_0])
 
 def run_example():
