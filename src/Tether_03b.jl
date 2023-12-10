@@ -47,7 +47,7 @@ end
 cb = ContinuousCallback(condition, affect!)
 
 prob = ODEProblem(simple_sys, u0, tspan)
-@time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts, callback = cb)
+sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts, callback = cb)
 
 X = sol.t
 POS_Z = sol(X, idxs=pos[3])

@@ -83,6 +83,42 @@ attached to the mass. Mass initially below the origin, spring un-stretched. Z-ax
 upwards. 
 
 Initial velocity $4 m/s$ upwards. The compression stiffness is zero. The grey line shows that
-the stiffness is zero at the beginning, and has the nominal value at the end.
+the stiffness is zero at the beginning, and has the nominal value at the end. See: [Code](src/Tether_03.jl).
 
-[Code](src/Tether_03.jl)
+#### Using a callback
+By using a callback to detect exactly when the transition from a stiff tether segment to a loose
+tether segment happens we can increase the accuracy of the simulation. Example: [Code](src/Tether_03b.jl).
+
+We only have to add the following lines of code:
+```julia
+function condition(u, t, integrator) # Event when condition(u,t,integrator) == 0
+    norm(u[1:3]) - abs(L0)
+end
+function affect!(integrator)
+    println(integrator.t)            # Not needed, just to show that the callback works
+end
+cb = ContinuousCallback(condition, affect!)
+```
+and add the parameter `callback = cb` to the line that calls the solver:
+```julia
+sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts, callback = cb)
+```
+
+#### Benchmarking
+Using a callback slows the simulation down, but not much. Try it out:
+```julia
+include("src/Tether_03c.jl")
+```
+Output on a fast PC:
+```
+Solving the system without callback...
+  0.000606 seconds (8.06 k allocations: 257.672 KiB)
+Press any key...
+
+Solving the system with callback...
+  0.000741 seconds (9.93 k allocations: 365.812 KiB)
+If you zoom in to the points in time where pos_z crosses -10m
+you should see a difference...
+```
+In this example the gain of accuracy is very small, but that can be different
+in other simulations.
