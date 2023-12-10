@@ -8,7 +8,7 @@ import pylab as plt
 L_0 = 10.0 # initial segment length [m]
 
 from tools import ExtProblem
-from assimulo.solvers.sundials import IDA #Imports the solver IDA from Assimulo
+from assimulo.solvers.sundials import IDA # Imports the solver IDA from Assimulo
 
 G_EARTH  = np.array([0.0, 0.0, -9.81]) # gravitational acceleration
 C_SPRING =  50                         # spring constant [N/m]; Dynema, 4mm: 200e3
@@ -23,7 +23,7 @@ class ExtendedProblem(ExtProblem):
     pos_0 = np.array([0.0, 0.0, 0.0])     # Initial position of mass zero
     vel_0 = np.array([0.0, 0.0, 0.0])     # Initial velocity of mass zero
     pos_1 = np.array([0.0, 0.0,  -L_0])   # Initial position of mass one
-    vel_1 = np.array([0.0, 0.0,  V0])    # Initial velocity of mass one
+    vel_1 = np.array([0.0, 0.0,  V0])     # Initial velocity of mass one
     acc_1 = np.array([0.0, 0.0, -9.81])   # Initial acceleration mass one
     y0  = np.append(pos_0, np.append(pos_1, vel_1)) # Initial state vector
     yd0 = np.append(vel_0, np.append(vel_1, acc_1)) # Initial state vector derivative
@@ -58,9 +58,9 @@ class ExtendedProblem(ExtProblem):
 
 def run_example():
     #Create an instance of the problem
-    model = ExtendedProblem() #Create the problem
+    model = ExtendedProblem()  # Create the problem
     model.name = 'Mass-Spring' # Specifies the name of problem (optional)
-    sim = IDA(model) #Create the solver
+    sim = IDA(model)           # Create the solver
     sim.verbosity = 30
     time, y, yd = sim.simulate(10.0, 500) #Simulate 10 seconds with 500 communications points
 
