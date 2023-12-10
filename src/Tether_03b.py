@@ -5,8 +5,6 @@ for l < l_0).
 """
 import numpy as np
 import pylab as plt
-L_0 = 10.0 # initial segment length [m]
-
 from tools import ExtProblem
 from assimulo.solvers.sundials import IDA # Imports the solver IDA from Assimulo
 
@@ -14,7 +12,10 @@ G_EARTH  = np.array([0.0, 0.0, -9.81]) # gravitational acceleration
 C_SPRING =  50                         # spring constant [N/m]; Dynema, 4mm: 200e3
 DAMPING  =  0.5                        # damping [Ns/m]
 MASS     = 1.0                         # mass per point-mass [kg]
+# Be careful! If you change the following two values they must also be changed in tools.py!
+L_0      = 10.0                        # initial segment length [m]
 V0       = 4.0                         # initial velocity
+
 
 #Extend Assimulos problem definition
 class ExtendedProblem(ExtProblem):
