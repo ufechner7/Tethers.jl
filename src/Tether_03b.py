@@ -39,10 +39,11 @@ class ExtendedProblem(ExtProblem):
         rel_vel = yd[3:6] - yd[0:3] # calculate the relative velocity of mass1 with respect to mass 0
         segment = y[3:6] - y[0:3]   # calculate the vector from mass1 to mass0
         if not sw[0]:               # if the segment is not loose, calculate spring and damping force
-            force = C_SPRING * (np.linalg.norm(segment) - L_0) * segment / np.linalg.norm(segment) \
-                + DAMPING * rel_vel
+            c_spring = C_SPRING
         else:
-            force = np.array([0.0, 0.0, 0.0])
+            c_spring = 0.0
+        force = c_spring * (np.linalg.norm(segment) - L_0) * segment / np.linalg.norm(segment) \
+                + DAMPING * rel_vel
         acc = force / MASS                # create the vector of the spring acceleration
         res_2 = yd[6:9] - (G_EARTH - acc) # the derivative of the velocity must be equal to the total acceleration
         return np.append(res_0, np.append(res_1, res_2))
