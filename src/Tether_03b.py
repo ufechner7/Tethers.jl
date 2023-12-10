@@ -15,6 +15,8 @@ MASS     = 1.0                         # mass per point-mass [kg]
 L_0      = 10.0                        # initial segment length [m]
 V0       = 4.0                         # initial velocity
 
+C_SPRINGS = np.zeros(1000)
+index = 0
 
 #Extend Assimulos problem definition
 class ExtendedProblem(ExtProblem):
@@ -42,6 +44,8 @@ class ExtendedProblem(ExtProblem):
             c_spring = C_SPRING
         else:
             c_spring = 0.0
+        index = int(t*50)
+        C_SPRINGS[index] = c_spring
         force = c_spring * (np.linalg.norm(segment) - L_0) * segment / np.linalg.norm(segment) \
                 + DAMPING * rel_vel
         acc = force / MASS                # create the vector of the spring acceleration
@@ -66,17 +70,21 @@ def run_example():
     time, y, yd = sim.simulate(10.0, 500) #Simulate 10 seconds with 500 communications points
 
     # plot the result
+    c_spring = C_SPRINGS[0:len(time)]
+    # print(c_spring)
     pos_z = y[:,5]
     vel_z = y[:,8]
     plt.ax1 = plt.subplot(111)
     plt.ax1.set_xlabel('time [s]')
     plt.plot(time, pos_z, color="green")
+    plt.plot(time, -np.ones(len(time)) * L_0 + 0.005 * c_spring, color="grey", label="c_spring")
     plt.ax1.set_ylabel('pos_z [m]')
     plt.grid(True)
     plt.ax2 = plt.twinx()
     plt.ax2.set_ylabel('vel_z [m/s]')
     plt.plot(time, vel_z, color="red")
     plt.show()
+    
 
 if __name__ == '__main__':
     run_example()
