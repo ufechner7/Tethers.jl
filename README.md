@@ -104,6 +104,34 @@ and add the parameter `callback = cb` to the line that calls the solver:
 sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts, callback = cb)
 ```
 
+#### Using a callback with Python
+In Python you would have to add the following attribute:
+```Python
+    sw0 = [vel_1[2] > 0] # array of booleans; true means the tether segment is loose (l < l_0)
+```
+and the following methods:
+```Python
+    def state_events(self, t, y, yd, sw):
+        """
+        This is our function that keeps track of our events. When the sign
+        of any of the events has changed, we have an event.
+        """
+        # calculate the norm of the vector from mass1 to mass0 minus the initial segment length
+        event_0 = np.linalg.norm(y[3:6]) - L_0
+        return np.array([event_0])
+    
+    def handle_event(self, solver, event_info):
+        """
+        Event handling. This functions is called when Assimulo finds an event as
+        specified by the event functions.
+        """
+        state_info = event_info[0] # We are only interested in state events
+        if state_info[0] != 0:     # Check if the first event function has been triggered
+            if solver.sw[0]:       # If the switch is True the pendulum bounces
+                print(solver.t)
+```
+Example: [Code](src/Tether_03b.py).
+
 #### Benchmarking
 Using a callback slows the simulation down, but not much. Try it out:
 ```julia
