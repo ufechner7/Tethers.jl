@@ -25,6 +25,7 @@ for i in 2:segments+1
 end
 for i in 1:segments
     UNIT_VECTORS0[:, i] .= [0, 0, 1.0]
+    SEGMENTS0[:, i] .= POS0[:, i+1] - POS0[:, i]
 end
 
 # model, Z component upwards
@@ -47,7 +48,8 @@ eqs1 = vcat(D.(pos) ~ vel,
 eqs2 = []
 for i in 1:segments
     global eqs2
-    eqs2 = vcat(eqs2, segment[:,i] ~ pos[:, i+1] - pos[:, i])
+    eqs2 = vcat(eqs2, segment[:, i] ~ pos[:, i+1] - pos[:, i])
+    eqs2 = vcat(eqs2, norm1[i] ~ norm(segment[:, i]))
 end
 eqs = vcat(eqs1..., eqs2)
      
