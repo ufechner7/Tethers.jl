@@ -54,9 +54,9 @@ for i in 1:segments
     eqs2 = vcat(eqs2, rel_vel[:, i] ~ vel[:, i+1] - vel[:, i])
     eqs2 = vcat(eqs2, spring_vel[i] ~ -unit_vector[:, i] ⋅ vel[:, i])
     eqs2 = vcat(eqs2, c_spring[i] ~ c_spring0 * (norm1[i] > l_seg))
-    eqs2 = vcat(eqs2, spring_force[:, i] ~ (c_spring[i] * (norm1[i] - l_seg) * damping * spring_vel[i]) * unit_vector[:, i])
+    eqs2 = vcat(eqs2, spring_force[:, i] ~ (c_spring[i] * (norm1[i] - l_seg) + damping * spring_vel[i]) * unit_vector[:, i])
     # TODO: the spring_force must be distributed
-    eqs2 = vcat(eqs2, acc[:, i+1] ~ G_EARTH + spring_force[:, i] / mass)
+    eqs2 = vcat(eqs2, acc[:, i+1] .~ G_EARTH + spring_force[:, i] / mass)
 end
 eqs2 = vcat(eqs2, acc[:, 1] .~ zeros(3))
 eqs = vcat(eqs1..., eqs2)
