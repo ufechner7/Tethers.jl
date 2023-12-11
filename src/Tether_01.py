@@ -21,7 +21,7 @@ def res1(t, y, yd):
     return np.append(res_0, res_1)
 
 def run_example():
-    # Set the initial conditons
+    # Set the initial conditions
     t0  = 0.0                   # Initial time
     vel_0 = [0.0, 0.0, 50.0]    # Initial velocity
     pos_0 = [0.0, 0.0,  0.0]    # Initial position
@@ -35,7 +35,7 @@ def run_example():
     sim = Radau5DAE(model)      # Create the IDA solver
         
     tfinal = 10.0           # Specify the final time
-    ncp    = 500            # Number of communcation points (number of return points)
+    ncp    = 500            # Number of communication points (number of return points)
 
     # Use the .simulate method to simulate and provide the final time and ncp (optional)    
     time, y, yd = sim.simulate(tfinal, ncp) 
