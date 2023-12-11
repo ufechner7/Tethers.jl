@@ -10,16 +10,16 @@ using ModelingToolkit, OrdinaryDiffEq, PyPlot, LinearAlgebra
 G_EARTH     = Float64[0.0, 0.0, -9.81]          # gravitational acceleration     [m/s²]
 L0::Float64 = -10.0                             # initial segment length            [m]
 V0::Float64 = 4                                 # initial velocity of lowest mass [m/s]
-segments::Int64 = 5
+segments::Int64 = 5                             # number of tether segments         [-]
 POS0 = zeros(3, segments+1)
+VEL0 = zeros(3, segments+1)
+ACC0 = zeros(3, segments+1)
+UNIT_VECTORS0 = zeros(3, segments+1)
 for i in 1:segments+1
     POS0[:, i] .= [0.0, 0, (i-1)*L0]
-end
-VEL0 = zeros(3, segments+1)
-for i in 1:segments+1
     VEL0[:, i] .= [0.0, 0, (i-1)*V0/segments]
+    UNIT_VECTORS0[:, i] .= [0, 0, 1.0]
 end
-ACC0 = zeros(3, segments+1)
 for i in 2:segments+1
     ACC0[:, i] .= G_EARTH
 end
@@ -30,11 +30,14 @@ end
 @variables pos(t)[1:3, 1:segments]  = POS0
 @variables vel(t)[1:3, 1:segments]  = VEL0
 @variables acc(t)[1:3, 1:segments]  = ACC0
-# @variables unit_vector(t)[1:3]  = [0.0, 0.0, -sign(L0)]
+@variables unit_vector(t)[1:3, 1:segments]  = UNIT_VECTORS0
 # @variables c_spring(t) = c_spring0
 # @variables spring_force(t)[1:3] = [0.0, 0.0, 0.0]
 # @variables force(t) = 0.0 norm1(t) = abs(l0) spring_vel(t) = 0.0
-# D = Differential(t)
+D = Differential(t)
+
+eqs = vcat(D.(pos) ~ vel,
+           D.(vel) ~ acc)
 
 # eqs = vcat(D.(pos)      ~ vel,
 #            D.(vel)      ~ acc,
