@@ -17,7 +17,7 @@ ACC0 = zeros(3, segments+1)
 SEGMENTS0 = zeros(3, segments) 
 UNIT_VECTORS0 = zeros(3, segments)
 for i in 1:segments+1
-    POS0[:, i] .= [0.0, 0, (i-1)*L0]
+    POS0[:, i] .= [0.0, 0, -(i-1)*L0]
     VEL0[:, i] .= [0.0, 0, (i-1)*V0/segments]
 end
 for i in 2:segments+1
@@ -70,7 +70,7 @@ tol = 1e-6
 tspan = (0.0, duration)
 ts    = 0:dt:duration
 u0 = zeros(12)
-u0[9] = L0
+u0[9] = -L0
 u0[12] = V0
 
 prob = ODEProblem(simple_sys, u0, tspan)
@@ -85,9 +85,8 @@ C_SPRING = sol(X, idxs=c_spring[1])
 lns1 = plot(X, POS_Z, color="green", label="pos_z")
 xlabel("time [s]")
 ylabel("pos_z [m]")
-lns2 = plot(X, L0.+0.005 .* C_SPRING, color="grey", label="c_spring")
+lns2 = plot(X, -L0.+0.005 .* C_SPRING, color="grey", label="c_spring")
 grid(true)
-legend() 
 twinx()
 ylabel("vel_z [m/s]") 
 lns3 = plot(X, VEL_Z, color="red", label="vel_z")
