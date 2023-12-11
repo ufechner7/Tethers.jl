@@ -100,4 +100,4 @@ def run_example():
     plt.show()
 
 if __name__ == '__main__':
-    y=run_example()
+    run_example()
