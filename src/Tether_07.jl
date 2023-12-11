@@ -1,8 +1,6 @@
 """
 Tutorial example simulating a 3D mass-spring system with a nonlinear spring (no spring forces
-for l < l_0) and reel-out. It uses five tether segments. Added parameter NONLINEAR: If it is set to `false`, 
-than a linear springs are used.
-Damping now increases with the segment length. 
+for l < l_0) and n tether segments. 
 """
 
 using ModelingToolkit, OrdinaryDiffEq, PyPlot, LinearAlgebra
@@ -69,9 +67,10 @@ dt = 0.02
 tol = 1e-6
 tspan = (0.0, duration)
 ts    = 0:dt:duration
-u0 = zeros(12)
-u0[9] = -L0
-u0[12] = V0
+# TODO Use POS0 and VEL0 to calculate u0
+u0 = zeros((segments+1)*6)
+u0[segments*6+3] = -L0
+u0[segments*6+6] = V0
 
 prob = ODEProblem(simple_sys, u0, tspan)
 @time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
