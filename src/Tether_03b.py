@@ -5,7 +5,8 @@ for l < l_0).
 """
 import numpy as np
 import pylab as plt
-from tools import ExtProblem
+
+from assimulo.problem import Implicit_Problem # Imports the problem formulation from Assimulo
 from assimulo.solvers.sundials import IDA # Imports the solver IDA from Assimulo
 
 G_EARTH  = np.array([0.0, 0.0, -9.81]) # gravitational acceleration
@@ -15,11 +16,8 @@ MASS     = 1.0                         # mass per point-mass [kg]
 L_0      = 10.0                        # initial segment length [m]
 V0       = 4.0                         # initial velocity
 
-C_SPRINGS = np.zeros(1000)
-index = 0
-
-#Extend Assimulos problem definition
-class ExtendedProblem(ExtProblem):
+# Extend Assimulos problem definition
+class ExtendedProblem(Implicit_Problem):
     # Set the initial conditions
     t0  = 0.0                   # Initial time
     pos_0 = np.array([0.0, 0.0, 0.0])     # Initial position of mass zero
@@ -44,14 +42,10 @@ class ExtendedProblem(ExtProblem):
             c_spring = C_SPRING
         else:
             c_spring = 0.0
-        index = int(t*50)
-        C_SPRINGS[index] = c_spring
         force = c_spring * (np.linalg.norm(segment) - L_0) * segment / np.linalg.norm(segment) \
                 + DAMPING * rel_vel
         acc = force / MASS                # create the vector of the spring acceleration
         res_2 = yd[6:9] - (G_EARTH - acc) # the derivative of the velocity must be equal to the total acceleration
-        if np.linalg.norm(res_1) + np.linalg.norm(res_2) < 1e-7:
-            C_SPRINGS[index] = c_spring
         return np.append(res_0, np.append(res_1, res_2))
 
     def state_events(self, t, y, yd, sw):
@@ -62,31 +56,48 @@ class ExtendedProblem(ExtProblem):
         # calculate the norm of the vector from mass1 to mass0 minus the initial segment length
         event_0 = np.linalg.norm(y[3:6]) - L_0
         return np.array([event_0])
+    
+    def handle_event(self, solver, event_info):
+        """
+        Event handling. This functions is called when Assimulo finds an event as
+        specified by the event functions.
+        """
+        state_info = event_info[0] # We are only interested in state events
+        if state_info[0] != 0:     # Check if the first event function has been triggered
+            if solver.sw[0]:       # If the switch is True the pendulum bounces
+                print(solver.t)
 
 def run_example():
-    #Create an instance of the problem
-    model = ExtendedProblem(L_0, V0)  # Create the problem
+    # Create an instance of the problem
+    model = ExtendedProblem()  # Create the problem
     model.name = 'Mass-Spring' # Specifies the name of problem (optional)
     sim = IDA(model)           # Create the solver
     sim.verbosity = 30
     time, y, yd = sim.simulate(10.0, 500) #Simulate 10 seconds with 500 communications points
+    print(len(time))
 
     # plot the result
-    c_spring = C_SPRINGS[0:len(time)]
-    # print(c_spring)
     pos_z = y[:,5]
     vel_z = y[:,8]
+    C_SPRINGS = np.zeros(len(time))
+    for i in range(len(time)):
+        yi=y[i]
+        segment = yi[3:6] - yi[0:3]
+        if np.linalg.norm(segment) > L_0:               # if the segment is not loose, calculate spring and damping force
+            c_spring = C_SPRING
+        else:
+            c_spring = 0.0
+        C_SPRINGS[i] = c_spring
     plt.ax1 = plt.subplot(111)
     plt.ax1.set_xlabel('time [s]')
     plt.plot(time, pos_z, color="green")
-    plt.plot(time, -np.ones(len(time)) * L_0 + 0.005 * c_spring, color="grey", label="c_spring")
+    plt.plot(time, -np.ones(len(time)) * L_0 + 0.005 * C_SPRINGS, color="grey", label="c_spring")
     plt.ax1.set_ylabel('pos_z [m]')
     plt.grid(True)
     plt.ax2 = plt.twinx()
     plt.ax2.set_ylabel('vel_z [m/s]')
     plt.plot(time, vel_z, color="red")
     plt.show()
-    
 
 if __name__ == '__main__':
-    run_example()
+    y=run_example()
