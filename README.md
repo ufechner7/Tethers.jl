@@ -83,11 +83,13 @@ attached to the mass. Mass initially below the origin, spring un-stretched. Z-ax
 upwards. 
 
 Initial velocity $4 m/s$ upwards. The compression stiffness is zero. The grey line shows that
-the stiffness is zero at the beginning, and has the nominal value at the end. See: [Code](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_03.jl).
+the stiffness is zero at the beginning, and has the nominal value at the end. **Example:** [Tether_03.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_03.jl).
+
+The same as Python version: **Example:** [Tether_03.py](src/Tether_03.py). 
 
 #### Using a callback
 By using a callback to detect exactly when the transition from a stiff tether segment to a loose
-tether segment happens we can increase the accuracy of the simulation. Example: [Code](src/Tether_03b.jl).
+tether segment happens we can increase the accuracy of the simulation. **Example:** [Tether_03b.jl](src/Tether_03b.jl).
 
 We only have to add the following lines of code:
 ```julia
@@ -130,7 +132,10 @@ and the following methods:
             if solver.sw[0]:       # If the switch is True the pendulum bounces
                 print(solver.t)
 ```
-Example: [Code](src/Tether_03b.py).
+**Example:** [Tether_03b.py](src/Tether_03b.py).  
+As you can see, logging of calculated variables is not
+possible with Assimulo (easy with ModelingToolkit in Julia). You need to re-calculate them
+after the simulation.
 
 #### Benchmarking
 Using a callback slows the simulation down, but not much. Try it out:
@@ -151,3 +156,15 @@ you should see a difference...
 In this example the gain of accuracy is very small, but that can be different
 in other simulations. For benchmarking we call solve twice: The first call ensures that the
 code is compiled, the second call measures the execution time of the code.
+
+**Python**
+The script, which executes the Python code with callbacks:
+```
+include("src/RunTether_03b.jl")
+```
+reports 31 ms for solving the problem (without printing).
+Without callbacks:
+```
+include("src/RunTether_03.jl")
+```
+still 20 ms are needed.

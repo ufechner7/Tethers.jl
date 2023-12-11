@@ -27,13 +27,12 @@ class ExtendedProblem(Implicit_Problem):
     acc_1 = np.array([0.0, 0.0, -9.81])   # Initial acceleration mass one
     y0  = np.append(pos_0, np.append(pos_1, vel_1)) # Initial state vector
     yd0 = np.append(vel_0, np.append(vel_1, acc_1)) # Initial state vector derivative
-    sw0 = [vel_1[2] > 0] # array of booleans; true means the tether segment is loose (l < l_0)
 
     # Falling mass, attached to a spring
     # State vector y   = mass0.pos, mass1.pos, mass1.vel
     # Derivative   yd  = mass0.vel, mass1.vel, mass1.acc
     # Residual     res = (yd.mass0.vel), (y.mass1.vel - yd.mass1.vel), (yd.mass1.acc - G_EARTH)
-    def res(self, t, y, yd, sw):
+    def res(self, t, y, yd):
         res_0 = y[0:3]              # the velocity of mass0 shall be zero
         res_1 = y[6:9]  - yd[3:6]   # the derivative of the position of mass1 must be equal to its velocity
         rel_vel = yd[3:6] - yd[0:3] # calculate the relative velocity of mass1 with respect to mass 0
@@ -47,25 +46,6 @@ class ExtendedProblem(Implicit_Problem):
         acc = force / MASS                # create the vector of the spring acceleration
         res_2 = yd[6:9] - (G_EARTH - acc) # the derivative of the velocity must be equal to the total acceleration
         return np.append(res_0, np.append(res_1, res_2))
-
-    def state_events(self, t, y, yd, sw):
-        """
-        This is our function that keeps track of our events. When the sign
-        of any of the events has changed, we have an event.
-        """
-        # calculate the norm of the vector from mass1 to mass0 minus the initial segment length
-        event_0 = np.linalg.norm(y[3:6]) - L_0
-        return np.array([event_0])
-    
-    def handle_event(self, solver, event_info):
-        """
-        Event handling. This functions is called when Assimulo finds an event as
-        specified by the event functions.
-        """
-        state_info = event_info[0] # We are only interested in state events
-        if state_info[0] != 0:     # Check if the first event function has been triggered
-            if solver.sw[0]:      
-                print(solver.t)
 
 def run_example():
     # Create an instance of the problem
