@@ -10,7 +10,7 @@ using ModelingToolkit, OrdinaryDiffEq, PyPlot, LinearAlgebra
 G_EARTH     = Float64[0.0, 0.0, -9.81]          # gravitational acceleration     [m/s²]
 L0::Float64 = -10.0                             # initial segment length            [m]
 V0::Float64 = 4                                 # initial velocity of lowest mass [m/s]
-segments::Int64 = 2                             # number of tether segments         [-]
+segments::Int64 = 3                             # number of tether segments         [-]
 POS0 = zeros(3, segments+1)
 VEL0 = zeros(3, segments+1)
 ACC0 = zeros(3, segments+1)
@@ -27,9 +27,9 @@ end
 # model, Z component upwards
 @parameters mass=1.0 c_spring0=50.0 damping=0.5 l_seg=L0
 @variables t 
-@variables pos(t)[1:3, 1:segments]  = POS0
-@variables vel(t)[1:3, 1:segments]  = VEL0
-@variables acc(t)[1:3, 1:segments]  = ACC0
+@variables pos(t)[1:3, 1:segments+1]  = POS0
+@variables vel(t)[1:3, 1:segments+1]  = VEL0
+@variables acc(t)[1:3, 1:segments+1]  = ACC0
 # @variables unit_vector(t)[1:3, 1:segments]  = UNIT_VECTORS0
 # @variables norm1(t)[1:segments] = l_seg * ones(segments)
 # @variables c_spring(t) = c_spring0
@@ -38,8 +38,9 @@ end
 D = Differential(t)
 
 eqs = vcat(D.(pos) ~ vel,
-           D.(vel) ~ acc)
-
+           D.(vel) ~ acc,
+           acc    .~ ACC0)
+     
 # eqs = vcat(D.(pos)      ~ vel,
 #            D.(vel)      ~ acc,
 #            norm1        ~ norm(pos),
