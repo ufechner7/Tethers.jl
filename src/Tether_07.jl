@@ -56,6 +56,7 @@ for i in 1:segments
     eqs2 = vcat(eqs2, rel_vel[:, i] ~ vel[:, i+1] - vel[:, i])
     eqs2 = vcat(eqs2, spring_vel[i] ~ -unit_vector[:, i] ⋅ vel[:, i])
     eqs2 = vcat(eqs2, c_spring[i] ~ c_spring0 * (norm1[i] > l_seg))
+    eqs2 = vcat(eqs2, spring_force[:, i] ~ (c_spring[i] * (norm1[i] - l_seg) * damping * spring_vel[i]) * unit_vector[:, i])
 end
 eqs = vcat(eqs1..., eqs2)
      
