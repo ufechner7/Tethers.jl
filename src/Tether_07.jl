@@ -31,7 +31,7 @@ end
 @variables vel(t)[1:3, 1:segments+1]  = VEL0
 @variables acc(t)[1:3, 1:segments+1]  = ACC0
 # @variables unit_vector(t)[1:3, 1:segments]  = UNIT_VECTORS0
-# @variables norm1(t)[1:segments] = l_seg * ones(segments)
+@variables norm1(t)[1:segments] = l_seg * ones(segments)
 # @variables c_spring(t) = c_spring0
 # @variables spring_force(t)[1:3] = [0.0, 0.0, 0.0]
 # @variables force(t) = 0.0 norm1(t) = abs(l0) spring_vel(t) = 0.0
