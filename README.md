@@ -176,4 +176,4 @@ still 20 ms are needed.
 |Non-linear Spring damper     |     61              | 83  | 0.61  | 20  |
 |dito with callbacks          |     68              | 103 | 0.74 | 31  |
 
-**Disadvantage of Julia:** The code is compiled before it is executed, that can cause 1 to 10 seconds delay when running a simulation the first time.
+**Tradeoff Julia vs Python:** In Julia the code is compiled before it is executed, that can cause about 1 to 10 seconds delay when running a simulation the first time, but speeds up the execution a lot afterwards. In addition Julia can run fully multithreaded, Python cannot really use threads because of the global interpreter lock. 
