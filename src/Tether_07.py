@@ -10,12 +10,12 @@ import numpy as np
 import pylab as plt
 import math
 
-from assimulo.solvers.sundials import IDA #Imports the solver IDA from Assimulo
+from assimulo.solvers.sundials import IDA     # Imports the solver IDA from Assimulo
 from assimulo.problem import Implicit_Problem # Imports the problem formulation from Assimulo
 
 G_EARTH  = np.array([0.0, 0.0, -9.81]) # gravitational acceleration
-C_SPRING = 5000.0                      # spring constant [N/m]; Dyema, 4mm: 200e3
-DAMPING  =  10.0                        # damping [Ns/m]
+C_SPRING = 5000.0                      # spring constant [N/m]; Dynema, 4mm: 200e3
+DAMPING  =  10.0                       # damping [Ns/m]
 L_0      = 10.0                        # initial segment length [m]
 SEGMENTS = 5
 MASS     = 0.2                         # mass per tether of initial segment length [kg]
@@ -31,7 +31,7 @@ NONLINEAR = True
 # Derivative   yd  = mass0.vel, mass1.vel, mass1.acc
 # Residual     res = (yd.mass0.vel), (y.mass1.vel - yd.mass1.vel), (yd.mass1.acc - G_EARTH)     
 
-#Extend Assimulos problem definition
+# Extend Assimulos problem definition
 class ExtendedProblem(Implicit_Problem):
     # Set the initial conditions
     t0  = 0.0                   # Initial time
