@@ -37,9 +37,10 @@ end
 # @variables force(t) = 0.0 norm1(t) = abs(l0) spring_vel(t) = 0.0
 D = Differential(t)
 
-eqs = vcat(D.(pos) ~ vel,
-           D.(vel) ~ acc,
-           acc    .~ ACC0)
+eqs1 = vcat(D.(pos) ~ vel,
+            D.(vel) ~ acc,
+            acc    .~ ACC0)
+eqs = vcat(eqs1...)
      
 # eqs = vcat(D.(pos)      ~ vel,
 #            D.(vel)      ~ acc,
