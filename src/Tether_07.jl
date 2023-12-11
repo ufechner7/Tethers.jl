@@ -50,12 +50,12 @@ for i in 1:segments
     global eqs2
     eqs2 = vcat(eqs2, segment[:, i] ~ pos[:, i+1] - pos[:, i])
     eqs2 = vcat(eqs2, norm1[i] ~ norm(segment[:, i]))
-    eqs2 = vcat(eqs2, unit_vector[:, i] ~ segment[:, i]/norm1[i])
+    eqs2 = vcat(eqs2, unit_vector[:, i] ~ -segment[:, i]/norm1[i])
     eqs2 = vcat(eqs2, rel_vel[:, i] ~ vel[:, i+1] - vel[:, i])
     eqs2 = vcat(eqs2, spring_vel[i] ~ -unit_vector[:, i] ⋅ vel[:, i])
     eqs2 = vcat(eqs2, c_spring[i] ~ c_spring0 * (norm1[i] > l_seg))
     eqs2 = vcat(eqs2, spring_force[:, i] ~ (c_spring[i] * (norm1[i] - l_seg) * damping * spring_vel[i]) * unit_vector[:, i])
-    # TODO: if segments > 1 the spring_force must be distributed
+    # TODO: the spring_force must be distributed
     eqs2 = vcat(eqs2, acc[:, i+1] ~ G_EARTH + spring_force[:, i] / mass)
 end
 eqs2 = vcat(eqs2, acc[:, 1] .~ zeros(3))
@@ -77,21 +77,23 @@ prob = ODEProblem(simple_sys, u0, tspan)
 @time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
 
 X = sol.t
-# POS_Z = sol(X, idxs=pos[3])
-# VEL_Z = sol(X, idxs=vel[3])
+particle = 2
+POS_Z = sol(X, idxs=pos[3, particle])
+VEL_Z = sol(X, idxs=vel[3, particle])
+C_SPRING = sol(X, idxs=c_spring[1])
 
-# lns1 = plot(X, POS_Z, color="green", label="pos_z")
-# xlabel("time [s]")
-# ylabel("pos_z [m]")
-# lns2 = plot(X, L0.+0.005 .* sol[c_spring], color="grey", label="c_spring")
-# grid(true)
-# legend() 
-# twinx()
-# ylabel("vel_z [m/s]") 
-# lns3 = plot(X, VEL_Z, color="red", label="vel_z")
-# lns = vcat(lns1, lns2, lns3)
-# labs = [l.get_label() for l in lns]
-# legend(lns, labs) 
-# PyPlot.show(block=false)
-# nothing
+lns1 = plot(X, POS_Z, color="green", label="pos_z")
+xlabel("time [s]")
+ylabel("pos_z [m]")
+lns2 = plot(X, L0.+0.005 .* C_SPRING, color="grey", label="c_spring")
+grid(true)
+legend() 
+twinx()
+ylabel("vel_z [m/s]") 
+lns3 = plot(X, VEL_Z, color="red", label="vel_z")
+lns = vcat(lns1, lns2, lns3)
+labs = [l.get_label() for l in lns]
+legend(lns, labs) 
+PyPlot.show(block=false)
+nothing
 
