@@ -41,12 +41,10 @@ end
 @variables spring_vel(t)[1:segments] = zeros(segments)
 @variables c_spring(t)[1:segments] = c_spring0 * ones(segments)
 @variables spring_force(t)[1:3, 1:segments] = zeros(3, segments)
-# @variables force(t) = 0.0 norm1(t) = abs(l0) spring_vel(t) = 0.0
 D = Differential(t)
 
 eqs1 = vcat(D.(pos) ~ vel,
-            D.(vel) ~ acc,
-            acc    .~ ACC0)
+            D.(vel) ~ acc)
 eqs2 = []
 for i in 1:segments
     global eqs2
@@ -57,7 +55,9 @@ for i in 1:segments
     eqs2 = vcat(eqs2, spring_vel[i] ~ -unit_vector[:, i] ⋅ vel[:, i])
     eqs2 = vcat(eqs2, c_spring[i] ~ c_spring0 * (norm1[i] > l_seg))
     eqs2 = vcat(eqs2, spring_force[:, i] ~ (c_spring[i] * (norm1[i] - l_seg) * damping * spring_vel[i]) * unit_vector[:, i])
+    eqs2 = vcat(eqs2, acc[:, i+1] ~ G_EARTH + spring_force[:, i] / mass)
 end
+eqs2 = vcat(eqs2, acc[:, 1] .~ zeros(3))
 eqs = vcat(eqs1..., eqs2)
      
 # eqs = vcat(D.(pos)      ~ vel,
