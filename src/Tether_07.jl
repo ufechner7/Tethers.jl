@@ -50,6 +50,7 @@ for i in 1:segments
     global eqs2
     eqs2 = vcat(eqs2, segment[:, i] ~ pos[:, i+1] - pos[:, i])
     eqs2 = vcat(eqs2, norm1[i] ~ norm(segment[:, i]))
+    eqs2 = vcat(eqs2, unit_vector[:, i] ~ segment[:, i]/norm1[i])
 end
 eqs = vcat(eqs1..., eqs2)
      
