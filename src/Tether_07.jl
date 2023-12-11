@@ -37,6 +37,7 @@ end
 @variables segment(t)[1:3, 1:segments]  = SEGMENTS0
 @variables unit_vector(t)[1:3, 1:segments]  = UNIT_VECTORS0
 @variables norm1(t)[1:segments] = l_seg * ones(segments)
+@variables rel_vel(t)[1:3, 1:segments]  = zeros(3, segments)
 @variables spring_vel(t)[1:segments] = zeros(segments)
 # @variables c_spring(t) = c_spring0
 # @variables spring_force(t)[1:3] = [0.0, 0.0, 0.0]
@@ -52,7 +53,7 @@ for i in 1:segments
     eqs2 = vcat(eqs2, segment[:, i] ~ pos[:, i+1] - pos[:, i])
     eqs2 = vcat(eqs2, norm1[i] ~ norm(segment[:, i]))
     eqs2 = vcat(eqs2, unit_vector[:, i] ~ segment[:, i]/norm1[i])
-    # TODO: this is not the correct velocity... we need rel_vel
+    eqs2 = vcat(eqs2, rel_vel[:, i] ~ vel[:, i+1] - vel[:, i])
     eqs2 = vcat(eqs2, spring_vel[i] ~ -unit_vector[:, i] ⋅ vel[:, i])
 end
 eqs = vcat(eqs1..., eqs2)
