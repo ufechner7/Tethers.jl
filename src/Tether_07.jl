@@ -55,19 +55,11 @@ for i in 1:segments
     eqs2 = vcat(eqs2, spring_vel[i] ~ -unit_vector[:, i] ⋅ vel[:, i])
     eqs2 = vcat(eqs2, c_spring[i] ~ c_spring0 * (norm1[i] > l_seg))
     eqs2 = vcat(eqs2, spring_force[:, i] ~ (c_spring[i] * (norm1[i] - l_seg) * damping * spring_vel[i]) * unit_vector[:, i])
+    # TODO: if segments > 1 the spring_force must be distributed
     eqs2 = vcat(eqs2, acc[:, i+1] ~ G_EARTH + spring_force[:, i] / mass)
 end
 eqs2 = vcat(eqs2, acc[:, 1] .~ zeros(3))
 eqs = vcat(eqs1..., eqs2)
      
-# eqs = vcat(D.(pos)      ~ vel,
-#            D.(vel)      ~ acc,
-#            norm1        ~ norm(pos),
-#            unit_vector  ~ -pos/norm1,         # direction from point mass to origin
-#            spring_vel   ~ -unit_vector ⋅ vel,
-#            c_spring     ~ c_spring0 * (norm1 > abs(l0)),
-#            spring_force ~ (c_spring * (norm1 - abs(l0)) + damping * spring_vel) * unit_vector,
-#            acc          ~ G_EARTH + spring_force/mass)
-
 @named sys = ODESystem(eqs, t)
 simple_sys = structural_simplify(sys)
