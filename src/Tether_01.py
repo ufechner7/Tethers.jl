@@ -10,8 +10,7 @@ from assimulo.solvers import Radau5DAE        # Imports the solver RADAU from As
 
 G_EARTH  = np.array([0.0, 0.0, -9.81]) # gravitational acceleration
   
-# Example one:
-# Falling mass.
+# Example one: Falling mass
 # State vector y   = mass.pos, mass.vel
 # Derivative   yd  = mass.vel, mass.acc
 # Residual     res = (y.vel - yd.vel), (yd.acc - G_EARTH)     

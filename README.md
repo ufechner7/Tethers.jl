@@ -168,3 +168,12 @@ Without callbacks:
 include("src/RunTether_03.jl")
 ```
 still 20 ms are needed.
+
+## Comparism
+| Testcase                    | Lines of code (LOC) Julia | LOC Python  | Time Julia [ms] | Time Python [ms] |
+|:----------------------------|:-------------------:|:---:|:-:|:---:|
+|Falling mass                 |     42              | 56  | 0.17  | 2.6  |
+|Non-linear Spring damper     |     61              | 83  | 0.61  | 20  |
+|dito with callbacks          |     68              | 103 | 0.74 | 31  |
+
+**Disadvantage of Julia:** The code is compiled before it is executed, that can cause 1 to 10 seconds delay when running a simulation the first time.
