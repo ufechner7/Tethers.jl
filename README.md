@@ -85,6 +85,19 @@ upwards.
 Initial velocity $4 m/s$ upwards. The compression stiffness is zero. The grey line shows that
 the stiffness is zero at the beginning, and has the nominal value at the end. **Example:** [Tether_03.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_03.jl).
 
+Thanks to the package [ModelingToolkit.jl](https://docs.sciml.ai/ModelingToolkit/stable/) the system description is very compact and readable:
+```Julia
+D = Differential(t)
+eqs = vcat(D.(pos)      ~ vel,
+           D.(vel)      ~ acc,
+           norm1        ~ norm(pos),
+           unit_vector  ~ -pos/norm1,         # direction from point mass to origin
+           spring_vel   ~ -unit_vector ⋅ vel,
+           c_spring     ~ c_spring0 * (norm1 > abs(l0)),
+           spring_force ~ (c_spring * (norm1 - abs(l0)) + damping * spring_vel) * unit_vector,
+           acc          ~ G_EARTH + spring_force/mass)
+```
+
 The same as Python version: **Python code:** [Tether_03.py](src/Tether_03.py). 
 
 #### Using a callback
@@ -96,7 +109,7 @@ We only have to add the following lines of code:
 function condition(u, t, integrator) # Event when condition(u,t,integrator) == 0
     norm(u[1:3]) - abs(L0)
 end
-function affect!(integrator)
+`function affect!(integrator)
     println(integrator.t)            # Not needed, just to show that the callback works
 end
 cb = ContinuousCallback(condition, affect!)
