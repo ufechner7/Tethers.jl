@@ -83,7 +83,7 @@ attached to the mass. Mass initially below the origin, spring un-stretched. Z-ax
 upwards. 
 
 Initial velocity $4 m/s$ upwards. The compression stiffness is zero. The grey line shows that
-the stiffness is zero at the beginning, and has the nominal value at the end. See: [Code](src/Tether_03.jl).
+the stiffness is zero at the beginning, and has the nominal value at the end. See: [Code](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_03.jl).
 
 #### Using a callback
 By using a callback to detect exactly when the transition from a stiff tether segment to a loose
