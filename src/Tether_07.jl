@@ -8,7 +8,7 @@ Damping now increases with the segment length.
 using ModelingToolkit, OrdinaryDiffEq, PyPlot, LinearAlgebra
 
 G_EARTH     = Float64[0.0, 0.0, -9.81]          # gravitational acceleration     [m/s²]
-L0::Float64 = -10.0                             # initial segment length            [m]
+L0::Float64 = 10.0                              # initial segment length            [m]
 V0::Float64 = 4                                 # initial velocity of lowest mass [m/s]
 segments::Int64 = 3                             # number of tether segments         [-]
 POS0 = zeros(3, segments+1)
@@ -39,8 +39,8 @@ end
 @variables norm1(t)[1:segments] = l_seg * ones(segments)
 @variables rel_vel(t)[1:3, 1:segments]  = zeros(3, segments)
 @variables spring_vel(t)[1:segments] = zeros(segments)
-# @variables c_spring(t) = c_spring0
-# @variables spring_force(t)[1:3] = [0.0, 0.0, 0.0]
+@variables c_spring(t)[1:segments] = c_spring0 * ones(segments)
+@variables spring_force(t)[1:3, 1:segments] = zeros(3, segments)
 # @variables force(t) = 0.0 norm1(t) = abs(l0) spring_vel(t) = 0.0
 D = Differential(t)
 
@@ -55,6 +55,7 @@ for i in 1:segments
     eqs2 = vcat(eqs2, unit_vector[:, i] ~ segment[:, i]/norm1[i])
     eqs2 = vcat(eqs2, rel_vel[:, i] ~ vel[:, i+1] - vel[:, i])
     eqs2 = vcat(eqs2, spring_vel[i] ~ -unit_vector[:, i] ⋅ vel[:, i])
+    eqs2 = vcat(eqs2, c_spring[i] ~ c_spring0 * (norm1[i] > l_seg))
 end
 eqs = vcat(eqs1..., eqs2)
      
