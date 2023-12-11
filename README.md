@@ -43,7 +43,7 @@ You should see a plot similar to:
 
 This example shows a mass that is thrown upwards, slows down and then falls.
 
-[Code](src/Tether_01.jl)
+**Julia code:** [Tether_01.jl](src/Tether_01.jl)
 
 ## Running the Python version as comparison
 From the Julia prompt execute:
@@ -52,7 +52,7 @@ include("src/RunTether.jl")
 ```
 This will install Python and Matplotlib and Assimulo and execute the script `Tether_01.py`.
 
-[Code](src/Tether_01.py)
+**Python code:** [Tether_01.py](src/Tether_01.py)
 
 If you compare the Python and the Julia script you can see that:
 - the Julia script is shorter and easier to read
@@ -70,7 +70,7 @@ Mass, attached to a spring damper element. One end of the spring at the origin, 
 attached to the mass. Mass initially below the origin, spring un-stretched. Z-axis pointing
 upwards.
 
-[Code](src/Tether_02.jl)
+**Julia code:** [Tether_02.jl](src/Tether_02.jl)
 
 ### Mass, attached to a non-linear spring damper element
 ```julia
@@ -85,11 +85,11 @@ upwards.
 Initial velocity $4 m/s$ upwards. The compression stiffness is zero. The grey line shows that
 the stiffness is zero at the beginning, and has the nominal value at the end. **Example:** [Tether_03.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_03.jl).
 
-The same as Python version: **Example:** [Tether_03.py](src/Tether_03.py). 
+The same as Python version: **Python code:** [Tether_03.py](src/Tether_03.py). 
 
 #### Using a callback
 By using a callback to detect exactly when the transition from a stiff tether segment to a loose
-tether segment happens we can increase the accuracy of the simulation. **Example:** [Tether_03b.jl](src/Tether_03b.jl).
+tether segment happens we can increase the accuracy of the simulation. **Julia code:** [Tether_03b.jl](src/Tether_03b.jl).
 
 We only have to add the following lines of code:
 ```julia
