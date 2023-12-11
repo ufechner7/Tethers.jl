@@ -10,7 +10,7 @@ using ModelingToolkit, OrdinaryDiffEq, PyPlot, LinearAlgebra
 G_EARTH     = Float64[0.0, 0.0, -9.81]          # gravitational acceleration     [m/s²]
 L0::Float64 = 10.0                              # initial segment length            [m]
 V0::Float64 = 4                                 # initial velocity of lowest mass [m/s]
-segments::Int64 = 3                             # number of tether segments         [-]
+segments::Int64 = 1                             # number of tether segments         [-]
 POS0 = zeros(3, segments+1)
 VEL0 = zeros(3, segments+1)
 ACC0 = zeros(3, segments+1)
@@ -63,3 +63,35 @@ eqs = vcat(eqs1..., eqs2)
      
 @named sys = ODESystem(eqs, t)
 simple_sys = structural_simplify(sys)
+
+duration = 10.0
+dt = 0.02
+tol = 1e-6
+tspan = (0.0, duration)
+ts    = 0:dt:duration
+u0 = zeros(12)
+u0[9] = L0
+u0[12] = V0
+
+prob = ODEProblem(simple_sys, u0, tspan)
+@time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
+
+X = sol.t
+# POS_Z = sol(X, idxs=pos[3])
+# VEL_Z = sol(X, idxs=vel[3])
+
+# lns1 = plot(X, POS_Z, color="green", label="pos_z")
+# xlabel("time [s]")
+# ylabel("pos_z [m]")
+# lns2 = plot(X, L0.+0.005 .* sol[c_spring], color="grey", label="c_spring")
+# grid(true)
+# legend() 
+# twinx()
+# ylabel("vel_z [m/s]") 
+# lns3 = plot(X, VEL_Z, color="red", label="vel_z")
+# lns = vcat(lns1, lns2, lns3)
+# labs = [l.get_label() for l in lns]
+# legend(lns, labs) 
+# PyPlot.show(block=false)
+# nothing
+
