@@ -7,6 +7,7 @@ L0::Float64 = 10.0                              # initial segment length        
 V0::Float64 = 2                                 # initial velocity of lowest mass [m/s]
 segments::Int64 = 5                             # number of tether segments         [-]
 α0 = π/8                                        # initial tether angle            [rad]
+duration = 60.0                                 # duration of the simulation        [s]
 POS0 = zeros(3, segments+1)
 VEL0 = zeros(3, segments+1)
 ACC0 = zeros(3, segments+1)
@@ -68,7 +69,6 @@ eqs = vcat(eqs1..., eqs2)
 @named sys = ODESystem(eqs, t)
 simple_sys = structural_simplify(sys)
 
-duration = 10.0
 dt = 0.02
 tol = 1e-6
 tspan = (0.0, duration)
@@ -109,7 +109,7 @@ function play()
     xlim(-segments*5, segments*5)
     grid(true; color="grey", linestyle="dotted")
     line, sc, txt = nothing, nothing, nothing
-    for time in 0:dt:10
+    for time in 0:dt:duration
         line, sc, txt = plot2d(sol, time, segments, line, sc, txt)
         sleep(0.25*dt)
     end
