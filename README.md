@@ -180,9 +180,9 @@ for i in 1:segments
     SEGMENTS0[:, i] .= POS0[:, i+1] - POS0[:, i]
 end
 ```
-The first example of such a model is the script [Tether_04.jl](Tether_04.jl) which is derived from the last example.
+The first example of such a model is the script [Tether_04.jl](src/Tether_04.jl) which is derived from the last example.
 
-In the script [Tether_05.jl](Tether_05.jl) the spring force is distributed correctly on the two masses attached to the spring, see:
+In the script [Tether_05.jl](src/Tether_05.jl) the spring force is distributed correctly on the two masses attached to the spring as shown here:
 ```julia
 if i == segments
     eqs2 = vcat(eqs2, total_force[:, i] ~ spring_force[:, i])
