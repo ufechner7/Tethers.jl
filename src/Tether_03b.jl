@@ -34,9 +34,8 @@ dt = 0.02
 tol = 1e-6
 tspan = (0.0, duration)
 ts    = 0:dt:duration
-u0 = zeros(6)
-u0[3] = L0
-u0[6] = V0
+# initial state
+u0 = Dict(pos=>[0,0,L0], vel=>[0,0,V0])
 
 function condition(u, t, integrator) # Event when condition(u,t,integrator) == 0
     norm(u[1:3]) - abs(L0)
