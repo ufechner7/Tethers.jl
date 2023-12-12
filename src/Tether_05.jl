@@ -73,11 +73,8 @@ tol = 1e-6
 tspan = (0.0, duration)
 ts    = 0:dt:duration
 
-u0 = Float64[]
-for i in 1:segments+1
-    global u0
-    u0 = vcat(u0, POS0[:, i], VEL0[:, i])
-end
+# initial state
+u0 = Dict(pos=>POS0, vel=>VEL0)
 
 prob = ODEProblem(simple_sys, u0, tspan)
 @time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
