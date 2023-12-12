@@ -1,7 +1,8 @@
 """
 Tutorial example simulating a 3D mass-spring system with a nonlinear spring (no spring forces
-for l < l_0) and n tether segments. 
+for l < l_0), n tether segments and reel-out.
 """
+# TODO: implement reel-out
 
 using ModelingToolkit, OrdinaryDiffEq, PyPlot, LinearAlgebra
 
