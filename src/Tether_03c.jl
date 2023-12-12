@@ -84,7 +84,9 @@ simple_sys, pos, vel, c_spring = model3(G_EARTH, L0, V0)
 sol = solve3(simple_sys, L0, V0; cb=false)
 plt(sol; title="Solution without callback")
 println("Press any key...")
-readline()
+if ! @isdefined __PC
+    readline()
+end
 println("Solving the system with callback...")
 sol = solve3(simple_sys, L0, V0; cb=true)
 plt(sol; title="Solution with callback")
