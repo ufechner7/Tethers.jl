@@ -3,14 +3,13 @@ Tutorial example simulating a 3D mass-spring system with a nonlinear spring (no 
 for l < l_0) and n tether segments. 
 """
 # TODO: Distribute force correctly
-# TODO: Add 2D plot
 
 using ModelingToolkit, OrdinaryDiffEq, Plots, LinearAlgebra
 
 G_EARTH     = Float64[0.0, 0.0, -9.81]          # gravitational acceleration     [m/s²]
 L0::Float64 = 10.0                              # initial segment length            [m]
-V0::Float64 = 4                                 # initial velocity of lowest mass [m/s]
-segments::Int64 = 2                             # number of tether segments         [-]
+V0::Float64 = 2                                 # initial velocity of lowest mass [m/s]
+segments::Int64 = 4                             # number of tether segments         [-]
 POS0 = zeros(3, segments+1)
 VEL0 = zeros(3, segments+1)
 ACC0 = zeros(3, segments+1)
@@ -100,8 +99,10 @@ prob = ODEProblem(simple_sys, u0, tspan)
 # # plt(sol, 2)
 # plt(sol, 3)
 include("plot_2d.jl")
-for time in 0:1.0:10
-    # plot2d(x, z, time)
+dt = 0.04
+for time in 0:dt:10
+    display(plot2d(sol, time, segments))
+    sleep(0.5*dt)
 end
 nothing
 
