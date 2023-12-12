@@ -89,9 +89,9 @@ function plot2d(sol, reltime, segments)
     end
     x_max = maximum(x)
     z_max = maximum(z)
-    plot(x,z, xlabel="x [m]", ylabel="z [m]", legend=false)
+    Plots.plot(x,z, xlabel="x [m]", ylabel="z [m]", legend=false)
     annotate!(15, z_max-3.0, "t=$(round(reltime,digits=1)) s")
-    plot!(x, z, seriestype = :scatter) 
+    Plots.plot!(x, z, seriestype = :scatter) 
     ylims!((-segments*10-10, 0.5))
     xlims!((-segments*5, segments*5))
 end
