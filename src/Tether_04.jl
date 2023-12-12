@@ -2,6 +2,8 @@
 Tutorial example simulating a 3D mass-spring system with a nonlinear spring (no spring forces
 for l < l_0) and n tether segments. 
 """
+# TODO: Distribute force correctly
+# TODO: Add 2D plot
 
 using ModelingToolkit, OrdinaryDiffEq, PyPlot, LinearAlgebra
 
