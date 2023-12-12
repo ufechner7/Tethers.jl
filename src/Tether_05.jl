@@ -5,7 +5,7 @@ using ModelingToolkit, OrdinaryDiffEq, Plots, LinearAlgebra
 G_EARTH     = Float64[0.0, 0.0, -9.81]          # gravitational acceleration     [m/s²]
 L0::Float64 = 10.0                              # initial segment length            [m]
 V0::Float64 = 2                                 # initial velocity of lowest mass [m/s]
-segments::Int64 = 4                             # number of tether segments         [-]
+segments::Int64 = 5                             # number of tether segments         [-]
 α0 = π/8                                        # initial tether angle            [rad]
 POS0 = zeros(3, segments+1)
 VEL0 = zeros(3, segments+1)

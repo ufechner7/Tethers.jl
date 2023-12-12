@@ -101,9 +101,9 @@ class ExtendedProblem(Implicit_Problem):
             RESULT[2*i+4] = res_4                       
     
         # 3. calculate the force of the spring above    
-        res_1 = y1[2]  - yd1[1]  # the derivative of the position of mass1 must be equal to its velocity
-        rel_vel = yd1[1] - yd1[0] # calcultate the relative velocity of mass1 with respect to mass 0 
-        segment = y1[1] - y1[0]  # calculate the vector from mass1 to mass0
+        res_1   = y1[2]  - yd1[1] # the derivative of the position of mass1 must be equal to its velocity
+        rel_vel = yd1[1] - yd1[0] # calculate the relative velocity of mass1 with respect to mass 0 
+        segment = y1[1]  - y1[0]  # calculate the vector from mass1 to mass0
         if not sw[0] or not NONLINEAR:         
             norm = math.sqrt(segment[0]**2 + segment[1]**2 + segment[2]**2)  
             force = c_spring * (norm - length) * segment / norm + damping * rel_vel    

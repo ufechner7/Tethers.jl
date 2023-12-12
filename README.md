@@ -230,10 +230,12 @@ include("src/RunTether_03.jl")
 still 20 ms are needed.
 
 ## Comparism
+Execution time for a simulation of 10s duration with logging the state every 20ms.
 | Testcase                    | Lines of code (LOC) Julia | LOC Python  | Time Julia [ms] | Time Python [ms] |
 |:----------------------------|:-------------------:|:---:|:-:|:---:|
 |Falling mass                 |     42              | 56  | 0.17  | 2.6  |
 |Non-linear Spring damper     |     61              | 83  | 0.61  | 20  |
 |dito with callbacks          |     68              | 103 | 0.74 | 31  |
+|swinging tether, 5 segments  |    104              | 190    | 2.90     |     |
 
 **Tradeoff Julia vs Python:** In Julia the code is compiled before it is executed, that can cause about 1 to 10 seconds delay when running a simulation the first time, but speeds up the execution a lot afterwards. In addition Julia can run fully multithreaded, Python cannot really use threads because of the global interpreter lock. 
