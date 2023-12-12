@@ -290,14 +290,6 @@ using SymPy
 Use PyCall to use Python packages for Julia. This works for all Python packages, but 
 is a little bit less comfortable than option one. Example:
 
-Install `NumPy`:
-```
-using CondaPkg
-]
-conda add NumPy
-add PyCall
-```
-Press \<DEL\> to leave the package manager mode.
 ```
 using PyCall
 np = pyimport("numpy")
@@ -310,6 +302,16 @@ julia> np.zeros(3)
  0.0
  0.0
 ```
+If the package is not yet installed, you can use the notation:
+```
+as = pyimport_conda("assimulo", "assimulo")
+```
+If the command `using PyCall` should fail, you can execute:
+```
+cd bin
+./build_pycall
+```
+to re-build it.
 
 **Sometimes needed:** Install CondaPkg
 ```
