@@ -271,8 +271,8 @@ Python and Julia play very well together. You could see in the examples above th
 
 
 **Using Python packages from Julia**
-
 There are three options:
+
 **Option one:** Use wrapper libraries which exist for a few, very popular Python packages, e.g.
 `PyPlot.jl` for Matplotlib or `SymPy.jl` for SymPy. You can install them like any
 other Julia package, e.g.
