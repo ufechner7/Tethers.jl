@@ -21,8 +21,9 @@ dt = 0.02
 tol = 1e-6
 tspan = (0.0, duration)
 ts    = 0:dt:duration
-u0 = zeros(6)
-u0[6] = 50.0
+
+# initial state
+u0 = Dict(vel=>[0, 0, 50.0])
 
 prob = ODEProblem(simple_sys, u0, tspan)
 @time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
