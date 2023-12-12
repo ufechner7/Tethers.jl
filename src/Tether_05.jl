@@ -6,14 +6,17 @@ G_EARTH     = Float64[0.0, 0.0, -9.81]          # gravitational acceleration    
 L0::Float64 = 10.0                              # initial segment length            [m]
 V0::Float64 = 2                                 # initial velocity of lowest mass [m/s]
 segments::Int64 = 4                             # number of tether segments         [-]
+α0 = π/8                                        # initial angle                   [rad]
 POS0 = zeros(3, segments+1)
 VEL0 = zeros(3, segments+1)
 ACC0 = zeros(3, segments+1)
 SEGMENTS0 = zeros(3, segments) 
 UNIT_VECTORS0 = zeros(3, segments)
 for i in 1:segments+1
-    POS0[:, i] .= [0.0, 0, -(i-1)*L0]
-    VEL0[:, i] .= [0.0, 0, (i-1)*V0/segments]
+    l0 = -(i-1)*L0
+    v0 = (i-1)*V0/segments
+    POS0[:, i] .= [sin(α0) * l0, 0, cos(α0) * l0]
+    VEL0[:, i] .= [sin(α0) * v0, 0, cos(α0) * v0]
 end
 for i in 2:segments+1
     ACC0[:, i] .= G_EARTH
@@ -90,9 +93,10 @@ function plot2d(sol, reltime, segments)
     x_max = maximum(x)
     z_max = maximum(z)
     plot(x,z, xlabel="x [m]", ylabel="z [m]", legend=false)
-    annotate!(x_max+0.5, z_max-3.0, "t=$(round(reltime,digits=1)) s")
+    annotate!(15, z_max-3.0, "t=$(round(reltime,digits=1)) s")
     plot!(x, z, seriestype = :scatter) 
-    ylims!((-segments*10-5, 0.5))
+    ylims!((-segments*10-10, 0.5))
+    xlims!((-segments*5, segments*5))
 end
 
 dt = 0.04
