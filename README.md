@@ -45,6 +45,20 @@ This example shows a mass that is thrown upwards, slows down and then falls.
 
 **Julia code:** [Tether_01.jl](src/Tether_01.jl)
 
+The differential equations define the model:
+```Julia
+D = Differential(t)
+
+eqs = vcat(D.(pos) ~ vel,
+           D.(vel) ~ acc,
+           acc    .~ G_EARTH)
+```
+The term `D.(pos)` means "Apply the differential D(t) to all elements of the vector `pos`".
+The second term defines that the differential of the velocity vector must be equal to the 
+acceleration. For equality in symbolic equations the character `~` has to be used, because
+the character `=` has the meaning "assign a value to a variable" which is not what we are doing here. The third equation means that all elements of the acceleration vector must be equal
+to the elements of the gravity vector. We end up with an array of `3x3`` equations.
+
 ## Running the Python version as comparison
 From the Julia prompt execute:
 ```
