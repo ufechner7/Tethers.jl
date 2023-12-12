@@ -2,8 +2,6 @@
 Tutorial example simulating a 3D mass-spring system with a nonlinear spring (no spring forces
 for l < l_0) and n tether segments. 
 """
-# TODO: Distribute force correctly
-
 using ModelingToolkit, OrdinaryDiffEq, Plots, LinearAlgebra
 
 G_EARTH     = Float64[0.0, 0.0, -9.81]          # gravitational acceleration     [m/s²]
@@ -40,12 +38,13 @@ end
 @variables spring_vel(t)[1:segments] = zeros(segments)
 @variables c_spring(t)[1:segments] = c_spring0 * ones(segments)
 @variables spring_force(t)[1:3, 1:segments] = zeros(3, segments)
+@variables total_force(t)[1:3, 1:segments] = zeros(3, segments)
 D = Differential(t)
 
 eqs1 = vcat(D.(pos) ~ vel,
             D.(vel) ~ acc)
 eqs2 = []
-for i in 1:segments
+for i in segments:-1:1
     global eqs2
     eqs2 = vcat(eqs2, segment[:, i] ~ pos[:, i+1] - pos[:, i])
     eqs2 = vcat(eqs2, norm1[i] ~ norm(segment[:, i]))
@@ -54,10 +53,12 @@ for i in 1:segments
     eqs2 = vcat(eqs2, spring_vel[i] ~ -unit_vector[:, i] ⋅ rel_vel[:, i])
     eqs2 = vcat(eqs2, c_spring[i] ~ c_spring0 * (norm1[i] > l_seg))
     eqs2 = vcat(eqs2, spring_force[:, i] ~ (c_spring[i] * (norm1[i] - l_seg) + damping * spring_vel[i]) * unit_vector[:, i])
-    # TODO: the spring_force must be distributed
-    # total_force .= spring_force + last_force
-    # last_force .= -spring_force
-    eqs2 = vcat(eqs2, acc[:, i+1] .~ G_EARTH + spring_force[:, i] / mass)
+    if i == segments
+        eqs2 = vcat(eqs2, total_force[:, i] ~ spring_force[:, i])
+    else
+        eqs2 = vcat(eqs2, total_force[:, i] ~ spring_force[:, i]- spring_force[:, i+1])
+    end
+    eqs2 = vcat(eqs2, acc[:, i+1] .~ G_EARTH + total_force[:, i] / mass)
 end
 eqs2 = vcat(eqs2, acc[:, 1] .~ zeros(3))
 eqs = vcat(eqs1..., eqs2)
@@ -99,7 +100,7 @@ end
 dt = 0.04
 for time in 0:dt:10
     display(plot2d(sol, time, segments))
-    sleep(0.5*dt)
+    sleep(0.25*dt)
 end
 nothing
 
