@@ -34,9 +34,8 @@ dt = 0.02
 tol = 1e-6
 tspan = (0.0, duration)
 ts    = 0:dt:duration
-u0 = zeros(6)
-u0[3] = L0
-u0[6] = V0
+# initial state
+u0 = Dict(pos=>[0,0,L0], vel=>[0,0,V0])
 
 prob = ODEProblem(simple_sys, u0, tspan)
 @time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
