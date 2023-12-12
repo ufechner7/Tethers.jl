@@ -45,7 +45,7 @@ This example shows a mass that is thrown upwards, slows down and then falls.
 
 **Julia code:** [Tether_01.jl](src/Tether_01.jl)
 
-The differential equations define the model:
+These differential equations define the model:
 ```Julia
 D = Differential(t)
 
@@ -264,3 +264,30 @@ Execution time for a simulation of 10s duration with logging the state every 20m
 |swinging tether, 5 segments  |    117              | 190    | 2.90     |     |
 
 **Tradeoff Julia vs Python:** In Julia the code is compiled before it is executed, that can cause about 1 to 10 seconds delay when running a simulation the first time, but speeds up the execution a lot afterwards. In addition Julia can run fully multithreaded, Python cannot really use threads because of the global interpreter lock. See also: [Why Julia?](https://ufechner7.github.io/2022/08/13/why-julia.html)
+
+## Using Python together with Julia
+Python and Julia play very well together. You could see in the examples above that I am using Matplotlib for plotting, both in Python and in Julia. Julia has a build-in package manager. You can use it install and remove Julia packages, but also to install or remove Python packages. That works like this:
+
+**Step one:** Install CondaPkg
+```
+] # by pressing the closing square bracket you enter the package manager mode of Julia
+add CondaPkg # add the Python package manger
+
+```
+Now press the <DEL> key to leave the package manager.
+In the Julia REPL, type:
+```
+using CondaPkg
+]                 # enter the package manager mode
+help              # will show you all available commands; try for example
+conda add ipython # this will add ipython
+```
+Press <DEL> to leave the package manager mode.
+In the Julia REPL, type:
+```
+CondaPkg.withenv() do
+    run(`ipython`)
+end
+```
+You should now get an interactive Python prompt and can program in Python.
+
