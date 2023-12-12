@@ -59,6 +59,17 @@ acceleration. For equality in symbolic equations the character `~` has to be use
 the character `=` has the meaning "assign a value to a variable" which is not what we are doing here. The third equation means that all elements of the acceleration vector must be equal
 to the elements of the gravity vector. We end up with an array of `3x3`` equations.
 
+The next lines are:
+```julia
+@named sys = ODESystem(eqs, t)
+simple_sys = structural_simplify(sys)
+```
+This means, we create a named ordinary equation system, depending on `t`. Then we simplify
+the system symbolically (order reduction). If you type `sys` in the Julia REPL (command line)
+you can see that the original system had 9 equations, the second line above created a system
+with ony six equations. This step helps to speed up the simulation and often also removes
+algebraic loops which makes the ODE a lot simple to solve numerically later on.
+
 ## Running the Python version as comparison
 From the Julia prompt execute:
 ```
