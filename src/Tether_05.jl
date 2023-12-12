@@ -107,7 +107,6 @@ function play()
     ylim(-segments*10-10, 0.5)
     xlim(-segments*5, segments*5)
     grid(true; color="grey", linestyle="dotted")
-    pygui(true)
     line, sc, txt = nothing, nothing, nothing
     for time in 0:dt:10
         line, sc, txt = plot2d(sol, time, segments, line, sc, txt)
