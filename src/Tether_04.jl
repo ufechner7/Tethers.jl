@@ -82,7 +82,6 @@ function plt(sol, particle)
     POS_Z = sol(X, idxs=pos[3, particle])
     VEL_Z = sol(X, idxs=vel[3, particle])
     C_SPRING = sol(X, idxs=c_spring[particle-1])
-
     lns1 = plot(X, POS_Z, color="green", label="pos_z")
     xlabel("time [s]")
     ylabel("pos_z [m]")
