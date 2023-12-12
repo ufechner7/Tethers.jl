@@ -13,6 +13,7 @@ ACC0 = zeros(3, segments+1)
 SEGMENTS0 = zeros(3, segments) 
 UNIT_VECTORS0 = zeros(3, segments)
 for i in 1:segments+1
+    local l0
     l0 = -(i-1)*L0
     v0 = (i-1)*V0/segments
     POS0[:, i] .= [sin(α0) * l0, 0, cos(α0) * l0]
