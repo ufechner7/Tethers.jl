@@ -1,15 +1,5 @@
-# is included from simulate.jl
-function plot2d(pos, reltime=0.0; zoom=true, front=false, segments=6)
-    x = Float64[] 
-    z = Float64[]
-    for i in eachindex(pos)
-        if front
-            push!(x, pos[i][2])
-        else
-            push!(x, pos[i][1])
-        end
-        push!(z, pos[i][3])
-    end
+# is included from Tether_04.jl.jl
+function plot2d(x, z, reltime=0.0)
     x_max = maximum(x)
     z_max = maximum(z)
     plot(x,z, xlabel="x [m]", ylabel="z [m]", legend=false)
