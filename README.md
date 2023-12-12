@@ -268,7 +268,24 @@ Execution time for a simulation of 10s duration with logging the state every 20m
 ## Using Python together with Julia
 Python and Julia play very well together. You could see in the examples above that I am using Matplotlib for plotting, both in Python and in Julia. Julia has a build-in package manager. You can use it install and remove Julia packages, but also to install or remove Python packages. That works like this:
 
-**Step one:** Install CondaPkg
+
+
+**Using Python packages from Julia**
+There are three options:
+**Option one:** Use wrapper libraries which exist for a few, very popular Python packages, e.g.
+`PyPlot.jl` for Matplotlib or `SymPy.jl` for SymPy. You can install them like any
+other Julia package, e.g.
+```
+]     # enter package manager mode
+add SymPy
+<DEL> # leave the package manager
+```
+and on the Julia prompt:
+```
+using SymPy
+```
+
+**Option two:** Install CondaPkg
 ```
 ] # by pressing the closing square bracket you enter the package manager mode of Julia
 add CondaPkg # add the Python package manger
