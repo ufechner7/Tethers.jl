@@ -1,4 +1,3 @@
-# is included from Tether_05.jl.jl
 function plot2d(sol, reltime, segments)
     index = Int64(round(reltime*50+1))
     x = Float64[]
