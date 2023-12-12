@@ -285,7 +285,33 @@ and on the Julia prompt:
 using SymPy
 ```
 
-**Option two:** Install CondaPkg
+**Option two:**
+
+Use PyCall to use Python packages for Julia. This works for all Python packages, but 
+is a little bit less comfortable than option one. Example:
+
+Install `NumPy`:
+```
+using CondaPkg
+]
+conda add NumPy
+add PyCall
+```
+Press \<DEL\> to leave the package manager mode.
+```
+using PyCall
+np = pyimport("numpy")
+```
+Now you can use NumPy from Julia:
+```julia
+julia> np.zeros(3)
+3-element Vector{Float64}:
+ 0.0
+ 0.0
+ 0.0
+```
+
+**Sometimes needed:** Install CondaPkg
 ```
 ] # by pressing the closing square bracket you enter the package manager mode of Julia
 add CondaPkg # add the Python package manger
