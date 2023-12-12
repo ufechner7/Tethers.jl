@@ -8,7 +8,7 @@ using ModelingToolkit, OrdinaryDiffEq, PyPlot, LinearAlgebra
 G_EARTH     = Float64[0.0, 0.0, -9.81]          # gravitational acceleration     [m/s²]
 L0::Float64 = 10.0                              # initial segment length            [m]
 V0::Float64 = 4                                 # initial velocity of lowest mass [m/s]
-segments::Int64 = 1                             # number of tether segments         [-]
+segments::Int64 = 2                             # number of tether segments         [-]
 POS0 = zeros(3, segments+1)
 VEL0 = zeros(3, segments+1)
 ACC0 = zeros(3, segments+1)
@@ -67,10 +67,12 @@ dt = 0.02
 tol = 1e-6
 tspan = (0.0, duration)
 ts    = 0:dt:duration
-# TODO Use POS0 and VEL0 to calculate u0
-u0 = zeros((segments+1)*6)
-u0[segments*6+3] = -L0
-u0[segments*6+6] = V0
+
+u0 = Float64[]
+for i in 1:segments+1
+    global u0
+    u0=vcat(u0, POS0[:, i], VEL0[:, i])
+end
 
 prob = ODEProblem(simple_sys, u0, tspan)
 @time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
