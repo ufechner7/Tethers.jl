@@ -1,6 +1,6 @@
 # Tutorial example simulating a 3D mass-spring system with a nonlinear spring (no spring forces
 # for l < l_0) and n tether segments. 
-using ModelingToolkit, OrdinaryDiffEq, Plots, LinearAlgebra
+using ModelingToolkit, OrdinaryDiffEq, PyPlot, LinearAlgebra
 
 G_EARTH     = Float64[0.0, 0.0, -9.81]          # gravitational acceleration     [m/s²]
 L0::Float64 = 10.0                              # initial segment length            [m]
@@ -79,27 +79,40 @@ u0 = Dict(pos=>POS0, vel=>VEL0)
 prob = ODEProblem(simple_sys, u0, tspan)
 @time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
 
-function plot2d(sol, reltime, segments)
+function plot2d(sol, reltime, segments, line, sc, txt)
     index = Int64(round(reltime*50+1))
-    x = Float64[]
-    z = Float64[]
+    x, z = Float64[], Float64[]
     for particle in 1:segments+1
         push!(x, (sol(sol.t, idxs=pos[1, particle]))[index])
         push!(z, (sol(sol.t, idxs=pos[3, particle]))[index])
     end
-    x_max = maximum(x)
     z_max = maximum(z)
-    Plots.plot(x,z, xlabel="x [m]", ylabel="z [m]", legend=false)
-    annotate!(15, z_max-3.0, "t=$(round(reltime,digits=1)) s")
-    Plots.plot!(x, z, seriestype = :scatter) 
-    ylims!((-segments*10-10, 0.5))
-    xlims!((-segments*5, segments*5))
+    if isnothing(line)
+        line, = plot(x,z; linewidth="1")
+        sc  = scatter(x, z; s=15, color="red") 
+        txt = annotate("t=$(round(reltime,digits=1)) s",  xy=(12, z_max-3.0), fontsize = 12)
+        PyPlot.show(block=false)
+    else
+        line.set_xdata(x)
+        line.set_ydata(z)
+        sc.set_offsets(hcat(x,z))
+        txt.set_text("t=$(round(reltime,digits=1)) s")
+        gcf().canvas.draw()
+    end
+    line, sc, txt
 end
 
-dt = 0.04
-for time in 0:dt:10
-    display(plot2d(sol, time, segments))
-    sleep(0.25*dt)
+function play()
+    dt = 0.2
+    ylim(-segments*10-10, 0.5)
+    xlim(-segments*5, segments*5)
+    grid(true; color="grey", linestyle="dotted")
+    pygui(true)
+    line, sc, txt = nothing, nothing, nothing
+    for time in 0:dt:10
+        line, sc, txt = plot2d(sol, time, segments, line, sc, txt)
+        sleep(0.25*dt)
+    end
+    nothing
 end
-nothing
-
+play()
