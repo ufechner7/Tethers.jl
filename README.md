@@ -274,7 +274,7 @@ Python and Julia play very well together. You could see in the examples above th
 add CondaPkg # add the Python package manger
 
 ```
-Now press the <DEL> key to leave the package manager.
+Now press the \<DEL\> key to leave the package manager.
 In the Julia REPL, type:
 ```
 using CondaPkg
@@ -282,7 +282,7 @@ using CondaPkg
 help              # will show you all available commands; try for example
 conda add ipython # this will add ipython
 ```
-Press <DEL> to leave the package manager mode.
+Press \<DEL\> to leave the package manager mode.
 In the Julia REPL, type:
 ```
 CondaPkg.withenv() do
