@@ -1,7 +1,5 @@
-"""
-Tutorial example simulating a 3D mass-spring system with a nonlinear spring (no spring forces
-for l < l_0) and n tether segments. 
-"""
+# Tutorial example simulating a 3D mass-spring system with a nonlinear spring (no spring forces
+# for l < l_0) and n tether segments. 
 using ModelingToolkit, OrdinaryDiffEq, Plots, LinearAlgebra
 
 G_EARTH     = Float64[0.0, 0.0, -9.81]          # gravitational acceleration     [m/s²]
