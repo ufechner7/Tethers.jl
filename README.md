@@ -150,6 +150,53 @@ As you can see, logging of calculated variables is not
 possible with Assimulo (easy with ModelingToolkit in Julia). You need to re-calculate them
 after the simulation.
 
+#### Multi-segment tether
+Using 2D arrays of variables allows to simulate a multi-segment tether:
+```julia
+@variables pos(t)[1:3, 1:segments+1]  = POS0
+@variables vel(t)[1:3, 1:segments+1]  = VEL0
+@variables acc(t)[1:3, 1:segments+1]  = ACC0
+```
+In this case it is important to calculate the initial conditions of each particle such that they are physically feasible:
+```julia
+G_EARTH     = Float64[0.0, 0.0, -9.81]          # gravitational acceleration     [m/s²]
+L0::Float64 = 10.0                              # initial segment length            [m]
+V0::Float64 = 4                                 # initial velocity of lowest mass [m/s]
+segments::Int64 = 2                             # number of tether segments         [-]
+POS0 = zeros(3, segments+1)
+VEL0 = zeros(3, segments+1)
+ACC0 = zeros(3, segments+1)
+SEGMENTS0 = zeros(3, segments) 
+UNIT_VECTORS0 = zeros(3, segments)
+for i in 1:segments+1
+    POS0[:, i] .= [0.0, 0, -(i-1)*L0]
+    VEL0[:, i] .= [0.0, 0, (i-1)*V0/segments]
+end
+for i in 2:segments+1
+    ACC0[:, i] .= G_EARTH
+end
+for i in 1:segments
+    UNIT_VECTORS0[:, i] .= [0, 0, 1.0]
+    SEGMENTS0[:, i] .= POS0[:, i+1] - POS0[:, i]
+end
+```
+The first example of such a model is the script [Tether_04.jl](Tether_04.jl) which is derived from the last example.
+
+In the script [Tether_05.jl](Tether_05.jl) the spring force is distributed correctly on the two masses attached to the spring, see:
+```julia
+if i == segments
+    eqs2 = vcat(eqs2, total_force[:, i] ~ spring_force[:, i])
+else
+    eqs2 = vcat(eqs2, total_force[:, i] ~ spring_force[:, i]- spring_force[:, i+1])
+end
+```
+We loop backwards over the particles, starting with the last particle, because on the last particle only one force is acting. On particle $n-1$ two spring forces are acting in the opposite direction.
+
+Finally in this example we plot the result dynamically as 2D video. Screenshot:
+
+![Tether 2D](docs/Tether2d.png)
+
+
 #### Benchmarking
 Using a callback slows the simulation down, but not much. Try it out:
 ```julia
