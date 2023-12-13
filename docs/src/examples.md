@@ -84,7 +84,7 @@ and the following methods:
             if solver.sw[0]:       # If the switch is True the pendulum bounces
                 print(solver.t)
 ```
-**Example:** [Tether_03b.py](src/Tether_03b.py).  
+**Example:** [Tether_03b.py](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_03b.py).  
 As you can see, logging of calculated variables is not
 possible with Assimulo (easy with ModelingToolkit in Julia). You need to re-calculate them
 after the simulation.
@@ -96,7 +96,7 @@ Using 2D arrays of variables allows to simulate a multi-segment tether:
 @variables vel(t)[1:3, 1:segments+1]  = VEL0
 @variables acc(t)[1:3, 1:segments+1]  = ACC0
 ```
-In this case it is important to calculate the initial conditions of each particle such that they are physically feasible:
+In this case, it is important to calculate the initial conditions of each particle such that they are physically feasible:
 ```julia
 G_EARTH     = Float64[0.0, 0.0, -9.81]          # gravitational acceleration     [m/s²]
 L0::Float64 = 10.0                              # initial segment length            [m]
@@ -121,7 +121,7 @@ end
 ```
 The first example of such a model is the script [Tether_04.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_04.jl) which is derived from the last example.
 
-In the script [Tether_05.jl](src/Tether_05.jl) the spring force is distributed correctly on the two masses attached to the spring as shown here:
+In the script [Tether_05.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_05.jl) the spring force is distributed correctly on the two masses attached to the spring as shown here:
 ```julia
 if i == segments
     eqs2 = vcat(eqs2, total_force[:, i] ~ spring_force[:, i])
