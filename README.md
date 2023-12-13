@@ -7,7 +7,7 @@ drag attached.
 ## Installation
 
 1. make sure you are running a `bash` terminal (shell) and you have at least 16GB RAM (MAC, Linux and Windows supported).  
-   On Windows, you can use [git for windows](https://gitforwindows.org/) which provides git AND a bash shell, but for using Julia from a `bash` terminal you must also install either  [Installation and usage of VSCode](docs/vscode.md) or [Windows Terminal](https://learn.microsoft.com/en-us/windows/terminal/install). `Windows Terminal` is the simple and clean solution, `VSCode` the comfortable, fancy solution.
+   On Windows, you can use [git for windows](https://gitforwindows.org/) which provides git AND a bash shell, but for using Julia from a `bash` terminal you must also install either  [Installation and usage of VSCode](docs/images/vscode.md) or [Windows Terminal](https://learn.microsoft.com/en-us/windows/terminal/install). `Windows Terminal` is the simple and clean solution, `VSCode` the comfortable, fancy solution.
 2. install Julia 1.10 using `juliaup`, see [https://github.com/JuliaLang/juliaup](https://github.com/JuliaLang/juliaup). If `juliaup` is already installed, the following commands will do:
 ```
 juliaup add 1.10
@@ -39,7 +39,7 @@ include("src/Tether_01.jl")
 ```
 You should see a plot similar to:
 
-![Falling mass](docs/FallingMass.png)
+![Falling mass](docs/images/FallingMass.png)
 
 This example shows a mass that is thrown upwards, slows down and then falls.
 
@@ -89,7 +89,7 @@ From the Julia prompt, run the simulation:
 ```julia
 include("src/Tether_02.jl")
 ```
-![Spring damper](docs/SpringDamper.png)
+![Spring damper](docs/images/SpringDamper.png)
 
 Mass, attached to a spring damper element. One end of the spring at the origin, the second end
 attached to the mass. Mass initially below the origin, spring un-stretched. Z-axis pointing
@@ -101,7 +101,7 @@ upwards.
 ```julia
 include("src/Tether_03.jl")
 ```
-![Non-linear Spring damper](docs/Nonlinear.png)
+![Non-linear Spring damper](docs/images/Nonlinear.png)
 
 Mass, attached to a spring damper element. One end of the spring at the origin, the second end
 attached to the mass. Mass initially below the origin, spring un-stretched. Z-axis pointing
@@ -219,7 +219,7 @@ We loop backwards over the particles, starting with the last particle, because o
 
 Finally in this example we plot the result dynamically as 2D video. Screenshot:
 
-![Tether 2D](docs/Tether2d.png)
+![Tether 2D](docs/images/Tether2d.png)
 
 
 #### Benchmarking

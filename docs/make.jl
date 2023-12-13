@@ -6,6 +6,15 @@ if ("TestEnv" ∈ keys(Pkg.project().dependencies))
 end
 using Documenter: deploydocs, makedocs
 
+src="src"
+dst="docs/src/src"
+mkpath(dst)
+cp(src, dst; force=true)
+src="docs/images"
+dst="docs/src/docs/images"
+mkpath(dst)
+cp(src, dst; force=true)
+
 src="README.md"
 dst="docs/src/index.md"
 if ! isfile(dst)

@@ -1,2 +1,1 @@
-## Python and Julia in harmonie
-
+## Python and Julia in harmony
