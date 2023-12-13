@@ -3,9 +3,10 @@
 using ModelingToolkit, OrdinaryDiffEq, PyPlot, LinearAlgebra
 
 G_EARTH     = Float64[0.0, 0.0, -9.81]          # gravitational acceleration     [m/s²]
-L0::Float64 = 10.0                              # initial segment length            [m]
+L0::Float64 = 5.0                               # initial segment length            [m]
 V0::Float64 = 2                                 # initial velocity of lowest mass [m/s]
-segments::Int64 = 5                             # number of tether segments         [-]
+M0::Float64 = 0.5                               # mass per particle                [kg]
+segments::Int64 = 10                            # number of tether segments         [-]
 α0 = π/8                                        # initial tether angle            [rad]
 duration = 60.0                                 # duration of the simulation        [s]
 POS0 = zeros(3, segments+1)
@@ -29,7 +30,7 @@ for i in 1:segments
 end
 
 # model, Z component upwards
-@parameters mass=1.0 c_spring0=50.0 damping=0.5 l_seg=L0
+@parameters mass=M0 c_spring0=50.0 damping=0.5 l_seg=L0
 @variables t 
 @variables pos(t)[1:3, 1:segments+1]  = POS0
 @variables vel(t)[1:3, 1:segments+1]  = VEL0
@@ -105,8 +106,8 @@ end
 
 function play()
     dt = 0.2
-    ylim(-segments*10-10, 0.5)
-    xlim(-segments*5, segments*5)
+    ylim(-segments*L0-10, 0.5)
+    xlim(-segments*L0/2, segments*L0/2)
     grid(true; color="grey", linestyle="dotted")
     line, sc, txt = nothing, nothing, nothing
     for time in 0:dt:duration
