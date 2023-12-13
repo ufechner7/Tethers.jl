@@ -32,4 +32,4 @@ makedocs(;
         "Readme" => "index.md",
         "Python and Julia" => "python.md"
     ])
-deploydocs(repo = "github.com/ufechner7/PkgHelpers.jl.git")
+deploydocs(repo = "github.com/ufechner7/Tethers.jl.git")
