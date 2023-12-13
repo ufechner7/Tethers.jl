@@ -2,20 +2,19 @@
 A sequence of examples, from a simple mass attached to a spring-damper element to
 a full segmented tether model with real-out and aerodynamic drag attached.
 
-## Mass, attached to a spring-damper element
+## Mass, attached to a spring-damper
 From the Julia prompt, run the simulation:
 ```julia
 include("src/Tether_02.jl")
 ```
 ![Spring damper](docs/images/SpringDamper.png)
 
-Mass, attached to a spring damper element. One end of the spring at the origin, the second end
-attached to the mass. Mass initially below the origin, spring un-stretched. Z-axis pointing
+Mass, attached to a spring-damper element. One end of the spring is attached at the origin, the second end is attached to the mass. Mass initially below the origin, spring un-stretched. Z-axis pointing
 upwards.
 
 **Julia code:** [Tether_02.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_02.jl)
 
-## Mass, attached to a non-linear spring damper element
+## Mass, with non-linear spring damper
 ```julia
 include("src/Tether_03.jl")
 ```
