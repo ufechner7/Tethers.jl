@@ -17,7 +17,7 @@ include("src/Tether_03.jl")
 ```
 ![Non-linear Spring damper](docs/images/Nonlinear.png)
 
-Mass, attached to a spring damper element. One end of the spring at the origin, the second end
+Mass, attached to a spring-damper element. One end of the spring is attached at the origin, and the second end is
 attached to the mass. Mass initially below the origin, spring un-stretched. Z-axis pointing
 upwards. 
 
@@ -129,9 +129,9 @@ else
     eqs2 = vcat(eqs2, total_force[:, i] ~ spring_force[:, i]- spring_force[:, i+1])
 end
 ```
-We loop backwards over the particles, starting with the last particle, because on the last particle, only one force is acting. On particle $n-1$ two spring forces are acting in the opposite direction.
+We loop backward over the particles, starting with the last particle, because on the last particle, only one force is acting. On particle $n-1$ two spring forces are acting in the opposite direction.
 
-Finally in this example we plot the result dynamically as 2D video. Screenshot:
+Finally, in this example, we plot the result dynamically as 2D video. Screenshot:
 
 ![Tether 2D](docs/images/Tether2d.png)
 
