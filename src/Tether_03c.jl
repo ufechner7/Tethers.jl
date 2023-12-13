@@ -3,8 +3,8 @@
 using ModelingToolkit, OrdinaryDiffEq, PyPlot, LinearAlgebra
 
 G_EARTH  = Float64[0.0, 0.0, -9.81]    # gravitational acceleration [m/s²]
-L0 = -10.0                             # initial spring length      [m]
-V0 = 4.0                               # initial velocity           [m/s]
+L0::Float64 = -10.0                             # initial spring length      [m]
+V0::Float64 = 4.0                               # initial velocity           [m/s]
 
 function model3(G_EARTH, L0, V0)
     # model, Z component upwards
