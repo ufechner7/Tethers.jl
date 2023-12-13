@@ -20,9 +20,7 @@ include("src/Tether_03.jl")
 ```
 ![Non-linear Spring damper](docs/images/Nonlinear.png)
 
-Mass, attached to a spring-damper element. One end of the spring is attached at the origin, and the second end is
-attached to the mass. Mass initially below the origin, spring un-stretched. Z-axis pointing
-upwards. 
+Mass, attached to a non-linear spring-damper element. One end of the spring is attached at the origin, and the second end is attached to the mass. Mass initially below the origin, spring un-stretched. Z-axis pointing upwards. 
 
 Initial velocity $4 m/s$ upwards. The compression stiffness is zero. The grey line shows that
 the stiffness is zero at the beginning, and has the nominal value at the end. **Example:** [Tether_03.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_03.jl).
