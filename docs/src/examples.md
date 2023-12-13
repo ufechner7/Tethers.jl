@@ -1,4 +1,8 @@
-## Mass, attached to a spring damper element
+# Examples
+A sequence of examples, from a simple mass attached to a spring-damper element to
+a full segmented tether model with real-out and aerodynamic drag attached.
+
+## Mass, attached to a spring-damper element
 From the Julia prompt, run the simulation:
 ```julia
 include("src/Tether_02.jl")
@@ -37,7 +41,7 @@ eqs = vcat(D.(pos)      ~ vel,
            acc          ~ G_EARTH + spring_force/mass)
 ```
 
-The same as Python version: **Python code:** [Tether_03.py](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_03.py). 
+The same in Python: **Python code:** [Tether_03.py](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_03.py). 
 
 ### Using a callback
 By using a callback to detect exactly when the transition from a stiff tether segment to a loose
@@ -121,7 +125,7 @@ end
 ```
 The first example of such a model is the script [Tether_04.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_04.jl) which is derived from the last example.
 
-In the script [Tether_05.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_05.jl) the spring force is distributed correctly on the two masses attached to the spring as shown here:
+In the script [Tether_05.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_05.jl), the spring force is distributed correctly on the two masses attached to the spring as shown here:
 ```julia
 if i == segments
     eqs2 = vcat(eqs2, total_force[:, i] ~ spring_force[:, i])
