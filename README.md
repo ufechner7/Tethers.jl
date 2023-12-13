@@ -27,7 +27,7 @@ cd bin
 ./create_sys_image
 ```
 
-## Running the simulation
+## Basic example
 Use the provided script to start Julia from the `Tethers.jl` folder:
 ```bash
 cd repos/Tethers.jl
@@ -70,7 +70,7 @@ you can see that the original system had 9 equations, the second line above crea
 with ony six equations. This step helps to speed up the simulation and often also removes
 algebraic loops which makes the ODE a lot simple to solve numerically later on.
 
-## Running the Python version as comparison
+## Python version as comparison
 From the Julia prompt execute:
 ```
 include("src/RunTether.jl")
