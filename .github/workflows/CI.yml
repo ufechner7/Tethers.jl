@@ -29,6 +29,6 @@ jobs:
       - run: |
           julia --project=docs -e '
             using Documenter: DocMeta, doctest
-            using PkgHelpers
-            DocMeta.setdocmeta!(PkgHelpers, :DocTestSetup, :(using PkgHelpers); recursive=true)
-            doctest(PkgHelpers)'
+            using Tethers
+            DocMeta.setdocmeta!(Tethers, :DocTestSetup, :(using Tethers); recursive=true)
+            doctest(Tethers)'
