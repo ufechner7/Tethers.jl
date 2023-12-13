@@ -3,7 +3,7 @@
 It is useful to install the integrated development environment VSCode, even though it is not required. You can also use any editor of your choice.
 
 VSCode provides syntax highlighting, but also the feature "goto definition" which can help to understand and explore the code.
-![VSCode](vscode.png)
+![VSCode](docs/images/vscode.png)
 
 You can download and install VSCode for all operating systems [here](https://code.visualstudio.com/).
 
