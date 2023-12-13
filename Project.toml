@@ -1,3 +1,8 @@
+name = "Tethers"
+uuid = "9fc261b7-0902-4839-ada8-9390617e313c"
+authors = ["Uwe Fechner <uwe.fechner.msc@gmail.com> and contributors"]
+version = "0.1"
+
 [deps]
 CondaPkg = "992eb4ea-22a4-4c89-a5bb-47a3300528ab"
 ModelingToolkit = "961ee093-0014-501f-94e3-6117800e7a78"
@@ -15,3 +20,9 @@ PackageCompiler = "=2.1.15"
 PyCall = "=1.96.3"
 PyPlot = "=2.11.2"
 julia = "~1.10"
+
+[extras]
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+
+[targets]
+test = ["Documenter"]
