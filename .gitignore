@@ -4,3 +4,4 @@ bin/kps-image-1.10.so
 .CondaPkg
 src/__pycache__
 .vscode/settings.json
+docs/build
