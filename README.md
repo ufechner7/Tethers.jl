@@ -313,6 +313,48 @@ cd bin
 ```
 to re-build it.
 
+**Option three:**
+Using the package [PythonCall](https://github.com/JuliaPy/PythonCall.jl).
+You cannot use it together with `PyCall`, it is the newer successor of `PyCall`, and it is
+symmetric, you can use it to call Julia from Python or Python from Julia.
+
+We need to create a new project to try it out:
+```
+cd repos # or any other folder that you use for your projects
+mkdir PythonDemo
+cd PythonDemo
+julia --project="." # this creates a new, empty project
+```
+Then enter at the Julia prompt:
+```
+]               # enter the package manger mode
+add PythonCall
+<BACK>          # leave the package manager mode
+```
+Example for using Python from Julia:
+```julia
+re = pyimport("re")   # import the re module
+words = re.findall("[a-zA-Z]+", "PythonCall.jl is very useful!")
+```
+Output:
+```
+Python: ['PythonCall', 'jl', 'is', 'very', 'useful']
+```
+Type:
+```julia
+sentence = Py(" ").join(words)
+```
+Output:
+```
+Python: 'PythonCall jl is very useful'
+```
+And finally convert this Python object to a Julia string:
+```julia
+pyconvert(String, sentence)  # convert the Python string to a Julia string
+```
+For adding Python packages that you want to use with PythonCall use CondaPkg as explained
+in the next section.
+
 **Sometimes needed:** Install CondaPkg
 ```
 ] # by pressing the closing square bracket you enter the package manager mode of Julia
