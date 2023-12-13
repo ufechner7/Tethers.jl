@@ -86,12 +86,12 @@ If you compare the Python and the Julia scripts you can see that:
 - the Julia script is shorter and easier to read
 - Julia is about 16 times faster when running the simulation
 
-Have a look at the [Examples] that teach you how to construct a full tether model step by step.
+Have a look at the [Examples](https://ufechner7.github.io/Tethers.jl/dev/examples/) that teach you how to construct a full tether model step by step.
 
 ## Overall comparison
 Execution time for a simulation of 10s duration with logging the state every 20ms.
 
-| Testcase                    | Lines of code (LOC) Julia | LOC Python  | Time Julia [ms] | Time Python [ms] |
+| Test-case                    | Lines of code (LOC) Julia | LOC Python  | Time Julia [ms] | Time Python [ms] |
 |:----------------------------|:-------------------:|:---:|:-----:|:---:|
 |Falling mass                 |     42              | 56  | 0.17  | 2.6 |
 |Non-linear Spring damper     |     61              | 83  | 0.61  | 20  |
