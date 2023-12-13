@@ -1,11 +1,11 @@
-## Python and Julia in harmony
+# Python and Julia in harmony
 
 Python and Julia play very well together. You could see in the examples above that I am using Matplotlib for plotting, both in Python and in Julia. Julia has a build-in package manager. You can use it install and remove Julia packages, but also to install or remove Python packages. That works like this:
 
-### Using Python packages from Julia
+## Using Python packages from Julia
 There are three options:
 
-#### Option one: 
+### Option one: 
 Use wrapper libraries which exist for a few, very popular Python packages, e.g.
 [PyPlot.jl](https://github.com/JuliaPy/PyPlot.jl) for Matplotlib or [SymPy.jl](https://github.com/JuliaPy/SymPy.jl) for SymPy. You can install them like any other Julia package, e.g.
 ```
@@ -18,7 +18,7 @@ and on the Julia prompt:
 using SymPy
 ```
 
-#### Option two:
+### Option two:
 
 Use PyCall to use Python packages for Julia. This works for all Python packages, but 
 is a little bit less comfortable than option one. Example:
@@ -46,7 +46,7 @@ cd bin
 ```
 to re-build it.
 
-#### Option three:
+### Option three:
 
 Using the package [PythonCall](https://github.com/JuliaPy/PythonCall.jl).
 You cannot use it together with `PyCall`, it is the newer successor of `PyCall`, and it is

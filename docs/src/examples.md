@@ -1,5 +1,4 @@
-## More examples
-### Mass, attached to a spring damper element
+## Mass, attached to a spring damper element
 From the Julia prompt, run the simulation:
 ```julia
 include("src/Tether_02.jl")
@@ -12,7 +11,7 @@ upwards.
 
 **Julia code:** [Tether_02.jl](src/Tether_02.jl)
 
-### Mass, attached to a non-linear spring damper element
+## Mass, attached to a non-linear spring damper element
 ```julia
 include("src/Tether_03.jl")
 ```
@@ -40,7 +39,7 @@ eqs = vcat(D.(pos)      ~ vel,
 
 The same as Python version: **Python code:** [Tether_03.py](src/Tether_03.py). 
 
-#### Using a callback
+### Using a callback
 By using a callback to detect exactly when the transition from a stiff tether segment to a loose
 tether segment happens we can increase the accuracy of the simulation. **Julia code:** [Tether_03b.jl](src/Tether_03b.jl).
 
@@ -59,7 +58,7 @@ and add the parameter `callback = cb` to the line that calls the solver:
 sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts, callback = cb)
 ```
 
-#### Using a callback with Python
+### Using a callback with Python
 In Python you would have to add the following attribute:
 ```Python
     sw0 = [vel_1[2] > 0] # array of booleans; true means the tether segment is loose (l < l_0)
@@ -90,7 +89,7 @@ As you can see, logging of calculated variables is not
 possible with Assimulo (easy with ModelingToolkit in Julia). You need to re-calculate them
 after the simulation.
 
-#### Multi-segment tether
+## Multi-segment tether
 Using 2D arrays of variables allows to simulate a multi-segment tether:
 ```julia
 @variables pos(t)[1:3, 1:segments+1]  = POS0
@@ -137,7 +136,7 @@ Finally in this example we plot the result dynamically as 2D video. Screenshot:
 ![Tether 2D](docs/images/Tether2d.png)
 
 
-#### Benchmarking
+## Benchmarking
 Using a callback slows the simulation down, but not much. Try it out:
 ```julia
 include("src/Tether_03c.jl")

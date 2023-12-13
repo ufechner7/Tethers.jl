@@ -88,7 +88,7 @@ If you compare the Python and the Julia script you can see that:
 
 Have a look at the [Examples] that teach you how to construct a full tether model step by step.
 
-## Comparison
+## Overall comparison
 Execution time for a simulation of 10s duration with logging the state every 20ms.
 
 | Testcase                    | Lines of code (LOC) Julia | LOC Python  | Time Julia [ms] | Time Python [ms] |
