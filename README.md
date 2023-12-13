@@ -368,7 +368,7 @@ using CondaPkg
 ]                 # enter the package manager mode
 help              # will show you all available commands; try for example
 conda add ipython # this will add ipython
-```
+``` 
 Press \<DEL\> to leave the package manager mode.
 In the Julia REPL, type:
 ```
