@@ -9,7 +9,7 @@ Mass, attached to a spring damper element. One end of the spring at the origin, 
 attached to the mass. Mass initially below the origin, spring un-stretched. Z-axis pointing
 upwards.
 
-**Julia code:** [Tether_02.jl](src/Tether_02.jl)
+**Julia code:** [Tether_02.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_02.jl)
 
 ## Mass, attached to a non-linear spring damper element
 ```julia
@@ -37,11 +37,11 @@ eqs = vcat(D.(pos)      ~ vel,
            acc          ~ G_EARTH + spring_force/mass)
 ```
 
-The same as Python version: **Python code:** [Tether_03.py](src/Tether_03.py). 
+The same as Python version: **Python code:** [Tether_03.py](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_03.py). 
 
 ### Using a callback
 By using a callback to detect exactly when the transition from a stiff tether segment to a loose
-tether segment happens we can increase the accuracy of the simulation. **Julia code:** [Tether_03b.jl](src/Tether_03b.jl).
+tether segment happens we can increase the accuracy of the simulation. **Julia code:** [Tether_03b.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_03b.jl).
 
 We only have to add the following lines of code:
 ```julia
@@ -119,7 +119,7 @@ for i in 1:segments
     SEGMENTS0[:, i] .= POS0[:, i+1] - POS0[:, i]
 end
 ```
-The first example of such a model is the script [Tether_04.jl](src/Tether_04.jl) which is derived from the last example.
+The first example of such a model is the script [Tether_04.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_04.jl) which is derived from the last example.
 
 In the script [Tether_05.jl](src/Tether_05.jl) the spring force is distributed correctly on the two masses attached to the spring as shown here:
 ```julia
@@ -129,7 +129,7 @@ else
     eqs2 = vcat(eqs2, total_force[:, i] ~ spring_force[:, i]- spring_force[:, i+1])
 end
 ```
-We loop backwards over the particles, starting with the last particle, because on the last particle only one force is acting. On particle $n-1$ two spring forces are acting in the opposite direction.
+We loop backwards over the particles, starting with the last particle, because on the last particle, only one force is acting. On particle $n-1$ two spring forces are acting in the opposite direction.
 
 Finally in this example we plot the result dynamically as 2D video. Screenshot:
 
@@ -152,9 +152,9 @@ Solving the system with callback...
 If you zoom in to the points in time where pos_z crosses -10m
 you should see a difference...
 ```
-In this example the gain of accuracy is very small, but that can be different
+In this example, the gain of accuracy is very small, but that can be different
 in other simulations. For benchmarking we call solve twice: The first call ensures that the
-code is compiled, the second call measures the execution time of the code.
+code is compiled, and the second call measures the execution time of the code.
 
 **Python**
 The script, which executes the Python code with callbacks:
@@ -166,4 +166,4 @@ Without callbacks:
 ```
 include("src/RunTether_03.jl")
 ```
-still 20 ms are needed.
+still, 20 ms are needed.
