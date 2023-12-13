@@ -78,11 +78,11 @@ From the Julia prompt execute:
 ```
 include("src/RunTether.jl")
 ```
-This will install Python and Matplotlib and Assimulo and execute the script `Tether_01.py`.
+This will install Python, Matplotlib and Assimulo and execute the script `Tether_01.py`.
 
 **Python code:** [Tether_01.py](src/Tether_01.py)
 
-If you compare the Python and the Julia script you can see that:
+If you compare the Python and the Julia scripts you can see that:
 - the Julia script is shorter and easier to read
 - Julia is about 16 times faster when running the simulation
 
@@ -98,7 +98,7 @@ Execution time for a simulation of 10s duration with logging the state every 20m
 |dito with callbacks          |     68              | 103 | 0.74  | 31  |
 |swinging tether, 5 segments  |    117              | 190 | 2.90  |     |
 
-**Tradeoff Julia vs Python:** In Julia the code is compiled before it is executed, that can cause about 1 to 10 seconds delay when running a simulation the first time, but speeds up the execution a lot afterwards. In addition Julia can run fully multithreaded, Python cannot really use threads because of the global interpreter lock. 
+**Tradeoff Julia vs Python:** In Julia, the code is compiled before it is executed, which can cause about one to 10 seconds delay when running a simulation the first time, but speeds up the execution a lot afterward. In addition, Julia can run fully multithreaded, Python cannot make use of multiple CPU cores with multithreading because of the global interpreter lock. 
 
 See also: [Why Julia?](https://ufechner7.github.io/2022/08/13/why-julia.html)
 
