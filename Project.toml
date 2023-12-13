@@ -5,6 +5,7 @@ OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
 PackageCompiler = "9b87118b-4619-50d2-8e1e-99f35a4d4d9d"
 PyCall = "438e738f-606a-5dbb-bf0a-cddfbfd45ab0"
 PyPlot = "d330b81b-6aea-500a-939a-2ce795aea3ee"
+Timers = "21f18d07-b854-4dab-86f0-c15a3821819a"
 
 [compat]
 CondaPkg = "=0.2.22"

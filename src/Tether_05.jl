@@ -1,6 +1,6 @@
 # Tutorial example simulating a 3D mass-spring system with a nonlinear spring (no spring forces
 # for l < l_0) and n tether segments. 
-using ModelingToolkit, OrdinaryDiffEq, PyPlot, LinearAlgebra
+using ModelingToolkit, OrdinaryDiffEq, PyPlot, LinearAlgebra, Timers
 
 G_EARTH     = Float64[0.0, 0.0, -9.81]          # gravitational acceleration     [m/s²]
 L0::Float64 = 5.0                               # initial segment length            [m]
@@ -105,14 +105,15 @@ function plot2d(sol, reltime, segments, line, sc, txt)
 end
 
 function play()
-    dt = 0.2
+    dt = 0.15
     ylim(-segments*L0-10, 0.5)
     xlim(-segments*L0/2, segments*L0/2)
     grid(true; color="grey", linestyle="dotted")
     line, sc, txt = nothing, nothing, nothing
+    start = time_ns()
     for time in 0:dt:duration
         line, sc, txt = plot2d(sol, time, segments, line, sc, txt)
-        sleep(0.25*dt)
+        wait_until(start + 0.5*time*1e9)
     end
     nothing
 end
