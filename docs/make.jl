@@ -30,6 +30,7 @@ makedocs(;
     doctest = false,
     pages=[
         "Readme" => "index.md",
+        "Examples" => "examples.md",
         "Python and Julia" => "python.md"
     ])
 deploydocs(repo = "github.com/ufechner7/Tethers.jl.git")
