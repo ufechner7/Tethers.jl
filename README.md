@@ -274,8 +274,7 @@ Python and Julia play very well together. You could see in the examples above th
 There are three options:
 
 **Option one:** Use wrapper libraries which exist for a few, very popular Python packages, e.g.
-`PyPlot.jl` for Matplotlib or `SymPy.jl` for SymPy. You can install them like any
-other Julia package, e.g.
+[PyPlot.jl](https://github.com/JuliaPy/PyPlot.jl) for Matplotlib or [SymPy.jl](https://github.com/JuliaPy/SymPy.jl) for SymPy. You can install them like any other Julia package, e.g.
 ```
 ]     # enter package manager mode
 add SymPy
