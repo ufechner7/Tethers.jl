@@ -1,6 +1,6 @@
 # Tethers.jl
-A series of examples, from a simple falling mass towards a tether model, consisting of point masses connected by spring damper elements with support of reel-out and reel-in and aerodynamic
-drag attached.
+[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://ufechner7.github.io/Tethers.jl/dev)
+A series of examples, from a simple falling mass towards a tether model, consisting of point masses connected by spring damper elements with support of reel-out and reel-in and aerodynamic drag attached.
 
 -- WORK IN PROGRESS --
 
