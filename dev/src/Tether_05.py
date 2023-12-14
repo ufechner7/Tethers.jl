@@ -119,7 +119,7 @@ def plot2d(fig, y, reltime, segments, line, sc, txt):
     return line, sc, txt
 
 def play(duration, y):
-    dt = 0.2
+    dt = 0.15
     plt.ioff()
     fig = plt.figure()
     plt.ylim(-SEGMENTS*L0-10, 0.5)
@@ -128,7 +128,7 @@ def play(duration, y):
     line, sc, txt = None, None, None
     for t in np.linspace(0, duration, num=round(duration/dt)+1):
         line, sc, txt = plot2d(fig, y, t, SEGMENTS, line, sc, txt)
-        time.sleep(0.05)
+        time.sleep(dt/2)
     plt.show()
    
 def run_example():  
@@ -144,7 +144,6 @@ def run_example():
     
     time, y, yd = sim.simulate(duration, 500) # Simulate 10 seconds with 500 communications points 
     play(duration, y)   
-    return y
     
 if __name__ == '__main__':
-    y=run_example()
+    run_example()
