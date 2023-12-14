@@ -46,7 +46,7 @@ You should see a plot similar to:
 
 This example shows a mass that is thrown upwards, slows down and then falls.
 
-**Julia code:** [Tether_01.jl](src/Tether_01.jl)
+**Julia code:** [Tether_01.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_01.jl)
 
 These differential equations define the model:
 ```Julia
@@ -67,11 +67,11 @@ The next lines are:
 @named sys = ODESystem(eqs, t)
 simple_sys = structural_simplify(sys)
 ```
-This means, we create a named ordinary equation system, depending on `t`. Then we simplify
+This means we create a named ordinary equation system, depending on `t`. Then we simplify
 the system symbolically (order reduction). If you type `sys` in the Julia REPL (command line)
 you can see that the original system had 9 equations, the second line above created a system
-with ony six equations. This step helps to speed up the simulation and often also removes
-algebraic loops which makes the ODE a lot simple to solve numerically later on.
+with only six equations. This step helps to speed up the simulation and often also removes
+algebraic loops which makes the ODE a lot simpler to solve numerically later on.
 
 ## Python version as comparison
 From the Julia prompt execute:
@@ -80,7 +80,7 @@ include("src/RunTether.jl")
 ```
 This will install Python, Matplotlib and Assimulo and execute the script `Tether_01.py`.
 
-**Python code:** [Tether_01.py](src/Tether_01.py)
+**Python code:** [Tether_01.py](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_01.py)
 
 If you compare the Python and the Julia scripts you can see that:
 - the Julia script is shorter and easier to read
