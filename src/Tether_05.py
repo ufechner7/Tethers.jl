@@ -16,7 +16,7 @@ C_SPRING = 50.0                        # spring constant
 DAMPING  =  0.5                        # damping [Ns/m]
 L_0      =  5.0                        # initial segment length    [m]
 ALPHA0   = math.pi/8                   # initial tether angle    [rad]
-SEGMENTS = 10
+SEGMENTS = 5
 MASS     = 0.5                         # mass per tether particle [kg]      
 ZEROS  = np.array([0.0, 0.0, 0.0])
 RESULT = np.zeros(SEGMENTS * 6 + 3).reshape((-1, 3))
@@ -52,12 +52,12 @@ class ExtendedProblem(Implicit_Problem):
     print(y0)
     print(yd0)
 
-    def res(self, t, y, yd, sw):  
+    def res(self, t, y, yd):  
         y1  = y.reshape((-1, 3)) # reshape the state vector such that we can access it per 3D-vector
         yd1 = yd.reshape((-1, 3))
         length = L_0
-        c_spring = C_SPRING * L_0 / length        
-        damping = DAMPING * length / L_0
+        c_spring = C_SPRING        
+        damping  = DAMPING
         RESULT[0] = y1[0] # the velocity of mass0 shall be zero        
         last_force = ZEROS # later this shall be the kite force
         
@@ -66,11 +66,12 @@ class ExtendedProblem(Implicit_Problem):
             res_3   =  y1[2*i+4] - yd1[2*i+3]  # the derivative of the position of mass1 must be equal to its velocity
             rel_vel = yd1[2*i+3] - yd1[2*i+1]  # calculate the relative velocity of mass2 with respect to mass 1 
             segment = y1[2*i+3]  - y1[2*i+1]   # calculate the vector from mass1 to mass0
-            if not sw[SEGMENTS - 1 - i] or not NONLINEAR:               # if the segment is not loose, calculate spring and damping force
-                norm = math.sqrt(segment[0]**2 + segment[1]**2 + segment[2]**2)                
-                force = c_spring * (norm - length) * segment / norm + damping * rel_vel 
+            if np.linalg.norm(segment) > L_0:               # if the segment is not loose, calculate spring and damping force
+                c_spring = C_SPRING
             else:
-                force = damping * rel_vel                                                    
+                c_spring = 0.0
+            force = c_spring * (np.linalg.norm(segment) - L_0) * segment / np.linalg.norm(segment) \
+                    + damping * rel_vel                                                
             # 2. apply it to the lowest mass (the mass next to the kite)   
             spring_forces = force - last_force    
             last_force = force       
@@ -83,12 +84,9 @@ class ExtendedProblem(Implicit_Problem):
         # 3. calculate the force of the spring above    
         res_1   = y1[2]  - yd1[1] # the derivative of the position of mass1 must be equal to its velocity
         rel_vel = yd1[1] - yd1[0] # calculate the relative velocity of mass1 with respect to mass 0 
-        segment = y1[1]  - y1[0]  # calculate the vector from mass1 to mass0
-        if not sw[0] or not NONLINEAR:         
-            norm = math.sqrt(segment[0]**2 + segment[1]**2 + segment[2]**2)  
-            force = c_spring * (norm - length) * segment / norm + damping * rel_vel    
-        else:
-            force = ZEROS
+        segment = y1[1]  - y1[0]  # calculate the vector from mass1 to mass0       
+        norm = math.sqrt(segment[0]**2 + segment[1]**2 + segment[2]**2)  
+        force = c_spring * (norm - length) * segment / norm + damping * rel_vel    
     
         # 2. apply it to the next mass nearer to the winch
         spring_forces = force - last_force    
@@ -107,11 +105,10 @@ def run_example():
     
     sim = IDA(model) # Create the solver 
     sim.verbosity = 30 
-    sim.atol = 1.0e-4
-    sim.rtol = 1.0e-5
-    #sim.continuous_output = True  
+    sim.atol = 1.0e-6
+    sim.rtol = 1.0e-6
     
-    time, y, yd = sim.simulate(20.0, 400) #Simulate 10 seconds with 1000 communications points     
+    time, y, yd = sim.simulate(20.0, 500) # Simulate 10 seconds with 500 communications points     
     
     # plot the result
     pos_z1 = y[:,5]
@@ -146,5 +143,5 @@ def run_example():
     plt.show()
 
 if __name__ == '__main__':
-    model = ExtendedProblem()  # Create the problem 
-    # run_example()
+    # model = ExtendedProblem()  # Create the problem 
+    run_example()
