@@ -32,6 +32,7 @@ makedocs(;
         "Readme" => "index.md",
         "Examples" => "examples.md",
         "VSCode IDE" => "vscode.md",
-        "Python and Julia" => "python.md"
+        "Python and Julia" => "python.md",
+        "References" => "references.md"
     ])
 deploydocs(repo = "github.com/ufechner7/Tethers.jl.git")
