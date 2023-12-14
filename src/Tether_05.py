@@ -113,9 +113,6 @@ def run_example():
     # plot the result
     pos_z1 = y[:,5]
     vel_z = y[:,8]
-#    force_z = y[:,11]
-    # rel_vel = yd[:,3:6] - yd[:,0:3]
-    # vel_norm = np.sum(np.abs(rel_vel)**2, axis=-1)**(1./2)
     plt.ax1 = plt.subplot(111) 
     plt.ax1.set_xlabel('time [s]')
     plt.plot(time, pos_z1, color="green")
@@ -136,9 +133,6 @@ def run_example():
     plt.ax2 = plt.twinx()  
     plt.ax2.set_ylabel('vel_z [m/s]')   
     plt.plot(time, vel_z, color="red")  
-#    plt.ax2.set_ylabel('force_z [N]')   
-#    plt.plot(time, force_z, color="red")      
-    # plt.plot(time, vel_norm, color="blue")  
     plt.grid(True)      
     plt.show()
 
