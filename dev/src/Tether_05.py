@@ -14,15 +14,14 @@ from assimulo.problem import Implicit_Problem # Imports the problem formulation 
 G_EARTH  = np.array([0.0, 0.0, -9.81]) # gravitational acceleration
 C_SPRING = 50.0                        # spring constant
 DAMPING  =  0.5                        # damping [Ns/m]
-L_0      =  5.0                        # initial segment length [m]
+L_0      =  5.0                        # initial segment length    [m]
+ALPHA0   = math.pi/8                   # initial tether angle    [rad]
 SEGMENTS = 10
 MASS     = 0.5                         # mass per tether particle [kg]      
 ZEROS  = np.array([0.0, 0.0, 0.0])
 RESULT = np.zeros(SEGMENTS * 6 + 3).reshape((-1, 3))
 NONLINEAR = True
 
-# Example seven:
-# Falling mass, attached to a spring with damping
 # State vector y   = mass0.pos, mass1.pos, mass1.vel
 # Derivative   yd  = mass0.vel, mass1.vel, mass1.acc
 # Residual     res = (yd.mass0.vel), (y.mass1.vel - yd.mass1.vel), (yd.mass1.acc - G_EARTH)     
@@ -33,15 +32,14 @@ class ExtendedProblem(Implicit_Problem):
     t0  = 0.0                   # Initial time
     pos, vel, acc = [], [], []
     x, y, z0 = 0.0, 0.0, 0.0
-    dz = L_0
     for i in range (SEGMENTS + 1):
-        z = z0 - i * dz
-        if i == 0:
-            pos.append(np.array([0.0, 0.0, z]))            
-        else:
-            pos.append(np.array([x, y, z]))
+        l0 = -i*L_0
+        pos.append(np.array([math.sin(ALPHA0) * l0, 0.0, math.cos(ALPHA0) * l0]))            
         vel.append(np.array([0.0, 0.0, 0.0]))
-        acc.append(np.array([0.0, 0.0, -9.81]))
+        if i == 0:
+            acc.append(np.array([0.0, 0.0, 0.0]))
+        else:
+            acc.append(np.array([0.0, 0.0, -9.81]))
     y0, yd0 = pos[0], vel[0]
     for i in range (SEGMENTS):    
         y0  = np.append(y0,  np.append(pos[i+1], vel[i+1])) # Initial state vector
@@ -148,4 +146,5 @@ def run_example():
     plt.show()
 
 if __name__ == '__main__':
-    run_example()
+    model = ExtendedProblem()  # Create the problem 
+    # run_example()
