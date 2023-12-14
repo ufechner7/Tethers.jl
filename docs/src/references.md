@@ -13,3 +13,4 @@ with good documentation for explicit and implicit problems.
 ## Scientific papers
 - Uwe Fechner, Rolf van der Vlugt, Edwin Schreuder, Roland Schmehl. (2015). [*Dynamic Model of a Pumping Kite Power System*](http://arxiv.org/abs/1406.6218) describes the tether model used in this tutorial, but also a model of a complete kite power system with experimental validation.
 - Yingbo Ma, Shashi Gowda, Ranjan Anantharaman, Chris Laughman, Viral Shah, and Chris Rackauckas. (2021). [*ModelingToolkit: A Composable Graph Transformation System For Equation-Based Modeling.*](https://arxiv.org/abs/2103.05244)
+- D.F. Duda1, H. Fuest, T. Islam, T. Ostermann, D. Moormann1. (2022). [*Hybrid modeling approach for the tether of an airborne wind energy system*](https://link.springer.com/article/10.1007/s13272-022-00581-7) CEAS Aeronautical Journal.
