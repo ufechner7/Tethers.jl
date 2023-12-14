@@ -105,8 +105,18 @@ def plot2d(y, reltime, segments, line, sc, txt):
     for i in range(segments):
         x[i] = y[index, 3+6*i]
         z[i] = y[index, 5+6*i]
-
-    # if line is None:
+    z_max = np.max(z)
+    if line is None:
+        line, = plt.plot(x,z, linewidth="1")
+        sc  = plt.scatter(x, z, s=15, color="red")
+        # txt = plt.annotate("t=$(round(reltime,digits=1)) s",  xy=(12, z_max-3.0), fontsize = 12)
+        plt.show(block=False)
+    else:
+        line.set_xdata(x)
+        line.set_ydata(z)
+        sc.set_offsets([x,z])
+        plt.gcf().canvas.draw()
+        # plt.show(block=False)
 
     return line, sc, txt
 
@@ -115,11 +125,11 @@ def play(duration, y):
     plt.ylim(-SEGMENTS*L0-10, 0.5)
     plt.xlim(-SEGMENTS*L0/2, SEGMENTS*L0/2)
     plt.grid(True, color="grey", linestyle="dotted")
+    plt.ion()
     line, sc, txt = None, None, None
     for t in np.linspace(0, duration, num=round(duration/dt)+1):
-        print(t)
         line, sc, txt = plot2d(y, t, SEGMENTS, line, sc, txt)
-        time.sleep(0.001)
+        time.sleep(0.1)
     plt.show()
    
 def run_example():  
