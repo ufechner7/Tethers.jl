@@ -1,12 +1,12 @@
 # Python and Julia in harmony
 
-Python and Julia play very well together. You could see in the examples above that I am using Matplotlib for plotting, both in Python and in Julia. Julia has a build-in package manager. You can use it install and remove Julia packages, but also to install or remove Python packages. That works like this:
+Python and Julia play very well together. You can see in the examples above that I am using Matplotlib for plotting, both in Python and in Julia. Julia has a built-in package manager. You can use it to install and remove Julia packages, but also to install or remove Python packages. That works like this:
 
 ## Using Python packages from Julia
 There are three options:
 
 ### Option one: 
-Use wrapper libraries which exist for a few, very popular Python packages, e.g.
+Use wrapper libraries that exist for a few, very popular Python packages, e.g.
 [PyPlot.jl](https://github.com/JuliaPy/PyPlot.jl) for Matplotlib or [SymPy.jl](https://github.com/JuliaPy/SymPy.jl) for SymPy. You can install them like any other Julia package, e.g.
 ```
 ]     # enter package manager mode
@@ -60,12 +60,7 @@ cd PythonDemo
 julia --project="." # this creates a new, empty project
 ```
 Then enter at the Julia prompt:
-```
-]               # enter the package manger mode
-add PythonCall
-<BACK>          # leave the package manager mode
-```
-Example for using Python from Julia:
+Example of using Python from Julia:
 ```julia
 re = pyimport("re")   # import the re module
 words = re.findall("[a-zA-Z]+", "PythonCall.jl is very useful!")
@@ -82,7 +77,7 @@ Output:
 ```
 Python: 'PythonCall jl is very useful'
 ```
-And finally convert this Python object to a Julia string:
+And finally, convert this Python object to a Julia string:
 ```julia
 pyconvert(String, sentence)  # convert the Python string to a Julia string
 ```
