@@ -40,28 +40,17 @@ class ExtendedProblem(Implicit_Problem):
             pos.append(np.array([0.0, 0.0, z]))            
         else:
             pos.append(np.array([x, y, z]))
-        if i == 0:    
-            vel.append(np.array([0.0, 0.0, 0.0]))
-        else:
-            vel.append(np.array([0.0, 0.0, 0.1*i]))
+        vel.append(np.array([0.0, 0.0, 0.0]))
         acc.append(np.array([0.0, 0.0, -9.81]))
     y0, yd0 = pos[0], vel[0]
-    sw0 = []
     for i in range (SEGMENTS):    
         y0  = np.append(y0,  np.append(pos[i+1], vel[i+1])) # Initial state vector
         yd0 = np.append(yd0, np.append(vel[i+1], acc[i+1])) # Initial state vector derivative
-        # array of booleans; true means the tether segment is loose (l < l_reelout)
         pos_ix = 6 * i  + 3 # position index of mass i + 1
         if i==0:
             last_pos_ix = 0
         else:
-            last_pos_ix = pos_ix - 6        
-        # calculate the norm of the vector from mass1 to mass0 minus the initial segment length
-        #event = (np.linalg.norm(y0[pos_ix:pos_ix + 3] - y0[last_pos_ix:last_pos_ix + 3] ) - L_0) <= 0
-        event = vel[i+1] > 0
-        #event = False
-        sw0.append(event)  
-    print(sw0)       
+            last_pos_ix = pos_ix - 6            
     print(y0)
     print(yd0)
 
