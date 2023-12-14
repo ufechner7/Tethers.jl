@@ -111,3 +111,8 @@ CondaPkg.withenv() do
 end
 ```
 You should now get an interactive Python prompt and can program in Python.
+
+## Further reading
+- [Noteworthy differences Julia/Python](https://docs.julialang.org/en/v1/manual/noteworthy-differences/#Noteworthy-differences-from-Python) Good to know.
+- [PythonCall.jl](https://juliapy.github.io/PythonCall.jl/stable/) New library to call Python from Julia or Julia from Python.
+- [PyCall](https://github.com/JuliaPy/PyCall.jl) Old library to call Python from Julia.
