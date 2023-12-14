@@ -94,43 +94,42 @@ class ExtendedProblem(Implicit_Problem):
         RESULT[2] = res_2 
         return RESULT.flatten()
     
-def plot2d(y, reltime, segments, line, sc, txt):
+def plot2d(fig, y, reltime, segments, line, sc, txt):
     index = round(reltime*50)
+    # print("index: ", index)
     x, z = np.zeros(segments+1), np.zeros(segments+1)
     for i in range(segments):
         x[i+1] = y[index, 3+6*i]
         z[i+1] = y[index, 5+6*i]
     z_max = np.max(z)
     if line is None:
-        print(x)
-        print(z)
         line, = plt.plot(x,z, linewidth="1")
         sc  = plt.scatter(x, z, s=15, color="red")
+        plt.pause(0.01)
         # txt = plt.annotate("t=$(round(reltime,digits=1)) s",  xy=(12, z_max-3.0), fontsize = 12)
         plt.show(block=False)
     else:
-        print(x)
-        print(z)
         line.set_xdata(x)
         line.set_ydata(z)
         sc.set_offsets(np.c_[x, z])
-        plt.gcf().canvas.draw()
+        fig.canvas.draw()
+        plt.pause(0.01)
         plt.show(block=False)
 
     return line, sc, txt
 
 def play(duration, y):
     dt = 0.2
+    plt.ioff()
+    fig = plt.figure()
     plt.ylim(-SEGMENTS*L0-10, 0.5)
     plt.xlim(-SEGMENTS*L0/2, SEGMENTS*L0/2)
     plt.grid(True, color="grey", linestyle="dotted")
-    plt.ion()
     line, sc, txt = None, None, None
     for t in np.linspace(0, duration, num=round(duration/dt)+1):
-        t=duration
-        line, sc, txt = plot2d(y, t, SEGMENTS, line, sc, txt)
-        time.sleep(0.5)
-    # plt.show()
+        line, sc, txt = plot2d(fig, y, t, SEGMENTS, line, sc, txt)
+        time.sleep(0.05)
+    plt.show()
    
 def run_example():  
     # Create an instance of the problem 
@@ -144,7 +143,7 @@ def run_example():
     duration = 10.0
     
     time, y, yd = sim.simulate(duration, 500) # Simulate 10 seconds with 500 communications points 
-    play(1, y)   
+    play(duration, y)   
     return y
     
 if __name__ == '__main__':
