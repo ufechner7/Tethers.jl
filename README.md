@@ -3,7 +3,7 @@
 
 ## Introduction
 
-A series of examples, from a simple falling mass towards a tether model, consisting of point masses connected by spring damper elements with support of reel-out and reel-in and aerodynamic drag attached.
+A series of examples, from a simple falling mass towards a tether model, consisting of point masses connected by spring damper elements with the support of reel-out and reel-in and aerodynamic drag attached.
 
 -- WORK IN PROGRESS --
 
@@ -56,22 +56,33 @@ eqs = vcat(D.(pos) ~ vel,
            D.(vel) ~ acc,
            acc    .~ G_EARTH)
 ```
-The term `D.(pos)` means "Apply the differential D(t) to all elements of the vector `pos`".
-The second term defines that the differential of the velocity vector must be equal to the 
-acceleration. For equality in symbolic equations the character `~` has to be used, because
-the character `=` has the meaning "assign a value to a variable" which is not what we are doing here. The third equation means that all elements of the acceleration vector must be equal
-to the elements of the gravity vector. We end up with an array of `3x3`` equations.
+The term `D.(pos)` means "Apply the differential D(t) to all elements of the vector `pos`". The second term defines that the differential of the velocity vector must be equal to the 
+acceleration. For equality in symbolic equations the character `~` has to be used, because the character `=` has the meaning "assign a value to a variable" which is not what we are doing here. The third equation means that all elements of the acceleration vector must be equal to the elements of the gravity vector. We end up with an array of `3x3`` equations.
 
 The next lines are:
 ```julia
 @named sys = ODESystem(eqs, t)
 simple_sys = structural_simplify(sys)
 ```
-This means we create a named ordinary equation system, depending on `t`. Then we simplify
-the system symbolically (order reduction). If you type `sys` in the Julia REPL (command line)
-you can see that the original system had 9 equations, the second line above created a system
-with only six equations. This step helps to speed up the simulation and often also removes
-algebraic loops which makes the ODE a lot simpler to solve numerically later on.
+This means we create a named ordinary equation system, depending on `t`. Then we simplify the system symbolically (order reduction). If you type `sys` in the Julia REPL (command line) you can see that the original system had 9 equations, the second line above created a system with only six equations. This step helps to speed up the simulation and often also removes algebraic loops which makes the ODE a lot simpler to solve numerically later on.
+
+Now the parameters of the integrator are defined:
+```julia
+duration = 10.0
+dt = 0.02
+tol = 1e-6
+tspan = (0.0, duration)
+ts    = 0:dt:duration
+```
+The time step $dt$ is the interval in which the solution shall be stored, NOT the time step of the integrator. The integrator uses a variable time step which can be much smaller or much larger as determined by the required tolerance, in this example set to $tol=10^{-6}$. The variable $ts$ is a range object defining the sampling times for the result.
+
+Then we define the initial condition $u0$. We use a dictionary of variable => value pairs to do this. In the next line, we define the ODE problem and finally, we solve it using the Rodas5 solver with the given parameters.
+```
+u0 = Dict(vel=>[0, 0, 50.0])
+
+prob = ODEProblem(simple_sys, u0, tspan)
+@time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
+```
 
 ## Python version as comparison
 From the Julia prompt execute:
