@@ -102,6 +102,7 @@ Have a look at the [Examples](https://ufechner7.github.io/Tethers.jl/dev/example
 
 ## Overall comparison
 Execution time for a simulation of 10s duration with logging the state every 20ms.
+Relative and absolute tolerance: $1.0^{-6}$. CPU: Ryzen 9 7950X.
 
 | Test-case                    | Lines of code (LOC) Julia | LOC Python  | Time Julia [ms] | Time Python [ms] |
 |:----------------------------|:-------------------:|:---:|:-----:|:---:|
