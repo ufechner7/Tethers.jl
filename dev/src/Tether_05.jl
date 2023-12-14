@@ -6,6 +6,7 @@ G_EARTH     = Float64[0.0, 0.0, -9.81]          # gravitational acceleration    
 L0::Float64 = 5.0                               # initial segment length            [m]
 V0::Float64 = 2                                 # initial velocity of lowest mass [m/s]
 M0::Float64 = 0.5                               # mass per particle                [kg]
+C_SPRING::Float64 = 50                          # spring constant
 segments::Int64 = 5                             # number of tether segments         [-]
 α0 = π/8                                        # initial tether angle            [rad]
 duration = 10.0                                 # duration of the simulation        [s]
@@ -30,7 +31,7 @@ for i in 1:segments
 end
 
 # model, Z component upwards
-@parameters mass=M0 c_spring0=50.0 damping=0.5 l_seg=L0
+@parameters mass=M0 c_spring0=C_SPRING damping=0.5 l_seg=L0
 @variables t 
 @variables pos(t)[1:3, 1:segments+1]  = POS0
 @variables vel(t)[1:3, 1:segments+1]  = VEL0
