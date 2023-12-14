@@ -7,7 +7,7 @@ function docu(build=true)
     # if build
     #     include("docs/make.jl")
     # end
-    Base.invokelatest(LiveServer.servedocs; skip_dir="docs")
+    Base.invokelatest(LiveServer.servedocs; skip_dir="docs", launch_browser=true)
 end
 
 end
