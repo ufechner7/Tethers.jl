@@ -77,12 +77,13 @@ ts    = 0:dt:duration
 The time step $dt$ is the interval in which the solution shall be stored, NOT the time step of the integrator. The integrator uses a variable time step which can be much smaller or much larger as determined by the required tolerance, in this example set to $tol=10^{-6}$. The variable $ts$ is a range object defining the sampling times for the result.
 
 Then we define the initial condition $u0$. We use a dictionary of variable => value pairs to do this. In the next line, we define the ODE problem and finally, we solve it using the Rodas5 solver with the given parameters.
-```
+```julia
 u0 = Dict(vel=>[0, 0, 50.0])
 
 prob = ODEProblem(simple_sys, u0, tspan)
 @time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
 ```
+The macro `@time` measures the compilation and execution time of calling the function `solve()`. It is compiled only when called the first time. 
 
 ## Python version as comparison
 From the Julia prompt execute:
