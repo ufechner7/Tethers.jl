@@ -100,12 +100,12 @@ class ExtendedProblem(Implicit_Problem):
         return RESULT.flatten()
     
 def plot2d(y, reltime, segments, line, sc, txt):
-    index = round(reltime*50+1)
-    # x, z = Float64[], Float64[]
-    # for particle in 1:segments+1
-    #     push!(x, (sol(sol.t, idxs=pos[1, particle]))[index])
-    #     push!(z, (sol(sol.t, idxs=pos[3, particle]))[index])
-    # end
+    index = round(reltime*50)
+    x, z = np.zeros(segments+1), np.zeros(segments+1)
+    for i in range(segments):
+        x[i] = y[index, 3+6*i]
+        z[i] = y[index, 5+6*i]
+
     # if line is None:
 
     return line, sc, txt
