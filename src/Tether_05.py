@@ -7,6 +7,7 @@ correctly.
 import numpy as np
 import pylab as plt
 import math
+import time
 
 from assimulo.solvers.sundials import IDA     # Imports the solver IDA from Assimulo
 from assimulo.problem import Implicit_Problem # Imports the problem formulation from Assimulo
@@ -14,7 +15,7 @@ from assimulo.problem import Implicit_Problem # Imports the problem formulation 
 G_EARTH  = np.array([0.0, 0.0, -9.81]) # gravitational acceleration
 C_SPRING = 50.0                        # spring constant
 DAMPING  =  0.5                        # damping [Ns/m]
-L_0      =  5.0                        # initial segment length    [m]
+L0      =  5.0                        # initial segment length    [m]
 ALPHA0   = math.pi/8                   # initial tether angle    [rad]
 SEGMENTS = 5
 MASS     = 0.5                         # mass per tether particle [kg]      
@@ -33,7 +34,7 @@ class ExtendedProblem(Implicit_Problem):
     pos, vel, acc = [], [], []
     x, y, z0 = 0.0, 0.0, 0.0
     for i in range (SEGMENTS + 1):
-        l0 = -i*L_0
+        l0 = -i*L0
         pos.append(np.array([math.sin(ALPHA0) * l0, 0.0, math.cos(ALPHA0) * l0]))            
         vel.append(np.array([0.0, 0.0, 0.0]))
         if i == 0:
@@ -55,7 +56,7 @@ class ExtendedProblem(Implicit_Problem):
     def res(self, t, y, yd):  
         y1  = y.reshape((-1, 3)) # reshape the state vector such that we can access it per 3D-vector
         yd1 = yd.reshape((-1, 3))
-        length = L_0
+        length = L0
         c_spring = C_SPRING        
         damping  = DAMPING
         RESULT[0] = y1[0] # the velocity of mass0 shall be zero        
@@ -66,11 +67,11 @@ class ExtendedProblem(Implicit_Problem):
             res_3   =  y1[2*i+4] - yd1[2*i+3]  # the derivative of the position of mass1 must be equal to its velocity
             rel_vel = yd1[2*i+3] - yd1[2*i+1]  # calculate the relative velocity of mass2 with respect to mass 1 
             segment = y1[2*i+3]  - y1[2*i+1]   # calculate the vector from mass1 to mass0
-            if np.linalg.norm(segment) > L_0:               # if the segment is not loose, calculate spring and damping force
+            if np.linalg.norm(segment) > L0:               # if the segment is not loose, calculate spring and damping force
                 c_spring = C_SPRING
             else:
                 c_spring = 0.0
-            force = c_spring * (np.linalg.norm(segment) - L_0) * segment / np.linalg.norm(segment) \
+            force = c_spring * (np.linalg.norm(segment) - L0) * segment / np.linalg.norm(segment) \
                     + damping * rel_vel                                                
             # 2. apply it to the lowest mass (the mass next to the kite)   
             spring_forces = force - last_force    
@@ -97,6 +98,29 @@ class ExtendedProblem(Implicit_Problem):
         RESULT[1] = res_1 
         RESULT[2] = res_2 
         return RESULT.flatten()
+    
+def plot2d(y, reltime, segments, line, sc, txt):
+    index = round(reltime*50+1)
+    # x, z = Float64[], Float64[]
+    # for particle in 1:segments+1
+    #     push!(x, (sol(sol.t, idxs=pos[1, particle]))[index])
+    #     push!(z, (sol(sol.t, idxs=pos[3, particle]))[index])
+    # end
+    # if line is None:
+
+    return line, sc, txt
+
+def play(duration, y):
+    dt = 0.2
+    plt.ylim(-SEGMENTS*L0-10, 0.5)
+    plt.xlim(-SEGMENTS*L0/2, SEGMENTS*L0/2)
+    plt.grid(True, color="grey", linestyle="dotted")
+    line, sc, txt = None, None, None
+    for t in np.linspace(0, duration, num=round(duration/dt)+1):
+        print(t)
+        line, sc, txt = plot2d(y, t, SEGMENTS, line, sc, txt)
+        time.sleep(0.001)
+    plt.show()
    
 def run_example():  
     # Create an instance of the problem 
@@ -107,34 +131,37 @@ def run_example():
     sim.verbosity = 30 
     sim.atol = 1.0e-6
     sim.rtol = 1.0e-6
+    duration = 10.0
     
-    time, y, yd = sim.simulate(20.0, 500) # Simulate 10 seconds with 500 communications points     
+    time, y, yd = sim.simulate(duration, 500) # Simulate 10 seconds with 500 communications points 
+    play(duration, y)   
     
-    # plot the result
-    pos_z1 = y[:,5]
-    vel_z = y[:,8]
-    plt.ax1 = plt.subplot(111) 
-    plt.ax1.set_xlabel('time [s]')
-    plt.plot(time, pos_z1, color="green")
-    if SEGMENTS > 1:    
-        pos_z2 = y[:,5+6]       
-        plt.plot(time, pos_z2, color="blue")    
-    if SEGMENTS > 2:    
-        pos_z3 = y[:,5+12]       
-        plt.plot(time, pos_z3, color="yellow")      
-    if SEGMENTS > 3:    
-        pos_z4 = y[:,5+18]       
-        plt.plot(time, pos_z4, color="grey")  
-    if SEGMENTS > 4:    
-        pos_z5 = y[:,5+24]     
-        vel_z = y[:,8+24]
-        plt.plot(time, pos_z5, color="black")            
-    plt.ax1.set_ylabel('pos_z [m]')   
-    plt.ax2 = plt.twinx()  
-    plt.ax2.set_ylabel('vel_z [m/s]')   
-    plt.plot(time, vel_z, color="red")  
-    plt.grid(True)      
-    plt.show()
+    
+    # # plot the result
+    # pos_z1 = y[:,5]
+    # vel_z = y[:,8]
+    # plt.ax1 = plt.subplot(111) 
+    # plt.ax1.set_xlabel('time [s]')
+    # plt.plot(time, pos_z1, color="green")
+    # if SEGMENTS > 1:    
+    #     pos_z2 = y[:,5+6]       
+    #     plt.plot(time, pos_z2, color="blue")    
+    # if SEGMENTS > 2:    
+    #     pos_z3 = y[:,5+12]       
+    #     plt.plot(time, pos_z3, color="yellow")      
+    # if SEGMENTS > 3:    
+    #     pos_z4 = y[:,5+18]       
+    #     plt.plot(time, pos_z4, color="grey")  
+    # if SEGMENTS > 4:    
+    #     pos_z5 = y[:,5+24]     
+    #     vel_z = y[:,8+24]
+    #     plt.plot(time, pos_z5, color="black")            
+    # plt.ax1.set_ylabel('pos_z [m]')   
+    # plt.ax2 = plt.twinx()  
+    # plt.ax2.set_ylabel('vel_z [m/s]')   
+    # plt.plot(time, vel_z, color="red")  
+    # plt.grid(True)      
+    # plt.show()
 
 if __name__ == '__main__':
     # model = ExtendedProblem()  # Create the problem 
