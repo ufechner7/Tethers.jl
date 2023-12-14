@@ -144,7 +144,6 @@ def run_example():
     
     time, y, yd = sim.simulate(duration, 500) # Simulate 10 seconds with 500 communications points 
     play(duration, y)   
-    return y
     
 if __name__ == '__main__':
-    y=run_example()
+    run_example()

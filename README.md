@@ -108,7 +108,7 @@ Execution time for a simulation of 10s duration with logging the state every 20m
 |Falling mass                 |     42              | 56  | 0.17  | 2.6 |
 |Non-linear Spring damper     |     61              | 83  | 0.61  | 20  |
 |dito with callbacks          |     68              | 103 | 0.74  | 31  |
-|swinging tether, 5 segments  |    117              | 190 | 2.90  |     |
+|swinging tether, 5 segments  |    117              | 149 |  8.3  | 110 |
 
 **Tradeoff Julia vs Python:** In Julia, the code is compiled before it is executed, which can cause about one to 10 seconds delay when running a simulation the first time, but speeds up the execution a lot afterward. In addition, Julia can run fully multithreaded, Python cannot make use of multiple CPU cores with multithreading because of the global interpreter lock. 
 
