@@ -115,7 +115,6 @@ def plot2d(fig, y, reltime, segments, line, sc, txt):
         fig.canvas.draw()
         plt.pause(0.01)
         plt.show(block=False)
-
     return line, sc, txt
 
 def play(duration, y):
