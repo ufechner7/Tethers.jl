@@ -11,7 +11,7 @@ A few examples where tether models can be useful:
 - launching of sail planes
 
 Modelling of tethers and cables is difficult for a number of reasons. One of them is the high 
-stiffness of the equation systems that need to be solved. I tried to implement these models with Simulink and Modellica and failed. It is possible to implement these models with Julia or Python. How to do this is explained in this tutorial. Tethers that are reeled in and out from
+stiffness of the equation systems that need to be solved. I tried to implement these models with Simulink and Modelica and failed. It is possible to implement these models with Julia or Python. How to do this is explained in this tutorial. Tethers that are reeled in and out from
 a winch are even more challenging to model than constant-length tethers.
 
 A series of examples, from a simple falling mass towards a tether model, consisting of point masses connected by spring damper elements with the support of reel-out and reel-in and aerodynamic drag attached.
