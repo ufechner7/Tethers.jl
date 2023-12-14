@@ -109,11 +109,13 @@ def plot2d(y, reltime, segments, line, sc, txt):
         # txt = plt.annotate("t=$(round(reltime,digits=1)) s",  xy=(12, z_max-3.0), fontsize = 12)
         plt.show(block=False)
     else:
+        print(x)
+        print(z)
         line.set_xdata(x)
         line.set_ydata(z)
-        sc.set_offsets([x,z])
+        sc.set_offsets(np.c_[x, z])
         plt.gcf().canvas.draw()
-        # plt.show(block=False)
+        plt.show(block=False)
 
     return line, sc, txt
 
@@ -124,11 +126,11 @@ def play(duration, y):
     plt.grid(True, color="grey", linestyle="dotted")
     plt.ion()
     line, sc, txt = None, None, None
-    # for t in np.linspace(0, duration, num=round(duration/dt)+1):
-    t=duration
-    line, sc, txt = plot2d(y, t, SEGMENTS, line, sc, txt)
-    time.sleep(0.1)
-    plt.show()
+    for t in np.linspace(0, duration, num=round(duration/dt)+1):
+        t=duration
+        line, sc, txt = plot2d(y, t, SEGMENTS, line, sc, txt)
+        time.sleep(0.5)
+    # plt.show()
    
 def run_example():  
     # Create an instance of the problem 
@@ -142,7 +144,7 @@ def run_example():
     duration = 10.0
     
     time, y, yd = sim.simulate(duration, 500) # Simulate 10 seconds with 500 communications points 
-    play(0, y)   
+    play(1, y)   
     return y
     
 if __name__ == '__main__':
