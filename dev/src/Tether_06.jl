@@ -6,7 +6,6 @@ G_EARTH     = Float64[0.0, 0.0, -9.81]          # gravitational acceleration    
 L0::Float64 = 25.0                              # initial tether length             [m]
 V0::Float64 = 2                                 # initial velocity of lowest mass [m/s]
 V_RO::Float64 = 2.0                             # reel-out speed                  [m/s]
-M0::Float64 = 0.5                               # mass per particle                [kg]
 D_TETHER::Float64 = 4                           # tether diameter                  [mm]
 RHO_TETHER::Float64 = 724.0                     # densitiy of Dyneema           [kg/m³] 
 C_SPRING::Float64 = 250                         # unit spring constant              [N]
@@ -14,6 +13,7 @@ DAMPING::Float64  = 2.5                         # unit damping constant         
 segments::Int64 = 5                             # number of tether segments         [-]
 α0 = π/10                                       # initial tether angle            [rad]
 duration = 30.0                                 # duration of the simulation        [s]
+mass_per_meter::Float64 = RHO_TETHER * segments * (D_TETHER/2000.0)^2
 POS0 = zeros(3, segments+1)
 VEL0 = zeros(3, segments+1)
 ACC0 = zeros(3, segments+1)
@@ -35,7 +35,7 @@ for i in 1:segments
 end
 
 # model, Z component upwards
-@parameters mass=M0 c_spring0=C_SPRING/(L0/segments) l_seg=L0/segments
+@parameters c_spring0=C_SPRING/(L0/segments) l_seg=L0/segments
 @variables t 
 @variables pos(t)[1:3, 1:segments+1]  = POS0
 @variables vel(t)[1:3, 1:segments+1]  = VEL0
@@ -45,6 +45,7 @@ end
 @variables length(t) = L0
 @variables c_spring(t) = c_spring0
 @variables damping(t) = DAMPING  / l_seg
+@variables m_tether_particle(t) = mass_per_meter * l_seg
 @variables norm1(t)[1:segments] = l_seg * ones(segments)
 @variables rel_vel(t)[1:3, 1:segments]  = zeros(3, segments)
 @variables spring_vel(t)[1:segments] = zeros(segments)
@@ -70,11 +71,12 @@ for i in segments:-1:1
     else
         eqs2 = vcat(eqs2, total_force[:, i] ~ spring_force[:, i]- spring_force[:, i+1])
     end
-    eqs2 = vcat(eqs2, acc[:, i+1] .~ G_EARTH + total_force[:, i] / mass)
+    eqs2 = vcat(eqs2, acc[:, i+1] .~ G_EARTH + total_force[:, i] / m_tether_particle)
 end
 eqs2 = vcat(eqs2, acc[:, 1] .~ zeros(3))
 eqs2 = vcat(eqs2, length ~ L0 + V_RO*t)
 eqs2 = vcat(eqs2, c_spring ~ C_SPRING / (length/segments))
+eqs2 = vcat(eqs2, m_tether_particle ~ mass_per_meter * (length/segments))
 eqs2 = vcat(eqs2, damping  ~ DAMPING  / (length/segments))
 eqs = vcat(eqs1..., eqs2)
      
