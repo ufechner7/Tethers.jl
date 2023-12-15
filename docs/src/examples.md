@@ -2,6 +2,14 @@
 A sequence of examples, from a simple mass attached to a spring-damper element to
 a full segmented tether model with real-out and aerodynamic drag attached.
 
+| Name  | Description | Learning objective |
+|---|---|---|
+| Tether_01 | Mass, thrown upwards, then falling  | Learn how to define a model, simulate it and plot the results   |
+| Tether_02  | Mass, attached to linear spring | Learn how to model a spring in 3D  |
+| Tether_03  |   |   |
+| Tether_04  |   |   |
+| Tether_05  |   |   |
+
 ## Mass, attached to a spring-damper
 From the Julia prompt, run the simulation:
 ```julia
