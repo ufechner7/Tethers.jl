@@ -3,13 +3,13 @@
 using ModelingToolkit, OrdinaryDiffEq, PyPlot, LinearAlgebra, Timers
 
 G_EARTH     = Float64[0.0, 0.0, -9.81]          # gravitational acceleration     [m/s²]
-L0::Float64 = 25.0                              # initial tether length             [m]
+L0::Float64 = 50.0                              # initial tether length             [m]
 V0::Float64 = 2                                 # initial velocity of lowest mass [m/s]
 V_RO::Float64 = 2.0                             # reel-out speed                  [m/s]
 D_TETHER::Float64 = 4                           # tether diameter                  [mm]
 RHO_TETHER::Float64 = 724.0                     # densitiy of Dyneema           [kg/m³] 
-C_SPRING::Float64 = 250                         # unit spring constant              [N]
-DAMPING::Float64  = 2.5                         # unit damping constant            [Ns]
+C_SPRING::Float64 = 614600.0                    # unit spring constant              [N]
+DAMPING::Float64  = 473                         # unit damping constant            [Ns]
 segments::Int64 = 5                             # number of tether segments         [-]
 α0 = π/10                                       # initial tether angle            [rad]
 duration = 30.0                                 # duration of the simulation        [s]
@@ -65,7 +65,7 @@ for i in segments:-1:1
     eqs2 = vcat(eqs2, rel_vel[:, i] ~ vel[:, i+1] - vel[:, i])
     eqs2 = vcat(eqs2, spring_vel[i] ~ -unit_vector[:, i] ⋅ rel_vel[:, i])
     eqs2 = vcat(eqs2, c_spr[i] ~ c_spring * (norm1[i] > length/segments))
-    eqs2 = vcat(eqs2, spring_force[:, i] ~ (c_spr[i] * (norm1[i] - l_seg) + damping * spring_vel[i]) * unit_vector[:, i])
+    eqs2 = vcat(eqs2, spring_force[:, i] ~ (c_spr[i] * (norm1[i] - (length/segments)) + damping * spring_vel[i]) * unit_vector[:, i])
     if i == segments
         eqs2 = vcat(eqs2, total_force[:, i] ~ spring_force[:, i])
     else
