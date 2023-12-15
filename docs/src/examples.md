@@ -185,3 +185,32 @@ We loop backward over the particles, starting with the last particle, because on
 Finally, in this example, we plot the result dynamically as 2D video. Screenshot:
 
 ![Tether 2D](docs/images/Tether2d.png)
+
+## Multi-segment tether reeling out
+In this example, we assume a constant reel-out speed of $V_RO=2m/s$. When reeling out the following values need to be dynamically calculated:
+- unstretched length of a tether segment
+- mass of the tether segment
+- spring constant
+- damping constant
+
+We do this in the following way (line 79ff):
+```julia
+length            ~ L0 + V_RO*t 
+m_tether_particle ~ mass_per_meter * (length/segments)
+c_spring          ~ C_SPRING / (length/segments)
+damping           ~ DAMPING  / (length/segments)
+```
+where `L0` is the unstretched length of the complete tether at $t=0$. In addition, the mass at the end of the tether is corrected to half of the mass of the other tether particles because only on one side of it a tether segment is attached:
+```julia
+    if i == segments
+        eqs2 = vcat(eqs2, total_force[:, i] ~ spring_force[:, i])
+        eqs2 = vcat(eqs2, acc[:, i+1] .~ G_EARTH + total_force[:, i] / 0.5*(m_tether_particle))
+    else
+        eqs2 = vcat(eqs2, total_force[:, i] ~ spring_force[:, i]- spring_force[:, i+1])
+        eqs2 = vcat(eqs2, acc[:, i+1] .~ G_EARTH + total_force[:, i] / m_tether_particle)
+    end
+```
+**Julia code:** [Tether_06.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_06.jl)
+
+
+
