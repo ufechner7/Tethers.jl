@@ -5,6 +5,7 @@ using ModelingToolkit, OrdinaryDiffEq, PyPlot, LinearAlgebra, Timers
 G_EARTH     = Float64[0.0, 0.0, -9.81]          # gravitational acceleration     [m/s²]
 L0::Float64 = 25.0                              # initial tether length             [m]
 V0::Float64 = 2                                 # initial velocity of lowest mass [m/s]
+V_RO::Float64 = 2.0                             # reel-out speed                  [m/s]
 M0::Float64 = 0.5                               # mass per particle                [kg]
 C_SPRING::Float64 = 50                          # spring constant
 segments::Int64 = 5                             # number of tether segments         [-]
@@ -38,6 +39,7 @@ end
 @variables acc(t)[1:3, 1:segments+1]  = ACC0
 @variables segment(t)[1:3, 1:segments]  = SEGMENTS0
 @variables unit_vector(t)[1:3, 1:segments]  = UNIT_VECTORS0
+@variables length(t) = L0
 @variables norm1(t)[1:segments] = l_seg * ones(segments)
 @variables rel_vel(t)[1:3, 1:segments]  = zeros(3, segments)
 @variables spring_vel(t)[1:segments] = zeros(segments)
@@ -56,7 +58,7 @@ for i in segments:-1:1
     eqs2 = vcat(eqs2, unit_vector[:, i] ~ -segment[:, i]/norm1[i])
     eqs2 = vcat(eqs2, rel_vel[:, i] ~ vel[:, i+1] - vel[:, i])
     eqs2 = vcat(eqs2, spring_vel[i] ~ -unit_vector[:, i] ⋅ rel_vel[:, i])
-    eqs2 = vcat(eqs2, c_spring[i] ~ c_spring0 * (norm1[i] > l_seg))
+    eqs2 = vcat(eqs2, c_spring[i] ~ c_spring0 * (norm1[i] > length/segments))
     eqs2 = vcat(eqs2, spring_force[:, i] ~ (c_spring[i] * (norm1[i] - l_seg) + damping * spring_vel[i]) * unit_vector[:, i])
     if i == segments
         eqs2 = vcat(eqs2, total_force[:, i] ~ spring_force[:, i])
@@ -66,6 +68,7 @@ for i in segments:-1:1
     eqs2 = vcat(eqs2, acc[:, i+1] .~ G_EARTH + total_force[:, i] / mass)
 end
 eqs2 = vcat(eqs2, acc[:, 1] .~ zeros(3))
+eqs2 = vcat(eqs2, length ~ L0 + V_RO*t)
 eqs = vcat(eqs1..., eqs2)
      
 @named sys = ODESystem(eqs, t)
@@ -94,7 +97,7 @@ function plot2d(sol, reltime, segments, line, sc, txt)
         line, = plot(x,z; linewidth="1")
         sc  = scatter(x, z; s=15, color="red") 
         txt = annotate("t=$(round(reltime,digits=1)) s",  
-                            xy=(L0/4.2, z_max-3.0*segments/5), fontsize = 12)
+                        xy=(L0/4.2, z_max-7.0*segments/5), fontsize = 12)
         PyPlot.show(block=false)
     else
         line.set_xdata(x)
@@ -108,7 +111,7 @@ end
 
 function play()
     dt = 0.15
-    ylim(-1.2*segments*L0/segments, 0.5)
+    ylim(-1.2*(L0+V_RO*duration), 0.5)
     xlim(-L0/2, L0/2)
     grid(true; color="grey", linestyle="dotted")
     line, sc, txt = nothing, nothing, nothing
