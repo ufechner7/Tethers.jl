@@ -7,7 +7,8 @@ L0::Float64 = 25.0                              # initial tether length         
 V0::Float64 = 2                                 # initial velocity of lowest mass [m/s]
 V_RO::Float64 = 2.0                             # reel-out speed                  [m/s]
 M0::Float64 = 0.5                               # mass per particle                [kg]
-C_SPRING::Float64 = 50                          # spring constant
+C_SPRING::Float64 = 250                         # unit spring constant              [N]
+DAMPING::Float64  = 2.5                         # unit damping constant            [Ns]
 segments::Int64 = 5                             # number of tether segments         [-]
 α0 = π/10                                       # initial tether angle            [rad]
 duration = 30.0                                 # duration of the simulation        [s]
@@ -32,7 +33,7 @@ for i in 1:segments
 end
 
 # model, Z component upwards
-@parameters mass=M0 c_spring0=C_SPRING damping=0.5 l_seg=L0/segments
+@parameters mass=M0 c_spring0=C_SPRING/(L0/segments) l_seg=L0/segments
 @variables t 
 @variables pos(t)[1:3, 1:segments+1]  = POS0
 @variables vel(t)[1:3, 1:segments+1]  = VEL0
@@ -40,10 +41,12 @@ end
 @variables segment(t)[1:3, 1:segments]  = SEGMENTS0
 @variables unit_vector(t)[1:3, 1:segments]  = UNIT_VECTORS0
 @variables length(t) = L0
+@variables c_spring(t) = c_spring0
+@variables damping(t) = DAMPING  / l_seg
 @variables norm1(t)[1:segments] = l_seg * ones(segments)
 @variables rel_vel(t)[1:3, 1:segments]  = zeros(3, segments)
 @variables spring_vel(t)[1:segments] = zeros(segments)
-@variables c_spring(t)[1:segments] = c_spring0 * ones(segments)
+@variables c_spr(t)[1:segments] = c_spring0 * ones(segments)
 @variables spring_force(t)[1:3, 1:segments] = zeros(3, segments)
 @variables total_force(t)[1:3, 1:segments] = zeros(3, segments)
 D = Differential(t)
@@ -58,8 +61,8 @@ for i in segments:-1:1
     eqs2 = vcat(eqs2, unit_vector[:, i] ~ -segment[:, i]/norm1[i])
     eqs2 = vcat(eqs2, rel_vel[:, i] ~ vel[:, i+1] - vel[:, i])
     eqs2 = vcat(eqs2, spring_vel[i] ~ -unit_vector[:, i] ⋅ rel_vel[:, i])
-    eqs2 = vcat(eqs2, c_spring[i] ~ c_spring0 * (norm1[i] > length/segments))
-    eqs2 = vcat(eqs2, spring_force[:, i] ~ (c_spring[i] * (norm1[i] - l_seg) + damping * spring_vel[i]) * unit_vector[:, i])
+    eqs2 = vcat(eqs2, c_spr[i] ~ c_spring * (norm1[i] > length/segments))
+    eqs2 = vcat(eqs2, spring_force[:, i] ~ (c_spr[i] * (norm1[i] - l_seg) + damping * spring_vel[i]) * unit_vector[:, i])
     if i == segments
         eqs2 = vcat(eqs2, total_force[:, i] ~ spring_force[:, i])
     else
@@ -69,6 +72,8 @@ for i in segments:-1:1
 end
 eqs2 = vcat(eqs2, acc[:, 1] .~ zeros(3))
 eqs2 = vcat(eqs2, length ~ L0 + V_RO*t)
+eqs2 = vcat(eqs2, c_spring ~ C_SPRING / (length/segments))
+eqs2 = vcat(eqs2, damping  ~ DAMPING  / (length/segments))
 eqs = vcat(eqs1..., eqs2)
      
 @named sys = ODESystem(eqs, t)
