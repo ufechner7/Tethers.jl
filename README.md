@@ -115,12 +115,12 @@ Have a look at the [Examples](https://ufechner7.github.io/Tethers.jl/dev/example
 Execution time for a simulation of 10s duration with logging the state every 20ms.
 Relative and absolute tolerance: $1.0^{-6}$. CPU: Ryzen 9 7950X.
 
-| Test-case                    | Lines of code (LOC) Julia | LOC Python  | Time Julia [ms] | Time Python [ms] |
-|:----------------------------|:-------------------:|:---:|:-----:|:---:|
-|Falling mass                 |     42              | 56  | 0.17  | 2.6 |
-|Non-linear Spring damper     |     61              | 83  | 0.61  | 20  |
-|dito with callbacks          |     68              | 103 | 0.74  | 31  |
-|swinging tether, 5 segments  |    121              | 148 |  3.5  | 47  |
+| Test-case             | Lines of code (LOC) Julia | LOC Python | Time Julia [ms] | Time Python [ms] |
+|:----------------------------|:-------------------:|:----------:|:---------------:|:---:|
+|Falling mass                 |     42              | 56         | 0.17            | 2.6 |
+|Non-linear Spring damper     |     61              | 83         | 0.61            | 20  |
+|dito with callbacks          |     68              | 103        | 0.74            | 31  |
+|swinging tether, 5 segments  |    122              | 150        | 3.50            | 47  |
 
 **Tradeoff Julia vs Python:** In Julia, the code is compiled before it is executed, which can cause about one to 10 seconds delay when running a simulation the first time, but speeds up the execution a lot afterward. In addition, Julia can run fully multithreaded, Python cannot make use of multiple CPU cores with multithreading because of the global interpreter lock. 
 
