@@ -1,6 +1,4 @@
 # Tethers.jl
- <p style="text-align:center;"><img src="docs/images/Tether.jpg" width="70">
-
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://ufechner7.github.io/Tethers.jl/dev)  
 
 ## Introduction
