@@ -3,12 +3,18 @@ A sequence of examples, from a simple mass attached to a spring-damper element t
 a full segmented tether model with real-out and aerodynamic drag attached.
 
 | Name  | Description | Learning objective |
-|---|---|---|
+|:---|:---|:---|
 | Tether_01 | Mass, thrown upwards, then falling  | Learn how to define a model, simulate it and plot the results   |
 | Tether_02  | Mass, attached to linear spring | Learn how to model a spring in 3D  |
-| Tether_03  |   |   |
-| Tether_04  |   |   |
-| Tether_05  |   |   |
+| Tether_03  | Mass, attached to non-linear spring | Learn how to model  DAE systems with discontinuities   |
+| Tether_04  | First segmented tether | Learn how to use arrays of equations |
+| Tether_05  | Segmented tether with correct force distribution  | Learn how to distribute the spring force over two masses   |
+| Tether_06  | Segmented tether with reel-in and reel-out  | Learn model a tether with changing unstretched length |
+| Tether_06  | Segmented tether with aerodynamic drag | Learn how to model tether drag |
+
+**Nomenclature:**
+- ODE: Ordinary differential equations
+- DAE: Differential algebraic equations
 
 ## Mass, attached to a spring-damper
 From the Julia prompt, run the simulation:
