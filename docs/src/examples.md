@@ -10,7 +10,7 @@ a full segmented tether model with real-out and aerodynamic drag attached.
 | Tether_04  | First segmented tether | Learn how to use arrays of equations |
 | Tether_05  | Segmented tether with correct force distribution  | Learn how to distribute the spring force over two masses   |
 | Tether_06  | Segmented tether with reel-in and reel-out  | Learn model a tether with changing unstretched length |
-| Tether_06  | Segmented tether with aerodynamic drag | Learn how to model tether drag |
+| Tether_07  | Segmented tether with aerodynamic drag | Learn how to model tether drag |
 
 **Nomenclature:**
 - ODE: Ordinary differential equations
@@ -104,6 +104,38 @@ As you can see, logging of calculated variables is not
 possible with Assimulo (easy with ModelingToolkit in Julia). You need to re-calculate them
 after the simulation.
 
+## Benchmarking non-linear simulation
+Using a callback slows the simulation down, but not much. Try it out:
+```julia
+include("src/Tether_03c.jl")
+```
+Output on a fast PC:
+```
+Solving the system without callback...
+  0.000606 seconds (8.06 k allocations: 257.672 KiB)
+Press any key...
+
+Solving the system with callback...
+  0.000741 seconds (9.93 k allocations: 365.812 KiB)
+If you zoom in to the points in time where pos_z crosses -10m
+you should see a difference...
+```
+In this example, the gain of accuracy is very small, but that can be different
+in other simulations. For benchmarking we call solve twice: The first call ensures that the
+code is compiled, and the second call measures the execution time of the code.
+
+**Python**
+The script, which executes the Python code with callbacks:
+```
+include("src/RunTether_03b.jl")
+```
+reports 31 ms for solving the problem (without printing).
+Without callbacks:
+```
+include("src/RunTether_03.jl")
+```
+still, 20 ms are needed.
+
 ## Multi-segment tether
 Using 2D arrays of variables allows to simulate a multi-segment tether:
 ```julia
@@ -153,36 +185,3 @@ We loop backward over the particles, starting with the last particle, because on
 Finally, in this example, we plot the result dynamically as 2D video. Screenshot:
 
 ![Tether 2D](docs/images/Tether2d.png)
-
-
-## Benchmarking
-Using a callback slows the simulation down, but not much. Try it out:
-```julia
-include("src/Tether_03c.jl")
-```
-Output on a fast PC:
-```
-Solving the system without callback...
-  0.000606 seconds (8.06 k allocations: 257.672 KiB)
-Press any key...
-
-Solving the system with callback...
-  0.000741 seconds (9.93 k allocations: 365.812 KiB)
-If you zoom in to the points in time where pos_z crosses -10m
-you should see a difference...
-```
-In this example, the gain of accuracy is very small, but that can be different
-in other simulations. For benchmarking we call solve twice: The first call ensures that the
-code is compiled, and the second call measures the execution time of the code.
-
-**Python**
-The script, which executes the Python code with callbacks:
-```
-include("src/RunTether_03b.jl")
-```
-reports 31 ms for solving the problem (without printing).
-Without callbacks:
-```
-include("src/RunTether_03.jl")
-```
-still, 20 ms are needed.
