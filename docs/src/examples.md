@@ -187,7 +187,7 @@ Finally, in this example, we plot the result dynamically as 2D video. Screenshot
 ![Tether 2D](docs/images/Tether2d.png)
 
 ## Multi-segment tether reeling out
-In this example, we assume a constant reel-out speed of $V_RO=2m/s$. When reeling out the following values need to be dynamically calculated:
+In this example, we assume a constant reel-out speed of $V_{RO}=2m/s$. When reeling out the following values need to be dynamically calculated:
 - unstretched length of a tether segment
 - mass of the tether segment
 - spring constant
