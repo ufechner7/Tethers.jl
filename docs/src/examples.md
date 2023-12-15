@@ -9,7 +9,7 @@ a full segmented tether model with real-out and aerodynamic drag attached.
 | Tether_03  | Mass, attached to non-linear spring | Learn how to model  DAE systems with discontinuities   |
 | Tether_04  | First segmented tether | Learn how to use arrays of equations |
 | Tether_05  | Segmented tether with correct force distribution  | Learn how to distribute the spring force over two masses   |
-| Tether_06  | Segmented tether with reel-in and reel-out  | Learn model a tether with changing unstretched length |
+| Tether_06  | Segmented tether with reel-in and reel-out  | Learn to model a tether with changing unstretched length |
 | Tether_07  | Segmented tether with aerodynamic drag | Learn how to model tether drag |
 
 **Nomenclature:**
