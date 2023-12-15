@@ -8,7 +8,7 @@ V0::Float64 = 2                                 # initial velocity of lowest mas
 M0::Float64 = 0.5                               # mass per particle                [kg]
 C_SPRING::Float64 = 50                          # spring constant
 segments::Int64 = 5                             # number of tether segments         [-]
-α0 = π/8                                        # initial tether angle            [rad]
+α0 = π/10                                       # initial tether angle            [rad]
 duration = 30.0                                 # duration of the simulation        [s]
 POS0 = zeros(3, segments+1)
 VEL0 = zeros(3, segments+1)
@@ -93,7 +93,8 @@ function plot2d(sol, reltime, segments, line, sc, txt)
     if isnothing(line)
         line, = plot(x,z; linewidth="1")
         sc  = scatter(x, z; s=15, color="red") 
-        txt = annotate("t=$(round(reltime,digits=1)) s",  xy=(segments*L0/4.2, z_max-3.0), fontsize = 12)
+        txt = annotate("t=$(round(reltime,digits=1)) s",  
+                            xy=(segments*L0/4.2, z_max-3.0*segments/5), fontsize = 12)
         PyPlot.show(block=false)
     else
         line.set_xdata(x)
@@ -107,7 +108,7 @@ end
 
 function play()
     dt = 0.15
-    ylim(-segments*L0-10, 0.5)
+    ylim(-1.2*segments*L0, 0.5)
     xlim(-segments*L0/2, segments*L0/2)
     grid(true; color="grey", linestyle="dotted")
     line, sc, txt = nothing, nothing, nothing
