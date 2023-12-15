@@ -15,10 +15,11 @@ from assimulo.problem import Implicit_Problem # Imports the problem formulation 
 G_EARTH  = np.array([0.0, 0.0, -9.81]) # gravitational acceleration
 C_SPRING = 50.0                        # spring constant
 DAMPING  =  0.5                        # damping [Ns/m]
-L0      =  5.0                        # initial segment length    [m]
-ALPHA0   = math.pi/8                   # initial tether angle    [rad]
+L0      =  5.0                         # initial segment length     [m]
+ALPHA0   = math.pi/10                  # initial tether angle     [rad]
 SEGMENTS = 5
-MASS     = 0.5                         # mass per tether particle [kg]      
+MASS     = 0.5                         # mass per tether particle  [kg]   
+DURATION = 30                          # duration of the simulation [s]
 ZEROS  = np.array([0.0, 0.0, 0.0])
 RESULT = np.zeros(SEGMENTS * 6 + 3).reshape((-1, 3))
 NONLINEAR = True
@@ -106,12 +107,14 @@ def plot2d(fig, y, reltime, segments, line, sc, txt):
         line, = plt.plot(x,z, linewidth="1")
         sc  = plt.scatter(x, z, s=15, color="red")
         plt.pause(0.01)
-        # txt = plt.annotate("t=$(round(reltime,digits=1)) s",  xy=(12, z_max-3.0), fontsize = 12)
+        txt = plt.annotate("t="+str(reltime)+" s",  
+                           xy=(segments*L0/4.2, z_max-3.0*segments/5), fontsize = 12)
         plt.show(block=False)
     else:
         line.set_xdata(x)
         line.set_ydata(z)
         sc.set_offsets(np.c_[x, z])
+        txt.set_text("t="+str(round(reltime,1))+" s")
         fig.canvas.draw()
         plt.pause(0.01)
         plt.show(block=False)
@@ -139,10 +142,9 @@ def run_example():
     sim.verbosity = 30 
     sim.atol = 1.0e-6
     sim.rtol = 1.0e-6
-    duration = 10.0
     
-    time, y, yd = sim.simulate(duration, 500) # Simulate 10 seconds with 500 communications points 
-    play(duration, y)   
+    time, y, yd = sim.simulate(DURATION, round(DURATION*50)+2) # 50 communications points per second 
+    play(DURATION, y)   
     
 if __name__ == '__main__':
     run_example()
