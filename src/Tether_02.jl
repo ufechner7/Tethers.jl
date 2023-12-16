@@ -44,7 +44,7 @@ VEL_Z = stack(sol[vel], dims=1)[:,3]
 plot(X, POS_Z, color="green")
 xlabel("time [s]")
 ylabel("pos_z [m]")
-grid(true)
+PyPlot.grid(true)
 twinx()
 ylabel("vel_z [m/s]") 
 plot(X, VEL_Z, color="red") 

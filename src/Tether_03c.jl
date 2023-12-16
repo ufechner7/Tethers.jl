@@ -68,7 +68,7 @@ function plt(sol; title="")
     xlabel("time [s]")
     ylabel("pos_z [m]")
     lns2 = plot(X, L0.+0.005 .* sol[c_spring], color="grey", label="c_spring")
-    grid(true)
+    PyPlot.grid(true)
     twinx()
     ylabel("vel_z [m/s]") 
     lns3 = plot(X, VEL_Z, color="red", label="vel_z")
@@ -79,6 +79,7 @@ function plt(sol; title="")
     nothing
 end
 
+PyPlot.clear()
 println("Solving the system without callback...")
 simple_sys, pos, vel, c_spring = model3(G_EARTH, L0, V0)
 sol = solve3(simple_sys, L0, V0; cb=false)
