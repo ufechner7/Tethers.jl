@@ -12,7 +12,7 @@ C_SPRING::Float64 = 614600.0                    # unit spring constant          
 DAMPING::Float64  = 473                         # unit damping constant            [Ns]
 segments::Int64 = 5                             # number of tether segments         [-]
 α0 = π/10                                       # initial tether angle            [rad]
-duration = 10.0                                 # duration of the simulation        [s]
+duration = 30.0                                 # duration of the simulation        [s]
 mass_per_meter::Float64 = RHO_TETHER * segments * (D_TETHER/2000.0)^2
 POS0 = zeros(3, segments+1)
 VEL0 = zeros(3, segments+1)
@@ -108,7 +108,7 @@ function plot2d(sol, reltime, segments, line, sc, txt)
         line, = plot(x,z; linewidth="1")
         sc  = scatter(x, z; s=15, color="red") 
         txt = annotate("t=$(round(reltime,digits=1)) s",  
-                        xy=(L0/4.2, z_max-7.0*segments/5), fontsize = 12)
+                        xy=(L0/4.2, z_max-10), fontsize = 12)
         PyPlot.show(block=false)
     else
         line.set_xdata(x)
