@@ -108,7 +108,7 @@ function plot2d(sol, reltime, segments, line, sc, txt)
         line, = plot(x,z; linewidth="1")
         sc  = scatter(x, z; s=15, color="red") 
         txt = annotate("t=$(round(reltime,digits=1)) s",  
-                        xy=(L0/4.2, z_max-10), fontsize = 12)
+                        xy=(L0/4.2, z_max-7), fontsize = 12)
     else
         line.set_xdata(x)
         line.set_ydata(z)
