@@ -38,8 +38,8 @@ prob = ODEProblem(simple_sys, u0, tspan)
 @time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
 
 X = sol.t
-POS_Z = sol(X, idxs=pos[3])
-VEL_Z = sol(X, idxs=vel[3])
+POS_Z = stack(sol[pos], dims=1)[:,3]
+VEL_Z = stack(sol[vel], dims=1)[:,3]
 
 plot(X, POS_Z, color="green")
 xlabel("time [s]")

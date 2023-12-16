@@ -77,9 +77,10 @@ prob = ODEProblem(simple_sys, u0, tspan)
 
 function plt(sol, particle)
     X = sol.t
-    POS_Z = sol(X, idxs=pos[3, particle])
-    VEL_Z = sol(X, idxs=vel[3, particle])
-    C_SPRING = sol(X, idxs=c_spring[particle-1])
+    POS_Z = stack(sol[pos], dims=1)[:,3,particle]
+    VEL_Z = stack(sol[vel], dims=1)[:,3,particle]
+    C_SPRING = stack(sol[c_spring], dims=1)[:, particle-1]
+    # C_SPRING = sol(X, idxs=c_spring[particle-1])
     lns1 = plot(X, POS_Z, color="green", label="pos_z")
     xlabel("time [s]")
     ylabel("pos_z [m]")

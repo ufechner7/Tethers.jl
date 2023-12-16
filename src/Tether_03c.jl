@@ -61,8 +61,8 @@ end
 function plt(sol; title="")
     fig = figure(title)
     X = sol.t
-    POS_Z = sol(X, idxs=pos[3])
-    VEL_Z = sol(X, idxs=vel[3])
+    POS_Z = stack(sol[pos], dims=1)[:,3]
+    VEL_Z = stack(sol[vel], dims=1)[:,3]
 
     lns1 = plot(X, POS_Z, color="green", label="pos_z")
     xlabel("time [s]")
