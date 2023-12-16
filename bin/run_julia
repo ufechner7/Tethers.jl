@@ -1,6 +1,7 @@
 #!/bin/bash
 
 export KMP_DUPLICATE_LIB_OK=TRUE
+export MPLBACKEND=qt5agg
 
 if [[ $(basename $(pwd)) == "bin" ]]; then
     cd ..
