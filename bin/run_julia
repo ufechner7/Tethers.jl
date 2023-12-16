@@ -9,7 +9,7 @@ if [[ $HOSTNAME == "tuxedi" ]]; then
     sudo performance.sh
 fi
 
-EX=""
+EX='-e include("src/init.jl")'
 
 julia_version=$(julia --version | awk '{print($3)}')
 julia_major=${julia_version:0:3} 
