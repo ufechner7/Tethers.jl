@@ -1,5 +1,5 @@
 # Example two: Falling mass, attached to linear spring
-using ModelingToolkit, OrdinaryDiffEq, PyPlot, LinearAlgebra
+using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra
 
 G_EARTH  = Float64[0.0, 0.0, -9.81]    # gravitational acceleration [m/s²]
 L0::Float64 = -10.0                    # initial spring length      [m]
@@ -48,5 +48,4 @@ grid(true)
 twinx()
 ylabel("vel_z [m/s]") 
 plot(X, VEL_Z, color="red") 
-PyPlot.show(block=false)
 nothing

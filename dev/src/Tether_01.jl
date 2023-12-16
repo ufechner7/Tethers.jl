@@ -1,5 +1,5 @@
 # Example one: Falling mass.
-using ModelingToolkit, OrdinaryDiffEq, PyPlot
+using ModelingToolkit, OrdinaryDiffEq
 
 G_EARTH  = Float64[0.0, 0.0, -9.81]    # gravitational acceleration
 
