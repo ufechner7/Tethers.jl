@@ -12,7 +12,8 @@ C_SPRING::Float64 = 614600.0                    # unit spring constant          
 DAMPING::Float64  = 473                         # unit damping constant            [Ns]
 segments::Int64 = 5                             # number of tether segments         [-]
 α0 = π/10                                       # initial tether angle            [rad]
-duration = 30.0                                 # duration of the simulation        [s]
+duration = 10.0                                 # duration of the simulation        [s]
+SAVE = true
 mass_per_meter::Float64 = RHO_TETHER * segments * (D_TETHER/2000.0)^2
 POS0 = zeros(3, segments+1)
 VEL0 = zeros(3, segments+1)
@@ -96,7 +97,7 @@ u0 = Dict(pos=>POS0, vel=>VEL0)
 prob = ODEProblem(simple_sys, u0, tspan)
 @time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
 
-function plot2d(sol, reltime, segments, line, sc, txt)
+function plot2d(sol, reltime, segments, line, sc, txt, j)
     index = Int64(round(reltime*50+1))
     x, z = Float64[], Float64[]
     for particle in 1:segments+1
@@ -116,6 +117,9 @@ function plot2d(sol, reltime, segments, line, sc, txt)
         txt.set_text("t=$(round(reltime,digits=1)) s")
         gcf().canvas.draw()
     end
+    if SAVE
+        PyPlot.savefig("video/"*"img-"*lpad(j,4,"0"))
+    end
     line, sc, txt
 end
 
@@ -128,8 +132,10 @@ function play()
     tight_layout(rect=(0, 0, 0.98, 0.98))
     line, sc, txt = nothing, nothing, nothing
     start = time_ns()
+    j = 0
     for time in 0:dt:duration
-        line, sc, txt = plot2d(sol, time, segments, line, sc, txt)
+        line, sc, txt = plot2d(sol, time, segments, line, sc, txt, j)
+        j += 1
         wait_until(start + 0.5*time*1e9)
     end
     nothing
