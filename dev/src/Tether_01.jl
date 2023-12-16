@@ -39,5 +39,4 @@ grid(true)
 twinx()
 ylabel("vel_z [m/s]") 
 plot(X, VEL_Z, color="red") 
-PyPlot.show(block=false)
 nothing
