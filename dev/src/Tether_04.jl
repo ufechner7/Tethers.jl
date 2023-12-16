@@ -5,7 +5,7 @@ for l < l_0) and n tether segments.
 # TODO: Distribute force correctly
 # TODO: Add 2D plot
 
-using ModelingToolkit, OrdinaryDiffEq, PyPlot, LinearAlgebra
+using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra
 
 G_EARTH     = Float64[0.0, 0.0, -9.81]          # gravitational acceleration     [m/s²]
 L0::Float64 = 10.0                              # initial segment length            [m]
@@ -92,7 +92,6 @@ function plt(sol, particle)
     lns = vcat(lns1, lns2, lns3)
     labs = [l.get_label() for l in lns]
     legend(lns, labs) 
-    PyPlot.show(block=false)
 end
 # plt(sol, 2)
 plt(sol, 3)
