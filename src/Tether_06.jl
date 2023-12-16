@@ -124,6 +124,7 @@ function play()
     ylim(-1.2*(L0+V_RO*duration), 0.5)
     xlim(-L0/2, L0/2)
     grid(true; color="grey", linestyle="dotted")
+    tight_layout(rect=(0, 0, 0.98, 0.98))
     line, sc, txt = nothing, nothing, nothing
     start = time_ns()
     for time in 0:dt:duration
