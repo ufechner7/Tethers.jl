@@ -1,5 +1,6 @@
 println("Running init...")
 
+import PyPlot
 import PyPlot: plot as pl
 import PyPlot: xlabel, ylabel, xlim, ylim, twinx, legend, figure, scatter, annotate, gcf,
                tight_layout
