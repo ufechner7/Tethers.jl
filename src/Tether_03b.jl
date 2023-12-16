@@ -52,6 +52,7 @@ X = sol.t
 POS_Z = stack(sol[pos], dims=1)[:,3]
 VEL_Z = stack(sol[vel], dims=1)[:,3]
 
+PyPlot.close()
 lns1 = plot(X, POS_Z, color="green", label="pos_z")
 xlabel("time [s]")
 ylabel("pos_z [m]")
