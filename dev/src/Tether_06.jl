@@ -120,7 +120,7 @@ function plot2d(sol, reltime, segments, line, sc, txt)
 end
 
 function play()
-    dt = 0.15
+    dt = 0.151
     ylim(-1.2*(L0+V_RO*duration), 0.5)
     xlim(-L0/2, L0/2)
     grid(true; color="grey", linestyle="dotted")
