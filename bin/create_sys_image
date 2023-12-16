@@ -30,4 +30,4 @@ else
     julia --pkgimages=no --project -t 16 --gcthreads=8,1 -e "include(\"./test/create_sys_image.jl\");"
 fi
 mv kps-image_tmp.so bin/kps-image-${julia_major}.so
-julia -J  bin/kps-image-${julia_major}.so --project -i -q -t 8 -e "using ModelingToolkit, OrdinaryDiffEq, PyPlot, LinearAlgebra, Timers"
+julia -J  bin/kps-image-${julia_major}.so --project -q -t 8 -e "using ModelingToolkit, OrdinaryDiffEq, PyPlot, LinearAlgebra, Timers"
