@@ -9,8 +9,8 @@ function plot(x...; y...)
     res
 end
 
-function grid(x...)
-    res = PyPlot.grid(x)
+function grid(x...; y...)
+    res = PyPlot.grid(x; y...)
     PyPlot.pause(0.01)
     PyPlot.show(block=false)
     res
