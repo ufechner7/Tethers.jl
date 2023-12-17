@@ -3,7 +3,7 @@ using ModelingToolkit, OrdinaryDiffEq
 
 G_EARTH  = Float64[0.0, 0.0, -9.81]    # gravitational acceleration
 
-# definition of the model
+# definiting the model
 @variables t pos(t)[1:3]=[0.0, 0.0,  0.0]
 @variables   vel(t)[1:3]=[0.0, 0.0, 50.0] 
 @variables   acc(t)[1:3]=[0.0, 0.0, -9.81] 
