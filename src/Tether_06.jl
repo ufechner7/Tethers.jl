@@ -7,67 +7,67 @@ L0::Float64 = 50.0                              # initial tether length         
 V0::Float64 = 2                                 # initial velocity of lowest mass [m/s]
 V_RO::Float64 = 2.0                             # reel-out speed                  [m/s]
 D_TETHER::Float64 = 4                           # tether diameter                  [mm]
-RHO_TETHER::Float64 = 724.0                     # densitiy of Dyneema           [kg/m³] 
+RHO_TETHER::Float64 = 724.0                     # density of Dyneema            [kg/m³] 
 C_SPRING::Float64 = 614600.0                    # unit spring constant              [N]
 DAMPING::Float64  = 473                         # unit damping constant            [Ns]
-segments::Int64 = 7                             # number of tether segments         [-]
+SEGMENTS::Int64 = 7                             # number of tether segments         [-]
 α0 = π/10                                       # initial tether angle            [rad]
 duration = 22.1                                 # duration of the simulation        [s]
 SAVE = false                                    # save png files in folder video
-mass_per_meter::Float64 = RHO_TETHER * segments * (D_TETHER/2000.0)^2
-POS0 = zeros(3, segments+1)
-VEL0 = zeros(3, segments+1)
-ACC0 = zeros(3, segments+1)
-SEGMENTS0 = zeros(3, segments) 
-UNIT_VECTORS0 = zeros(3, segments)
-for i in 1:segments+1
+mass_per_meter::Float64 = RHO_TETHER * SEGMENTS * (D_TETHER/2000.0)^2
+POS0 = zeros(3, SEGMENTS+1)
+VEL0 = zeros(3, SEGMENTS+1)
+ACC0 = zeros(3, SEGMENTS+1)
+SEGMENTS0 = zeros(3, SEGMENTS) 
+UNIT_VECTORS0 = zeros(3, SEGMENTS)
+for i in 1:SEGMENTS+1
     local l0
-    l0 = -(i-1)*L0/segments
-    v0 = (i-1)*V0/segments
+    l0 = -(i-1)*L0/SEGMENTS
+    v0 = (i-1)*V0/SEGMENTS
     POS0[:, i] .= [sin(α0) * l0, 0, cos(α0) * l0]
     VEL0[:, i] .= [sin(α0) * v0, 0, cos(α0) * v0]
 end
-for i in 2:segments+1
+for i in 2:SEGMENTS+1
     ACC0[:, i] .= G_EARTH
 end
-for i in 1:segments
+for i in 1:SEGMENTS
     UNIT_VECTORS0[:, i] .= [0, 0, 1.0]
     SEGMENTS0[:, i] .= POS0[:, i+1] - POS0[:, i]
 end
 
 # defining the model, Z component upwards
-@parameters c_spring0=C_SPRING/(L0/segments) l_seg=L0/segments
+@parameters c_spring0=C_SPRING/(L0/SEGMENTS) l_seg=L0/SEGMENTS
 @variables t 
-@variables pos(t)[1:3, 1:segments+1]  = POS0
-@variables vel(t)[1:3, 1:segments+1]  = VEL0
-@variables acc(t)[1:3, 1:segments+1]  = ACC0
-@variables segment(t)[1:3, 1:segments]  = SEGMENTS0
-@variables unit_vector(t)[1:3, 1:segments]  = UNIT_VECTORS0
+@variables pos(t)[1:3, 1:SEGMENTS+1]  = POS0
+@variables vel(t)[1:3, 1:SEGMENTS+1]  = VEL0
+@variables acc(t)[1:3, 1:SEGMENTS+1]  = ACC0
+@variables segment(t)[1:3, 1:SEGMENTS]  = SEGMENTS0
+@variables unit_vector(t)[1:3, 1:SEGMENTS]  = UNIT_VECTORS0
 @variables length(t) = L0
 @variables c_spring(t) = c_spring0
 @variables damping(t) = DAMPING  / l_seg
 @variables m_tether_particle(t) = mass_per_meter * l_seg
-@variables norm1(t)[1:segments] = l_seg * ones(segments)
-@variables rel_vel(t)[1:3, 1:segments]  = zeros(3, segments)
-@variables spring_vel(t)[1:segments] = zeros(segments)
-@variables c_spr(t)[1:segments] = c_spring0 * ones(segments)
-@variables spring_force(t)[1:3, 1:segments] = zeros(3, segments)
-@variables total_force(t)[1:3, 1:segments] = zeros(3, segments)
+@variables norm1(t)[1:SEGMENTS] = l_seg * ones(SEGMENTS)
+@variables rel_vel(t)[1:3, 1:SEGMENTS]  = zeros(3, SEGMENTS)
+@variables spring_vel(t)[1:SEGMENTS] = zeros(SEGMENTS)
+@variables c_spr(t)[1:SEGMENTS] = c_spring0 * ones(SEGMENTS)
+@variables spring_force(t)[1:3, 1:SEGMENTS] = zeros(3, SEGMENTS)
+@variables total_force(t)[1:3, 1:SEGMENTS] = zeros(3, SEGMENTS)
 D = Differential(t)
 
 eqs1 = vcat(D.(pos) ~ vel,
             D.(vel) ~ acc)
 eqs2 = []
-for i in segments:-1:1
+for i in SEGMENTS:-1:1
     global eqs2
     eqs2 = vcat(eqs2, segment[:, i] ~ pos[:, i+1] - pos[:, i])
     eqs2 = vcat(eqs2, norm1[i] ~ norm(segment[:, i]))
     eqs2 = vcat(eqs2, unit_vector[:, i] ~ -segment[:, i]/norm1[i])
     eqs2 = vcat(eqs2, rel_vel[:, i] ~ vel[:, i+1] - vel[:, i])
     eqs2 = vcat(eqs2, spring_vel[i] ~ -unit_vector[:, i] ⋅ rel_vel[:, i])
-    eqs2 = vcat(eqs2, c_spr[i] ~ c_spring * (norm1[i] > length/segments))
-    eqs2 = vcat(eqs2, spring_force[:, i] ~ (c_spr[i] * (norm1[i] - (length/segments)) + damping * spring_vel[i]) * unit_vector[:, i])
-    if i == segments
+    eqs2 = vcat(eqs2, c_spr[i] ~ c_spring * (norm1[i] > length/SEGMENTS))
+    eqs2 = vcat(eqs2, spring_force[:, i] ~ (c_spr[i] * (norm1[i] - (length/SEGMENTS)) + damping * spring_vel[i]) * unit_vector[:, i])
+    if i == SEGMENTS
         eqs2 = vcat(eqs2, total_force[:, i] ~ spring_force[:, i])
         eqs2 = vcat(eqs2, acc[:, i+1] .~ G_EARTH + total_force[:, i] / 0.5*(m_tether_particle))
     else
@@ -78,9 +78,9 @@ for i in segments:-1:1
 end
 eqs2 = vcat(eqs2, acc[:, 1] .~ zeros(3))
 eqs2 = vcat(eqs2, length ~ L0 + V_RO*t)
-eqs2 = vcat(eqs2, c_spring ~ C_SPRING / (length/segments))
-eqs2 = vcat(eqs2, m_tether_particle ~ mass_per_meter * (length/segments))
-eqs2 = vcat(eqs2, damping  ~ DAMPING  / (length/segments))
+eqs2 = vcat(eqs2, c_spring ~ C_SPRING / (length/SEGMENTS))
+eqs2 = vcat(eqs2, m_tether_particle ~ mass_per_meter * (length/SEGMENTS))
+eqs2 = vcat(eqs2, damping  ~ DAMPING  / (length/SEGMENTS))
 eqs = vcat(eqs1..., eqs2)
      
 @named sys = ODESystem(eqs, t)
@@ -133,7 +133,7 @@ function play()
     j = 0
     mkpath("video")
     for time in 0:dt:duration
-        line, sc, txt = plot2d(sol, time, segments, line, sc, txt, j)
+        line, sc, txt = plot2d(sol, time, SEGMENTS, line, sc, txt, j)
         j += 1
         wait_until(start + 0.5*time*1e9)
     end
