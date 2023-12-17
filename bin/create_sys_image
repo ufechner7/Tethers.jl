@@ -4,6 +4,7 @@ if [[ $(basename $(pwd)) == "bin" ]]; then
 fi
 
 export KMP_DUPLICATE_LIB_OK=TRUE
+export JULIA_IMAGE_THREADS=4
 if [[ $HOSTNAME == "framework" ]]; then
     export JULIA_IMAGE_THREADS=12
 fi
@@ -23,11 +24,11 @@ if test -f "Manifest.toml"; then
 fi
 julia --pkgimages=no --project -e "include(\"./test/update_packages.jl\");"
 
-julia --pkgimages=no --project -t 8 -e "using Pkg; Pkg.precompile()"
+julia --pkgimages=no --project -t 4 -e "using Pkg; Pkg.precompile()"
 if [[ $julia_major == "1.9" ]]; then
-    julia --pkgimages=no --project -t 8 -e "include(\"./test/create_sys_image.jl\");"
+    julia --pkgimages=no --project -t 4 -e "include(\"./test/create_sys_image.jl\");"
 else
-    julia --pkgimages=no --project -t 16 --gcthreads=8,1 -e "include(\"./test/create_sys_image.jl\");"
+    julia --pkgimages=no --project -t 4 --gcthreads=4,1 -e "include(\"./test/create_sys_image.jl\");"
 fi
 mv kps-image_tmp.so bin/kps-image-${julia_major}.so
-julia -J  bin/kps-image-${julia_major}.so --project -q -t 8 -e "using ModelingToolkit, OrdinaryDiffEq, PyPlot, LinearAlgebra, Timers"
+julia -J  bin/kps-image-${julia_major}.so --project -q -t 4 -e "using ModelingToolkit, OrdinaryDiffEq, PyPlot, LinearAlgebra, Timers"
