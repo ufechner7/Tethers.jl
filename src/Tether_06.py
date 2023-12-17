@@ -132,7 +132,7 @@ def play(duration, y):
     plt.xlim(-L0/2, L0/2)
     plt.grid(True, color="grey", linestyle="dotted")
     line, sc, txt = None, None, None
-    for t in np.linspace(0, duration, num=round(duration/dt)+1):
+    for t in np.linspace(0, duration, num=round(duration/dt)):
         line, sc, txt = plot2d(fig, y, t, SEGMENTS, line, sc, txt)
         time.sleep(dt/2)
     plt.show()
@@ -149,6 +149,7 @@ def run_example():
     
     time, y, yd = sim.simulate(DURATION, round(DURATION*50)+2) # 50 communications points per second 
     play(DURATION, y)   
+    return y
     
 if __name__ == '__main__':
     run_example()
