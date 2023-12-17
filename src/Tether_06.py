@@ -13,7 +13,7 @@ from assimulo.solvers.sundials import IDA     # Imports the solver IDA from Assi
 from assimulo.problem import Implicit_Problem # Imports the problem formulation from Assimulo
 
 G_EARTH  = np.array([0.0, 0.0, -9.81]) # gravitational acceleration
-C_SPRING =  614600.0*0.1                        # spring constant
+C_SPRING =  614600.0                        # spring constant
 DAMPING  =  473*0.005                       # damping [Ns/m]
 L0      =  50.0                         # initial segment length     [m]
 ALPHA0   = math.pi/10                  # initial tether angle     [rad]
@@ -138,10 +138,12 @@ def play(duration, y):
     plt.ylim(-1.2*(L0+V_RO*duration), 0.5)
     plt.xlim(-L0/2, L0/2)
     plt.grid(True, color="grey", linestyle="dotted")
+    plt.tight_layout(rect=(0, 0, 0.98, 0.98))
     line, sc, txt = None, None, None
     for t in np.linspace(0, duration, num=round(duration/dt)):
         line, sc, txt = plot2d(fig, y, t, SEGMENTS, line, sc, txt)
         time.sleep(dt/2)
+    plt.show(block=True)
    
 def run_example():  
     # Create an instance of the problem 
@@ -150,8 +152,8 @@ def run_example():
     
     sim = IDA(model) # Create the solver 
     sim.verbosity = 30 
-    sim.atol = 1.0e-5
-    sim.rtol = 1.0e-5
+    sim.atol = 1.0e-6
+    sim.rtol = 1.0e-6
     
     time, y, yd = sim.simulate(DURATION, round(DURATION*50)+2) # 50 communications points per second 
     play(DURATION, y)   
