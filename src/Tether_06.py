@@ -14,7 +14,7 @@ from assimulo.problem import Implicit_Problem # Imports the problem formulation 
 
 G_EARTH  = np.array([0.0, 0.0, -9.81]) # gravitational acceleration
 C_SPRING =  614600.0                   # spring constant
-DAMPING  =  473*0.005                  # damping [Ns/m]
+DAMPING  =  473*0.0045                 # damping [Ns/m]
 L0      =  50.0                        # initial segment length     [m]
 ALPHA0   = math.pi/10                  # initial tether angle     [rad]
 SEGMENTS = 7 
