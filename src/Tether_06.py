@@ -13,9 +13,9 @@ from assimulo.solvers.sundials import IDA     # Imports the solver IDA from Assi
 from assimulo.problem import Implicit_Problem # Imports the problem formulation from Assimulo
 
 G_EARTH  = np.array([0.0, 0.0, -9.81]) # gravitational acceleration
-C_SPRING =  614600.0                        # spring constant
-DAMPING  =  473*0.005                       # damping [Ns/m]
-L0      =  50.0                         # initial segment length     [m]
+C_SPRING =  614600.0                   # spring constant
+DAMPING  =  473*0.005                  # damping [Ns/m]
+L0      =  50.0                        # initial segment length     [m]
 ALPHA0   = math.pi/10                  # initial tether angle     [rad]
 SEGMENTS = 7 
 DURATION = 22                          # duration of the simulation [s]
@@ -57,9 +57,7 @@ class ExtendedProblem(Implicit_Problem):
         y1  = y.reshape((-1, 3)) # reshape the state vector such that we can access it per 3D-vector
         yd1 = yd.reshape((-1, 3))
         length = L0 + V_RO*t
-        # c_spring = C_SPRING 
         c_spring1 = C_SPRING / (length/SEGMENTS)       
-        # damping  = DAMPING
         damping  = DAMPING / (length/SEGMENTS)
         m_tether_particle = mass_per_meter * (length/SEGMENTS)   
         RESULT[0] = y1[0] # the velocity of mass0 shall be zero        
@@ -108,7 +106,6 @@ class ExtendedProblem(Implicit_Problem):
     
 def plot2d(fig, y, reltime, segments, line, sc, txt):
     index = round(reltime*50)
-    # print("index: ", index)
     x, z = np.zeros(segments+1), np.zeros(segments+1)
     for i in range(segments):
         x[i+1] = y[index, 3+6*i]
@@ -157,7 +154,7 @@ def run_example():
     
     time, y, yd = sim.simulate(DURATION, round(DURATION*50)+2) # 50 communications points per second 
     play(DURATION, y)   
-    return y
+    return
     
 if __name__ == '__main__':
-    y5=run_example()
+    run_example()
