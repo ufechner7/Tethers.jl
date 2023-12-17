@@ -6,7 +6,7 @@ G_EARTH  = Float64[0.0, 0.0, -9.81]             # gravitational acceleration [m/
 L0::Float64 = -10.0                             # initial spring length      [m]
 V0::Float64 = 4                                 # initial velocity           [m/s]
 
-# model, Z component upwards
+# defining the model, Z component upwards
 @parameters mass=1.0 c_spring0=50.0 damping=0.5 l0=L0
 @variables t pos(t)[1:3] = [0.0, 0.0,  L0]
 @variables   vel(t)[1:3] = [0.0, 0.0,  V0] 
@@ -29,15 +29,14 @@ eqs = vcat(D.(pos)      ~ vel,
 @named sys = ODESystem(eqs, t)
 simple_sys = structural_simplify(sys)
 
+# running the simulation
 duration = 10.0
 dt = 0.02
 tol = 1e-6
 tspan = (0.0, duration)
 ts    = 0:dt:duration
-# initial state
-u0 = Dict(pos=>[0,0,L0], vel=>[0,0,V0])
 
-function condition(u, t, integrator) # Event when condition(u,t,integrator) == 0
+function condition(u, t, integrator) # event when condition(u,t,integrator) == 0
     norm(u[1:3]) - abs(L0)
 end
 function affect!(integrator)
@@ -45,9 +44,10 @@ function affect!(integrator)
 end
 cb = ContinuousCallback(condition, affect!)
 
-prob = ODEProblem(simple_sys, u0, tspan)
+prob = ODEProblem(simple_sys, nothing, tspan)
 sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts, callback = cb)
 
+# plotting the result
 X = sol.t
 POS_Z = stack(sol[pos], dims=1)[:,3]
 VEL_Z = stack(sol[vel], dims=1)[:,3]

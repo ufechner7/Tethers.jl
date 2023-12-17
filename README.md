@@ -118,7 +118,7 @@ Relative and absolute tolerance: $1.0^{-6}$. CPU: Ryzen 9 7950X.
 |:----------------------------|:-------------------:|:----------:|:---------------:|:---:|
 |Falling mass                 |     41              | 56         | 0.17            | 2.6 |
 |Non-linear Spring damper     |     59              | 83         | 0.61            | 20  |
-|dito with callbacks          |     68              | 103        | 0.74            | 31  |
+|dito with callbacks          |     67              | 103        | 0.74            | 31  |
 |swinging tether, 5 segments  |    122              | 150        | 3.50            | 47  |
 |Dyneema tether, reeling out  |    136              |            | 22              |     |
 
