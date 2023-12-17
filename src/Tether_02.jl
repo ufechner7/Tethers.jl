@@ -47,6 +47,7 @@ ylabel("pos_z [m]")
 PyPlot.grid(true)
 twinx()
 ylabel("vel_z [m/s]") 
+tight_layout(rect=(0, 0, 0.98, 0.98))
 line2, = plot(X, VEL_Z, color="red", label="vel_z")
 legend(handles=[line1, line2]) 
 nothing

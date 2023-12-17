@@ -1,4 +1,4 @@
-# Example two: Falling mass, attached to non-linear spring without compression stiffness,
+# Example three: Falling mass, attached to non-linear spring without compression stiffness,
 # initially moving upwards with 4 m/s.
 using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra
 
