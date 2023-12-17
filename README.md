@@ -88,14 +88,12 @@ ts    = 0:dt:duration
 ```
 The time step $dt$ is the interval in which the solution shall be stored, NOT the time step of the integrator. The integrator uses a variable time step which can be much smaller or much larger as determined by the required tolerance, in this example set to $tol=10^{-6}$. The variable $ts$ is a range object defining the sampling times for the result.
 
-Then we define the initial condition $u0$. We use a dictionary of variable => value pairs to do this. In the next line, we define the ODE problem and finally, we solve it using the Rodas5 solver with the given parameters.
+In the next lines, we define the ODE problem and finally, we solve it using the Rodas5 solver with the given parameters.
 ```julia
-u0 = Dict(vel=>[0, 0, 50.0])
-
-prob = ODEProblem(simple_sys, u0, tspan)
+prob = ODEProblem(simple_sys, nothing, tspan)
 @time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
 ```
-The macro `@time` measures the compilation and execution time of calling the function `solve()`. It is compiled only when called the first time. 
+The macro `@time` measures the compilation and execution time of calling the function `solve()`. The function is compiled only when called the first time. 
 
 ## Python version as comparison
 From the Julia prompt execute:
@@ -118,8 +116,8 @@ Relative and absolute tolerance: $1.0^{-6}$. CPU: Ryzen 9 7950X.
 
 | Test-case             | Lines of code (LOC) Julia | LOC Python | Time Julia [ms] | Time Python [ms] |
 |:----------------------------|:-------------------:|:----------:|:---------------:|:---:|
-|Falling mass                 |     42              | 56         | 0.17            | 2.6 |
-|Non-linear Spring damper     |     61              | 83         | 0.61            | 20  |
+|Falling mass                 |     41              | 56         | 0.17            | 2.6 |
+|Non-linear Spring damper     |     52              | 83         | 0.61            | 20  |
 |dito with callbacks          |     68              | 103        | 0.74            | 31  |
 |swinging tether, 5 segments  |    122              | 150        | 3.50            | 47  |
 |Dyneema tether, reeling out  |    136              |            | 22              |     |
