@@ -1,3 +1,5 @@
+# Before running this script you must install the packages that are used
+# with `using Pkg; Pkg.add("FileIO")` etc.
 using FileIO, ImageIO, Colors, FixedPointNumbers, Images
 
 folder = "video"
