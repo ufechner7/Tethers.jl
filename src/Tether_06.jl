@@ -133,6 +133,7 @@ function play()
     line, sc, txt = nothing, nothing, nothing
     start = time_ns()
     j = 0
+    mkpath("video")
     for time in 0:dt:duration
         line, sc, txt = plot2d(sol, time, segments, line, sc, txt, j)
         j += 1
