@@ -17,8 +17,8 @@ C_SPRING =  614600.0                   # spring constant
 DAMPING  =  473*0.0045                 # damping [Ns/m]
 L0      =  50.0                        # initial segment length     [m]
 ALPHA0   = math.pi/10                  # initial tether angle     [rad]
-SEGMENTS = 7 
-DURATION = 22                          # duration of the simulation [s]
+SEGMENTS = 5 
+DURATION = 10                          # duration of the simulation [s]
 
 V_RO = 2.0                             # reel-out speed                  [m/s]
 D_TETHER = 4.0                         # tether diameter                  [mm]
