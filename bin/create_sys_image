@@ -4,10 +4,7 @@ if [[ $(basename $(pwd)) == "bin" ]]; then
 fi
 
 export KMP_DUPLICATE_LIB_OK=TRUE
-export JULIA_IMAGE_THREADS=4
-if [[ $HOSTNAME == "framework" ]]; then
-    export JULIA_IMAGE_THREADS=12
-fi
+export JULIA_IMAGE_THREADS=8
 
 julia_version=$(julia --version | awk '{print($3)}')
 julia_major=${julia_version:0:3} 
