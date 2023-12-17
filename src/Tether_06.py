@@ -12,7 +12,7 @@ from assimulo.solvers.sundials import IDA     # Imports the solver IDA from Assi
 from assimulo.problem import Implicit_Problem # Imports the problem formulation from Assimulo
 
 G_EARTH  = np.array([0.0, 0.0, -9.81]) # gravitational acceleration
-L0      =  5.0                         # initial segment length     [m]
+L0      =  50.0                         # initial segment length     [m]
 ALPHA0   = math.pi/10                  # initial tether angle     [rad]
 SEGMENTS = 5
 DURATION = 30                          # duration of the simulation [s]
@@ -68,11 +68,11 @@ class ExtendedProblem(Implicit_Problem):
             res_3   =  y1[2*i+4] - yd1[2*i+3]  # the derivative of the position of mass1 must be equal to its velocity
             rel_vel = yd1[2*i+3] - yd1[2*i+1]  # calculate the relative velocity of mass2 with respect to mass 1 
             segment = y1[2*i+3]  - y1[2*i+1]   # calculate the vector from mass1 to mass0
-            if np.linalg.norm(segment) > L0:               # if the segment is not loose, calculate spring and damping force
-                c_spring = C_SPRING
+            if np.linalg.norm(segment) > length:               # if the segment is not loose, calculate spring and damping force
+                c_spring = C_SPRING / (length/SEGMENTS) 
             else:
                 c_spring = 0.0
-            force = c_spring * (np.linalg.norm(segment) - L0) * segment / np.linalg.norm(segment) \
+            force = c_spring * (np.linalg.norm(segment) - length) * segment / np.linalg.norm(segment) \
                     + damping * rel_vel                                                
             # 2. apply it to the lowest mass (the mass next to the kite)   
             spring_forces = force - last_force    
@@ -125,11 +125,11 @@ def plot2d(fig, y, reltime, segments, line, sc, txt):
     return line, sc, txt
 
 def play(duration, y):
-    dt = 0.15
+    dt = 0.151
     plt.ioff()
     fig = plt.figure()
-    plt.ylim(-SEGMENTS*L0-10, 0.5)
-    plt.xlim(-SEGMENTS*L0/2, SEGMENTS*L0/2)
+    plt.ylim(-1.2*(L0+V_RO*duration), 0.5)
+    plt.xlim(-L0/2, L0/2)
     plt.grid(True, color="grey", linestyle="dotted")
     line, sc, txt = None, None, None
     for t in np.linspace(0, duration, num=round(duration/dt)+1):
