@@ -50,8 +50,6 @@ class ExtendedProblem(Implicit_Problem):
     for i in range (SEGMENTS):    
         y0  = np.append(y0,  np.append(pos[i+1], vel[i+1])) # Initial state vector
         yd0 = np.append(yd0, np.append(vel[i+1], acc[i+1])) # Initial state vector derivative          
-    print(y0)
-    print(yd0)
 
     def res(self, t, y, yd):  
         y1  = y.reshape((-1, 3)) # reshape the state vector such that we can access it per 3D-vector
