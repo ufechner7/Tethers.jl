@@ -281,5 +281,7 @@ where `L0` is the unstretched length of the complete tether at $t=0$. In additio
 ```
 **Julia code:** [Tether_06.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_06.jl)
 
+The IDA solver, used for Python has a very high numerically damping. Therefore we had to multiply
+the damping coefficient with a factor of $0.045$ to achieve a more-or-less realistic result.
 
-
+**Python code:** [Tether_06.py](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_06.py)
