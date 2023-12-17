@@ -68,7 +68,7 @@ class ExtendedProblem(Implicit_Problem):
             res_3   =  y1[2*i+4] - yd1[2*i+3]  # the derivative of the position of mass1 must be equal to its velocity
             rel_vel = yd1[2*i+3] - yd1[2*i+1]  # calculate the relative velocity of mass2 with respect to mass 1 
             segment = y1[2*i+3]  - y1[2*i+1]   # calculate the vector from mass1 to mass0
-            if np.linalg.norm(segment) > length:               # if the segment is not loose, calculate spring and damping force
+            if np.linalg.norm(segment) > length: # if the segment is not loose, calculate spring force
                 c_spring = C_SPRING / (length/SEGMENTS) 
             else:
                 c_spring = 0.0
@@ -112,7 +112,7 @@ def plot2d(fig, y, reltime, segments, line, sc, txt):
         sc  = plt.scatter(x, z, s=15, color="red")
         plt.pause(0.01)
         txt = plt.annotate("t="+str(reltime)+" s",  
-                           xy=(segments*L0/4.2, z_max-3.0*segments/5), fontsize = 12)
+                           xy=(L0/4.2, z_max-7.0), fontsize = 12)
         plt.show(block=False)
     else:
         line.set_xdata(x)
@@ -132,7 +132,7 @@ def play(duration, y):
     plt.xlim(-L0/2, L0/2)
     plt.grid(True, color="grey", linestyle="dotted")
     line, sc, txt = None, None, None
-    for t in np.linspace(0, duration, num=round(duration/dt)+1):
+    for t in np.linspace(0, duration, num=round(duration/dt)):
         line, sc, txt = plot2d(fig, y, t, SEGMENTS, line, sc, txt)
         time.sleep(dt/2)
     plt.show()
@@ -149,6 +149,7 @@ def run_example():
     
     time, y, yd = sim.simulate(DURATION, round(DURATION*50)+2) # 50 communications points per second 
     play(DURATION, y)   
+    return y
     
 if __name__ == '__main__':
     run_example()
