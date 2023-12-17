@@ -148,10 +148,11 @@ def run_example():
     model.name = 'Mass-Spring' # Specifies the name of problem (optional)   
     
     sim = IDA(model) # Create the solver 
-    sim.verbosity = 30 
+    sim.verbosity = 0 
     sim.atol = 1.0e-6
     sim.rtol = 1.0e-6
-    
+    sim.linear_solver="SPGMR"
+
     time, y, yd = sim.simulate(DURATION, round(DURATION*50)+2) # 50 communications points per second 
     play(DURATION, y)   
     return
