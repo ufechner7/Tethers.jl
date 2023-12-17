@@ -68,7 +68,7 @@ class ExtendedProblem(Implicit_Problem):
             res_3   =  y1[2*i+4] - yd1[2*i+3]  # the derivative of the position of mass1 must be equal to its velocity
             rel_vel = yd1[2*i+3] - yd1[2*i+1]  # calculate the relative velocity of mass2 with respect to mass 1 
             segment = y1[2*i+3]  - y1[2*i+1]   # calculate the vector from mass1 to mass0
-            if np.linalg.norm(segment) > length:               # if the segment is not loose, calculate spring and damping force
+            if np.linalg.norm(segment) > length: # if the segment is not loose, calculate spring force
                 c_spring = C_SPRING / (length/SEGMENTS) 
             else:
                 c_spring = 0.0
@@ -112,7 +112,7 @@ def plot2d(fig, y, reltime, segments, line, sc, txt):
         sc  = plt.scatter(x, z, s=15, color="red")
         plt.pause(0.01)
         txt = plt.annotate("t="+str(reltime)+" s",  
-                           xy=(segments*L0/4.2, z_max-3.0*segments/5), fontsize = 12)
+                           xy=(L0/4.2, z_max-7.0), fontsize = 12)
         plt.show(block=False)
     else:
         line.set_xdata(x)
