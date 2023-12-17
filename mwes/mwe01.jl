@@ -6,6 +6,6 @@ using ModelingToolkit, LinearAlgebra
 # pos/norm(pos)
 
 # not working
-@register_symbolic LinearAlgebra.normalize(pos)
+@register_symbolic LinearAlgebra.normalize(v::AbstractArray, p::Real)
 
 normalize(pos)
