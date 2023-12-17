@@ -39,7 +39,7 @@ class ExtendedProblem(Implicit_Problem):
     pos, vel, acc = [], [], []
     x, y, z0 = 0.0, 0.0, 0.0
     for i in range (SEGMENTS + 1):
-        l0 = -i*L0
+        l0 = -(i)*L0/SEGMENTS
         pos.append(np.array([math.sin(ALPHA0) * l0, 0.0, math.cos(ALPHA0) * l0]))            
         vel.append(np.array([0.0, 0.0, 0.0]))
         if i == 0:
