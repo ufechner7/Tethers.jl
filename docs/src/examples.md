@@ -4,17 +4,84 @@ a full segmented tether model with real-out and aerodynamic drag attached.
 
 | Name  | Description | Learning objective |
 |:---|:---|:---|
-| Tether_01 | Mass, thrown upwards, then falling  | Learn how to define a model, simulate it and plot the results   |
-| Tether_02  | Mass, attached to linear spring | Learn how to model a spring in 3D  |
-| Tether_03  | Mass, attached to non-linear spring | Learn how to model  DAE systems with discontinuities   |
-| Tether_04  | First segmented tether | Learn how to use arrays of equations |
-| Tether_05  | Segmented tether with correct force distribution  | Learn how to distribute the spring force over two masses   |
-| Tether_06  | Segmented tether with reel-in and reel-out  | Learn to model a tether with changing unstretched length |
+| Tether_01 | [Mass, thrown upwards, then falling](@ref)  | Learn how to define a model, simulate it and plot the results   |
+| Tether_02  | [Mass, attached to a spring-damper](@ref) | Learn how to model a spring in 3D  |
+| Tether_03  | [Mass, with non-linear spring-damper](@ref) | Learn how to model  DAE systems with discontinuities   |
+| Tether_04  | [Multi-segment tether](@ref) | Learn how to use arrays of equations |
+| Tether_05  | [Segmented tether with correct force distribution](@ref)  | Learn how to distribute the spring force over two masses   |
+| Tether_06  | [Multi-segment tether reeling out](@ref)  | Learn to model a tether with changing unstretched length |
 | Tether_07  | Segmented tether with aerodynamic drag | Learn how to model tether drag |
 
 **Nomenclature:**
 - ODE: Ordinary differential equations
 - DAE: Differential algebraic equations
+
+## Mass, thrown upwards, then falling
+Use the provided script to start Julia from the `Tethers.jl` folder:
+```bash
+cd repos/Tethers.jl
+./bin/run_julia
+```
+From the Julia prompt, run the simulation:
+```julia
+include("src/Tether_01.jl")
+```
+You should see a plot similar to:
+
+![Falling mass](docs/images/FallingMass.png)
+
+This example shows a mass that is thrown upwards, slows down and then falls.
+
+**Julia code:** [Tether_01.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_01.jl)
+
+These differential equations define the model:
+```Julia
+D = Differential(t)
+
+eqs = vcat(D.(pos) ~ vel,
+           D.(vel) ~ acc,
+           acc    .~ G_EARTH)
+```
+The term `D.(pos)` means "Apply the differential D(t) to all elements of the vector `pos`". The second term defines that the differential of the velocity vector must be equal to the 
+acceleration. For equality in symbolic equations the character `~` has to be used, because the character `=` has the meaning "assign a value to a variable" which is not what we are doing here. The third equation means that all elements of the acceleration vector must be equal to the elements of the gravity vector. We end up with an array of `3x3`` equations.
+
+The next lines are:
+```julia
+@named sys = ODESystem(eqs, t)
+simple_sys = structural_simplify(sys)
+```
+This means we create a named ordinary equation system, depending on `t`. Then we simplify the system symbolically (order reduction). If you type `sys` in the Julia REPL (command line) you can see that the original system had 9 equations, the second line above created a system with only six equations. This step helps to speed up the simulation and often also removes algebraic loops which makes the ODE a lot simpler to solve numerically later on.
+
+Now the parameters of the integrator are defined:
+```julia
+duration = 10.0
+dt = 0.02
+tol = 1e-6
+tspan = (0.0, duration)
+ts    = 0:dt:duration
+```
+The time step $dt$ is the interval in which the solution shall be stored, NOT the time step of the integrator. The integrator uses a variable time step which can be much smaller or much larger as determined by the required tolerance, in this example set to $tol=10^{-6}$. The variable $ts$ is a range object defining the sampling times for the result.
+
+In the next lines, we define the ODE problem and finally, we solve it using the Rodas5 solver with the given parameters.
+```julia
+prob = ODEProblem(simple_sys, nothing, tspan)
+@time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
+```
+The macro `@time` measures the compilation and execution time of calling the function `solve()`. The function is compiled only when called the first time. 
+
+### Python version as comparison
+From the Julia prompt execute:
+```
+include("src/RunTether.jl")
+```
+This will install Python, Matplotlib and Assimulo and execute the script `Tether_01.py`.
+
+**Python code:** [Tether_01.py](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_01.py)
+
+If you compare the Python and the Julia scripts you can see that:
+- the Julia script is shorter and easier to read
+- Julia is about 16 times faster when running the simulation
+
 
 ## Mass, attached to a spring-damper
 From the Julia prompt, run the simulation:
@@ -168,7 +235,9 @@ end
 ```
 The first example of such a model is the script [Tether_04.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_04.jl) which is derived from the last example.
 
-In the script [Tether_05.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_05.jl), the spring force is distributed correctly on the two masses attached to the spring as shown here:
+## Segmented tether with correct force distribution
+
+In the script [Tether_05.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_05.jl#L61), the spring force is distributed correctly on the two masses attached to the spring as shown here:
 ```julia
 if i == segments
     eqs2 = vcat(eqs2, total_force[:, i] ~ spring_force[:, i])
@@ -193,7 +262,7 @@ In this example, we assume a constant reel-out speed of $V_{RO}=2m/s$. When reel
 - spring constant
 - damping constant
 
-We do this in the following way (line 79ff):
+We do this in the following way at [line 80ff](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_06.jl#L80):
 ```julia
 length            ~ L0 + V_RO*t 
 m_tether_particle ~ mass_per_meter * (length/segments)
