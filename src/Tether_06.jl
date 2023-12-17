@@ -35,7 +35,7 @@ for i in 1:segments
     SEGMENTS0[:, i] .= POS0[:, i+1] - POS0[:, i]
 end
 
-# model, Z component upwards
+# defining the model, Z component upwards
 @parameters c_spring0=C_SPRING/(L0/segments) l_seg=L0/segments
 @variables t 
 @variables pos(t)[1:3, 1:segments+1]  = POS0
@@ -86,15 +86,13 @@ eqs = vcat(eqs1..., eqs2)
 @named sys = ODESystem(eqs, t)
 simple_sys = structural_simplify(sys)
 
+# running the simulation
 dt = 0.02
 tol = 1e-6
 tspan = (0.0, duration)
 ts    = 0:dt:duration
 
-# initial state
-u0 = Dict(pos=>POS0, vel=>VEL0)
-
-prob = ODEProblem(simple_sys, u0, tspan)
+prob = ODEProblem(simple_sys, nothing, tspan)
 @time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
 
 function plot2d(sol, reltime, segments, line, sc, txt, j)

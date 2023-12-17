@@ -1,23 +1,33 @@
-"""
-Tutorial example simulating a 3D mass-spring system with a nonlinear spring (no spring forces
-for l < l_0), n tether segments and reel-out.
-"""
-# TODO: implement reel-out
+# Tutorial example simulating a 3D mass-spring system with a nonlinear spring (no spring forces
+# for l < l_0), n tether segments, reel-in and reel-out and aerodynamic drag attached.
+using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers
 
-using ModelingToolkit, OrdinaryDiffEq, PyPlot, LinearAlgebra
+# TODO: Add aerodynamic drag
 
 G_EARTH     = Float64[0.0, 0.0, -9.81]          # gravitational acceleration     [m/s²]
-L0::Float64 = 10.0                              # initial segment length            [m]
-V0::Float64 = 4                                 # initial velocity of lowest mass [m/s]
-segments::Int64 = 5                             # number of tether segments         [-]
+L0::Float64 = 50.0                              # initial tether length             [m]
+V0::Float64 = 2                                 # initial velocity of lowest mass [m/s]
+V_RO::Float64 = 2.0                             # reel-out speed                  [m/s]
+D_TETHER::Float64 = 4                           # tether diameter                  [mm]
+RHO_TETHER::Float64 = 724.0                     # densitiy of Dyneema           [kg/m³] 
+C_SPRING::Float64 = 614600.0                    # unit spring constant              [N]
+DAMPING::Float64  = 473                         # unit damping constant            [Ns]
+segments::Int64 = 7                             # number of tether segments         [-]
+α0 = π/10                                       # initial tether angle            [rad]
+duration = 22.1                                 # duration of the simulation        [s]
+SAVE = false                                    # save png files in folder video
+mass_per_meter::Float64 = RHO_TETHER * segments * (D_TETHER/2000.0)^2
 POS0 = zeros(3, segments+1)
 VEL0 = zeros(3, segments+1)
 ACC0 = zeros(3, segments+1)
 SEGMENTS0 = zeros(3, segments) 
 UNIT_VECTORS0 = zeros(3, segments)
 for i in 1:segments+1
-    POS0[:, i] .= [0.0, 0, -(i-1)*L0]
-    VEL0[:, i] .= [0.0, 0, (i-1)*V0/segments]
+    local l0
+    l0 = -(i-1)*L0/segments
+    v0 = (i-1)*V0/segments
+    POS0[:, i] .= [sin(α0) * l0, 0, cos(α0) * l0]
+    VEL0[:, i] .= [sin(α0) * v0, 0, cos(α0) * v0]
 end
 for i in 2:segments+1
     ACC0[:, i] .= G_EARTH
@@ -27,71 +37,108 @@ for i in 1:segments
     SEGMENTS0[:, i] .= POS0[:, i+1] - POS0[:, i]
 end
 
-# model, Z component upwards
-@parameters mass=1.0 c_spring0=50.0 damping=0.5 l_seg=L0
+# defining the model, Z component upwards
+@parameters c_spring0=C_SPRING/(L0/segments) l_seg=L0/segments
 @variables t 
 @variables pos(t)[1:3, 1:segments+1]  = POS0
 @variables vel(t)[1:3, 1:segments+1]  = VEL0
 @variables acc(t)[1:3, 1:segments+1]  = ACC0
 @variables segment(t)[1:3, 1:segments]  = SEGMENTS0
 @variables unit_vector(t)[1:3, 1:segments]  = UNIT_VECTORS0
+@variables length(t) = L0
+@variables c_spring(t) = c_spring0
+@variables damping(t) = DAMPING  / l_seg
+@variables m_tether_particle(t) = mass_per_meter * l_seg
 @variables norm1(t)[1:segments] = l_seg * ones(segments)
 @variables rel_vel(t)[1:3, 1:segments]  = zeros(3, segments)
 @variables spring_vel(t)[1:segments] = zeros(segments)
-@variables c_spring(t)[1:segments] = c_spring0 * ones(segments)
+@variables c_spr(t)[1:segments] = c_spring0 * ones(segments)
 @variables spring_force(t)[1:3, 1:segments] = zeros(3, segments)
+@variables total_force(t)[1:3, 1:segments] = zeros(3, segments)
 D = Differential(t)
 
 eqs1 = vcat(D.(pos) ~ vel,
             D.(vel) ~ acc)
 eqs2 = []
-for i in 1:segments
+for i in segments:-1:1
     global eqs2
     eqs2 = vcat(eqs2, segment[:, i] ~ pos[:, i+1] - pos[:, i])
     eqs2 = vcat(eqs2, norm1[i] ~ norm(segment[:, i]))
     eqs2 = vcat(eqs2, unit_vector[:, i] ~ -segment[:, i]/norm1[i])
     eqs2 = vcat(eqs2, rel_vel[:, i] ~ vel[:, i+1] - vel[:, i])
     eqs2 = vcat(eqs2, spring_vel[i] ~ -unit_vector[:, i] ⋅ rel_vel[:, i])
-    eqs2 = vcat(eqs2, c_spring[i] ~ c_spring0 * (norm1[i] > l_seg))
-    eqs2 = vcat(eqs2, spring_force[:, i] ~ (c_spring[i] * (norm1[i] - l_seg) + damping * spring_vel[i]) * unit_vector[:, i])
-    # TODO: the spring_force must be distributed
-    eqs2 = vcat(eqs2, acc[:, i+1] .~ G_EARTH + spring_force[:, i] / mass)
+    eqs2 = vcat(eqs2, c_spr[i] ~ c_spring * (norm1[i] > length/segments))
+    eqs2 = vcat(eqs2, spring_force[:, i] ~ (c_spr[i] * (norm1[i] - (length/segments)) + damping * spring_vel[i]) * unit_vector[:, i])
+    if i == segments
+        eqs2 = vcat(eqs2, total_force[:, i] ~ spring_force[:, i])
+        eqs2 = vcat(eqs2, acc[:, i+1] .~ G_EARTH + total_force[:, i] / 0.5*(m_tether_particle))
+    else
+        eqs2 = vcat(eqs2, total_force[:, i] ~ spring_force[:, i]- spring_force[:, i+1])
+        eqs2 = vcat(eqs2, acc[:, i+1] .~ G_EARTH + total_force[:, i] / m_tether_particle)
+    end
+    
 end
 eqs2 = vcat(eqs2, acc[:, 1] .~ zeros(3))
+eqs2 = vcat(eqs2, length ~ L0 + V_RO*t)
+eqs2 = vcat(eqs2, c_spring ~ C_SPRING / (length/segments))
+eqs2 = vcat(eqs2, m_tether_particle ~ mass_per_meter * (length/segments))
+eqs2 = vcat(eqs2, damping  ~ DAMPING  / (length/segments))
 eqs = vcat(eqs1..., eqs2)
      
 @named sys = ODESystem(eqs, t)
 simple_sys = structural_simplify(sys)
 
-duration = 10.0
+# running the simulation
 dt = 0.02
 tol = 1e-6
 tspan = (0.0, duration)
 ts    = 0:dt:duration
 
-# initial state
-u0 = Dict(pos=>POS0, vel=>VEL0)
-
-prob = ODEProblem(simple_sys, u0, tspan)
+prob = ODEProblem(simple_sys, nothing, tspan)
 @time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
 
-X = sol.t
-particle = 2
-POS_Z = sol(X, idxs=pos[3, particle])
-VEL_Z = sol(X, idxs=vel[3, particle])
-C_SPRING = sol(X, idxs=c_spring[1])
+function plot2d(sol, reltime, segments, line, sc, txt, j)
+    index = Int64(round(reltime*50+1))
+    x, z = Float64[], Float64[]
+    for particle in 1:segments+1
+        push!(x, (sol(sol.t, idxs=pos[1, particle]))[index])
+        push!(z, (sol(sol.t, idxs=pos[3, particle]))[index])
+    end
+    z_max = maximum(z)
+    if isnothing(line)
+        line, = plot(x,z; linewidth="1")
+        sc  = scatter(x, z; s=15, color="red") 
+        txt = annotate("t=$(round(reltime,digits=1)) s",  
+                        xy=(L0/4.2, z_max-7), fontsize = 12)
+    else
+        line.set_xdata(x)
+        line.set_ydata(z)
+        sc.set_offsets(hcat(x,z))
+        txt.set_text("t=$(round(reltime,digits=1)) s")
+        gcf().canvas.draw()
+    end
+    if SAVE
+        PyPlot.savefig("video/"*"img-"*lpad(j,4,"0"))
+    end
+    line, sc, txt
+end
 
-lns1 = plot(X, POS_Z, color="green", label="pos_z")
-xlabel("time [s]")
-ylabel("pos_z [m]")
-lns2 = plot(X, -L0.+0.005 .* C_SPRING, color="grey", label="c_spring")
-grid(true)
-twinx()
-ylabel("vel_z [m/s]") 
-lns3 = plot(X, VEL_Z, color="red", label="vel_z")
-lns = vcat(lns1, lns2, lns3)
-labs = [l.get_label() for l in lns]
-legend(lns, labs) 
-PyPlot.show(block=false)
-nothing
-
+function play()
+    PyPlot.close()
+    dt = 0.151
+    ylim(-1.2*(L0+V_RO*duration), 0.5)
+    xlim(-L0/2, L0/2)
+    grid(true; color="grey", linestyle="dotted")
+    tight_layout(rect=(0, 0, 0.98, 0.98))
+    line, sc, txt = nothing, nothing, nothing
+    start = time_ns()
+    j = 0
+    mkpath("video")
+    for time in 0:dt:duration
+        line, sc, txt = plot2d(sol, time, segments, line, sc, txt, j)
+        j += 1
+        wait_until(start + 0.5*time*1e9)
+    end
+    nothing
+end
+play()

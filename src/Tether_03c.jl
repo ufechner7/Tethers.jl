@@ -7,7 +7,7 @@ L0::Float64 = -10.0                             # initial spring length      [m]
 V0::Float64 = 4.0                               # initial velocity           [m/s]
 
 function model3(G_EARTH, L0, V0)
-    # model, Z component upwards
+    # defining the model, Z component upwards
     @parameters mass=1.0 c_spring0=50.0 damping=0.5 l0=L0
     @variables t pos(t)[1:3] = [0.0, 0.0,  L0]
     @variables   vel(t)[1:3] = [0.0, 0.0,  V0] 
