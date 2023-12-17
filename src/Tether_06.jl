@@ -12,7 +12,7 @@ C_SPRING::Float64 = 614600.0                    # unit spring constant          
 DAMPING::Float64  = 473                         # unit damping constant            [Ns]
 SEGMENTS::Int64 = 5                             # number of tether segments         [-]
 α0 = π/10                                       # initial tether angle            [rad]
-duration = 10                                 # duration of the simulation        [s]
+duration = 10                                   # duration of the simulation        [s]
 SAVE = false                                    # save png files in folder video
 mass_per_meter::Float64 = RHO_TETHER * SEGMENTS * (D_TETHER/2000.0)^2
 
@@ -76,7 +76,6 @@ for i in SEGMENTS:-1:1
         eqs2 = vcat(eqs2, total_force[:, i] ~ spring_force[:, i]- spring_force[:, i+1])
         eqs2 = vcat(eqs2, acc[:, i+1] .~ G_EARTH + total_force[:, i] / m_tether_particle)
     end
-    
 end
 eqs2 = vcat(eqs2, acc[:, 1] .~ zeros(3))
 eqs2 = vcat(eqs2, length ~ L0 + V_RO*t)
