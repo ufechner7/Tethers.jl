@@ -5,8 +5,8 @@ using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, Parameters
 @with_kw mutable struct Settings @deftype Float64
     g_earth::Vector{Float64} = [0.0, 0.0, -9.81] # gravitational acceleration     [m/s²]
     l0 = 50                                      # initial tether length             [m]
-    v0 = 2                                       # initial speed                   [m/s]
-    v_ro = 0                                     # reel-out speed                  [m/s]
+    v0 = 0                                       # initial speed                   [m/s]
+    v_ro = 2                                     # reel-out speed                  [m/s]
     d_tether = 4                                 # tether diameter                  [mm]
     rho_tether = 724                             # density of Dyneema            [kg/m³]
     c_spring = 614600                            # unit spring constant              [N]
@@ -167,11 +167,12 @@ function main(se = Settings();play_=true)
     sol, pos, vel
 end
 
+# plot vertical velocity of last particle with and without callbacks
 function compare(se=Settings())
     PyPlot.close()
     se.callbacks = false
-    se.v_ro = 0
-    se.v0 = 2
+    se.v_ro = 2
+    se.v0 = 0
     sol, pos, vel = main(se, play_=false)
     vel_z1 = stack(sol[vel], dims=1)[:, 3, 5]
     plot(sol.t, vel_z1)
