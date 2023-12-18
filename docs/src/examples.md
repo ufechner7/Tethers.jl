@@ -281,7 +281,70 @@ where `L0` is the unstretched length of the complete tether at $t=0$. In additio
 ```
 **Julia code:** [Tether_06.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_06.jl)
 
-The IDA solver, used for Python has a very high numerically damping. Therefore we had to multiply
+The IDA solver, used for Python has a very high numerical damping. Therefore we had to multiply
 the damping coefficient with a factor of $0.045$ to achieve a more-or-less realistic result.
 
 **Python code:** [Tether_06.py](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_06.py)
+
+### Refactoring the code, add a Settings struct and splitting it into functions
+**Julia code:** [Tether_06b.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_06b.jl).
+
+If you want to have fast code, that can be reused and tested using unit tests, then it is better
+to put your code in functions and to avoid global variables. We demonstrate that in this example.
+
+First, the settings are stored in a `struct` type:
+```julia
+@with_kw mutable struct Settings @deftype Float64
+    g_earth::Vector{Float64} = [0.0, 0.0, -9.81] # gravitational acceleration     [m/s²]
+    l0 = 50                                      # initial tether length             [m]
+    v_ro = 2                                     # reel-out speed                  [m/s]
+    d_tether = 4                                 # tether diameter                  [mm]
+    rho_tether = 724                             # density of Dyneema            [kg/m³]
+    c_spring = 614600                            # unit spring constant              [N]
+    damping = 473                                # unit damping constant            [Ns]
+    segments::Int64 = 5                          # number of tether segments         [-]
+    α0 = π/10                                    # initial tether angle            [rad]
+    duration = 10                                # duration of the simulation        [s]
+    save::Bool = false                           # save png files in folder video
+end
+```
+When defining a `struct`` it is good to give a concrete type to each field. Here, we use Float64 as default,
+as defined in the first line. Apart from this type we also use the type `Int64` for integer values and `Bool`
+for a boolean value.
+
+Then we split the code into the functions:
+```julia
+function calc_initial_state(se)                          # determine the initial state
+function model(se)                                       # create the model
+function simulate(se, simple_sys)                        # run the simulation
+function plot2d(se, sol, pos, reltime, line, sc, txt, j) # plot the state for one point in time
+function play(se, sol, pos)                              # play the simulation result, the solution
+function main()                                          # the main program, calling all the other functions
+```
+The `main()` function looks like this:
+```julia
+function main()
+    se = Settings()
+    simple_sys, pos, vel = model(se)
+    sol = simulate(se, simple_sys)
+    play(se, sol, pos)
+end
+```
+
+### Using a callback
+By using a callback to detect exactly when the transition from a stiff tether segment to a loose
+tether segment happens we can increase the accuracy of the simulation. **Julia code:** [Tether_06c.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_06c.jl).
+
+The following lines had to be added:
+```julia
+local cb
+for i in 1:se.segments
+    cbi = [norm([pos[1, i+1] - pos[1, i], pos[2, i+1] - pos[2, i], pos[3, i+1] - pos[3, i]]) ~ abs(se.l0)/se.segments]
+    if i == 1
+        cb = cbi
+    else
+        cb = vcat(cb, cbi)
+    end
+end
+@named sys = ODESystem(eqs, t; continuous_events = cb)
+```
