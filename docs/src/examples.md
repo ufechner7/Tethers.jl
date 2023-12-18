@@ -308,7 +308,7 @@ First, the settings are stored in a `struct` type:
     save::Bool = false                           # save png files in folder video
 end
 ```
-When defining a `struct`` it is good to give a concrete type to each field. Here, we use Float64 as default,
+When defining a `struct` it is good to give a concrete type to each field. Here, we use Float64 as default,
 as defined in the first line. Apart from this type we also use the type `Int64` for integer values and `Bool`
 for a boolean value.
 
