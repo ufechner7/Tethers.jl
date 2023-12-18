@@ -88,7 +88,7 @@ function model(se)
     eqs = vcat(eqs1..., eqs2)
 
     if se.callbacks
-    local cb
+        local cb
         for i in 1:se.segments
             cbi = [norm([pos[1, i+1] - pos[1, i], pos[2, i+1] - pos[2, i], pos[3, i+1] - pos[3, i]]) ~ abs(se.l0)/se.segments]
             if i == 1
