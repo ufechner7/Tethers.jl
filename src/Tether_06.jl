@@ -4,7 +4,6 @@ using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers
 
 G_EARTH::Vector{Float64} = [0.0, 0.0, -9.81]    # gravitational acceleration     [m/s²]
 L0::Float64 = 50.0                              # initial tether length             [m]
-V0::Float64 = 2                                 # initial velocity of lowest mass [m/s]
 V_RO::Float64 = 2.0                             # reel-out speed                  [m/s]
 D_TETHER::Float64 = 4                           # tether diameter                  [mm]
 RHO_TETHER::Float64 = 724.0                     # density of Dyneema            [kg/m³] 
@@ -24,9 +23,8 @@ SEGMENTS0 = zeros(3, SEGMENTS)
 UNIT_VECTORS0 = zeros(3, SEGMENTS)
 for i in 1:SEGMENTS+1
     l0 = -(i-1)*L0/SEGMENTS
-    v0 = (i-1)*V0/SEGMENTS
     POS0[:, i] .= [sin(α0) * l0, 0, cos(α0) * l0]
-    VEL0[:, i] .= [sin(α0) * v0, 0, cos(α0) * v0]
+    VEL0[:, i] .= [0.0, 0, 0]
 end
 for i in 1:SEGMENTS
     ACC0[:, i+1] .= G_EARTH
@@ -128,11 +126,9 @@ function play()
     tight_layout(rect=(0, 0, 0.98, 0.98))
     line, sc, txt = nothing, nothing, nothing
     start = time_ns()
-    j = 0
     mkpath("video")
-    for time in 0:dt:duration
+    for (j, time) in pairs(0:dt:duration)
         line, sc, txt = plot2d(sol, time, SEGMENTS, line, sc, txt, j)
-        j += 1
         wait_until(start + 0.5*time*1e9)
     end
     nothing
