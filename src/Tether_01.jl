@@ -20,10 +20,9 @@ simple_sys = structural_simplify(sys)
 duration = 10.0
 dt = 0.02
 tol = 1e-6
-tspan = (0.0, duration)
 ts    = 0:dt:duration
 
-prob = ODEProblem(simple_sys, nothing, tspan)
+prob = ODEProblem(simple_sys, nothing, (0.0, duration))
 @time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
 
 # plotting the result
