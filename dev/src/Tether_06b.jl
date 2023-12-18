@@ -28,7 +28,7 @@ function calc_initial_state(se)
         VEL0[:, i] .= [0, 0, 0]
     end
     for i in 1:se.segments
-        ACC0[:, i+1] .= G_EARTH
+        ACC0[:, i+1] .= se.g_earth
         UNIT_VECTORS0[:, i] .= [0, 0, 1.0]
         SEGMENTS0[:, i] .= POS0[:, i+1] - POS0[:, i]
     end
@@ -70,14 +70,14 @@ function model(se)
         eqs2 = vcat(eqs2, spring_force[:, i] ~ (c_spr[i] * (norm1[i] - (length/se.segments)) + damping * spring_vel[i]) * unit_vector[:, i])
         if i == se.segments
             eqs2 = vcat(eqs2, total_force[:, i] ~ spring_force[:, i])
-            eqs2 = vcat(eqs2, acc[:, i+1] .~ G_EARTH + total_force[:, i] / 0.5*(m_tether_particle))
+            eqs2 = vcat(eqs2, acc[:, i+1] .~ se.g_earth + total_force[:, i] / 0.5*(m_tether_particle))
         else
             eqs2 = vcat(eqs2, total_force[:, i] ~ spring_force[:, i]- spring_force[:, i+1])
-            eqs2 = vcat(eqs2, acc[:, i+1] .~ G_EARTH + total_force[:, i] / m_tether_particle)
+            eqs2 = vcat(eqs2, acc[:, i+1] .~ se.g_earth + total_force[:, i] / m_tether_particle)
         end
     end
     eqs2 = vcat(eqs2, acc[:, 1] .~ zeros(3))
-    eqs2 = vcat(eqs2, length ~ se.l0 + V_RO*t)
+    eqs2 = vcat(eqs2, length ~ se.l0 + se.v_ro*t)
     eqs2 = vcat(eqs2, c_spring ~ se.c_spring / (length/se.segments))
     eqs2 = vcat(eqs2, m_tether_particle ~ mass_per_meter * (length/se.segments))
     eqs2 = vcat(eqs2, damping  ~ se.damping  / (length/se.segments))
@@ -88,20 +88,20 @@ function model(se)
     simple_sys, pos, vel
 end
 
-function simulate(simple_sys)
+function simulate(se, simple_sys)
     dt = 0.02
     tol = 1e-6
-    tspan = (0.0, duration)
-    ts    = 0:dt:duration
+    tspan = (0.0, se.duration)
+    ts    = 0:dt:se.duration
     prob = ODEProblem(simple_sys, nothing, tspan)
     @time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
     sol
 end
 
-function plot2d(se, sol, pos, reltime, segments, line, sc, txt, j)
+function plot2d(se, sol, pos, reltime, line, sc, txt, j)
     index = Int64(round(reltime*50+1))
     x, z = Float64[], Float64[]
-    for particle in 1:segments+1
+    for particle in 1:se.segments+1
         push!(x, (sol(sol.t, idxs=pos[1, particle]))[index])
         push!(z, (sol(sol.t, idxs=pos[3, particle]))[index])
     end
@@ -118,7 +118,7 @@ function plot2d(se, sol, pos, reltime, segments, line, sc, txt, j)
         txt.set_text("t=$(round(reltime,digits=1)) s")
         gcf().canvas.draw()
     end
-    if SAVE
+    if se.save
         PyPlot.savefig("video/"*"img-"*lpad(j,4,"0"))
     end
     line, sc, txt
@@ -127,15 +127,15 @@ end
 function play(se, sol, pos)
     PyPlot.close()
     dt = 0.151
-    ylim(-1.2*(se.l0+V_RO*duration), 0.5)
+    ylim(-1.2*(se.l0+se.v_ro*se.duration), 0.5)
     xlim(-se.l0/2, se.l0/2)
     grid(true; color="grey", linestyle="dotted")
     tight_layout(rect=(0, 0, 0.98, 0.98))
     line, sc, txt = nothing, nothing, nothing
     start = time_ns()
     mkpath("video")
-    for (j, time) in pairs(0:dt:duration)
-        line, sc, txt = plot2d(se, sol, pos, time, SEGMENTS, line, sc, txt, j)
+    for (j, time) in pairs(0:dt:se.duration)
+        line, sc, txt = plot2d(se, sol, pos, time, line, sc, txt, j)
         wait_until(start + 0.5*time*1e9)
     end
     nothing
@@ -144,7 +144,7 @@ end
 function main()
     se = Settings()
     simple_sys, pos, vel = model(se)
-    sol = simulate(simple_sys)
+    sol = simulate(se, simple_sys)
     play(se, sol, pos)
 end
 
