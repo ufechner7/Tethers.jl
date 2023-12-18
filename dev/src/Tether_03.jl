@@ -2,7 +2,7 @@
 # initially moving upwards with 4 m/s.
 using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra
 
-G_EARTH     = Float64[0.0, 0.0, -9.81]          # gravitational acceleration [m/s²]
+G_EARTH::Vector{Float64} = [0.0, 0.0, -9.81]    # gravitational acceleration     [m/s²]
 L0::Float64 = -10.0                             # initial spring length      [m]
 V0::Float64 = 4                                 # initial velocity           [m/s]
 
