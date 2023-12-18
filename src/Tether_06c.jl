@@ -83,10 +83,14 @@ function model(se)
     eqs2 = vcat(eqs2, damping  ~ se.damping  / (length/se.segments))
     eqs = vcat(eqs1..., eqs2)
 
-    cb = [norm([pos[1, 1+1] - pos[1, 1], pos[2, 1+1] - pos[2, 1], pos[3, 1+1] - pos[3, 1]]) ~ abs(se.l0)]
-    for i in 2:se.segments
+    local cb
+    for i in 1:se.segments
         cbi = [norm([pos[1, i+1] - pos[1, i], pos[2, i+1] - pos[2, i], pos[3, i+1] - pos[3, i]]) ~ abs(se.l0)]
-        cb = vcat(cb, cbi)
+        if i == 1
+            cb = cbi
+        else
+            cb = vcat(cb, cbi)
+        end
     end
         
     @named sys = ODESystem(eqs, t; continuous_events = cb)
