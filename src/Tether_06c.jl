@@ -167,6 +167,7 @@ function main(se = Settings();play_=true)
     sol, pos, vel
 end
 
+# plot vertical velocity of last particle with and without callbacks
 function compare(se=Settings())
     PyPlot.close()
     se.callbacks = false
