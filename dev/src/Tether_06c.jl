@@ -5,8 +5,8 @@ using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, Parameters
 @with_kw mutable struct Settings @deftype Float64
     g_earth::Vector{Float64} = [0.0, 0.0, -9.81] # gravitational acceleration     [m/s²]
     l0 = 50                                      # initial tether length             [m]
-    v0 = 0                                       # initial speed                   [m/s]
-    v_ro = 2                                     # reel-out speed                  [m/s]
+    v0 = 2                                       # initial speed                   [m/s]
+    v_ro = 0                                     # reel-out speed                  [m/s]
     d_tether = 4                                 # tether diameter                  [mm]
     rho_tether = 724                             # density of Dyneema            [kg/m³]
     c_spring = 614600                            # unit spring constant              [N]
@@ -16,6 +16,7 @@ using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, Parameters
     duration = 10                                # duration of the simulation        [s]
     dt = 0.02                                    # max time step in the solution     [s]
     save::Bool = false                           # save png files in folder video
+    callbacks::Bool = true                       # use callbacks
 end
                               
 function calc_initial_state(se)
@@ -86,17 +87,20 @@ function model(se)
     eqs2 = vcat(eqs2, damping  ~ se.damping  / (length/se.segments))
     eqs = vcat(eqs1..., eqs2)
 
+    if se.callbacks
     local cb
-    for i in 1:se.segments
-        cbi = [norm([pos[1, i+1] - pos[1, i], pos[2, i+1] - pos[2, i], pos[3, i+1] - pos[3, i]]) ~ abs(se.l0)/se.segments]
-        if i == 1
-            cb = cbi
-        else
-            cb = vcat(cb, cbi)
+        for i in 1:se.segments
+            cbi = [norm([pos[1, i+1] - pos[1, i], pos[2, i+1] - pos[2, i], pos[3, i+1] - pos[3, i]]) ~ abs(se.l0)/se.segments]
+            if i == 1
+                cb = cbi
+            else
+                cb = vcat(cb, cbi)
+            end
         end
+        @named sys = ODESystem(eqs, t; continuous_events = cb)
+    else
+        @named sys = ODESystem(eqs, t)
     end
-        
-    @named sys = ODESystem(eqs, t; continuous_events = cb)
     simple_sys = structural_simplify(sys)
     simple_sys, pos, vel
 end
@@ -153,13 +157,28 @@ function play(se, sol, pos)
     nothing
 end
 
-function main()
-    se = Settings()
+function main(se = Settings();play_=true)
     simple_sys, pos, vel = model(se)
     sol = simulate(se, simple_sys)
-    play(se, sol, pos)
+    if play_
+        play(se, sol, pos)
+    end
     println("Events: $(Int64(round(length(sol.t)- se.duration/se.dt)-1))")
     sol, pos, vel
+end
+
+function compare(se=Settings())
+    PyPlot.close()
+    se.callbacks = false
+    se.v_ro = 0
+    se.v0 = 2
+    sol, pos, vel = main(se, play_=false)
+    vel_z1 = stack(sol[vel], dims=1)[:, 3, 5]
+    plot(sol.t, vel_z1)
+    se.callbacks = true
+    sol, pos, vel = main(se, play_=false)
+    vel_z2 = stack(sol[vel], dims=1)[:, 3, 5]
+    plot(sol.t, vel_z2)
 end
 
 sol, pos, vel = main()
