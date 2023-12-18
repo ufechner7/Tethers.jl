@@ -1,8 +1,8 @@
 # Example two: Falling mass, attached to linear spring
 using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra
 
-G_EARTH  = Float64[0.0, 0.0, -9.81]    # gravitational acceleration [m/s²]
-L0::Float64 = -10.0                    # initial spring length      [m]
+G_EARTH::Vector{Float64} = [0.0, 0.0, -9.81]    # gravitational acceleration     [m/s²]
+L0::Float64 = -10.0                             # initial spring length      [m]
 
 # defing the model, Z component upwards
 @parameters mass=1.0 c_spring=50.0 damping=0.5 l0=L0

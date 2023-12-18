@@ -1,7 +1,7 @@
 # Example one: Falling mass.
 using ModelingToolkit, OrdinaryDiffEq
 
-G_EARTH  = Float64[0.0, 0.0, -9.81]    # gravitational acceleration
+G_EARTH::Vector{Float64} = [0.0, 0.0, -9.81]    # gravitational acceleration     [m/s²]
 
 # definiting the model
 @variables t pos(t)[1:3]=[0.0, 0.0,  0.0]
