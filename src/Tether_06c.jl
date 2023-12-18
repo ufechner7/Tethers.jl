@@ -5,6 +5,7 @@ using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, Parameters
 @with_kw mutable struct Settings @deftype Float64
     g_earth::Vector{Float64} = [0.0, 0.0, -9.81] # gravitational acceleration     [m/s²]
     l0 = 50                                      # initial tether length             [m]
+    v0 = 0                                       # initial speed                   [m/s]
     v_ro = 2                                     # reel-out speed                  [m/s]
     d_tether = 4                                 # tether diameter                  [mm]
     rho_tether = 724                             # density of Dyneema            [kg/m³]
@@ -13,6 +14,7 @@ using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, Parameters
     segments::Int64 = 5                          # number of tether segments         [-]
     α0 = π/10                                    # initial tether angle            [rad]
     duration = 10                                # duration of the simulation        [s]
+    dt = 0.02                                    # max time step in the solution     [s]
     save::Bool = false                           # save png files in folder video
 end
                               
@@ -24,8 +26,9 @@ function calc_initial_state(se)
     UNIT_VECTORS0 = zeros(3, se.segments)
     for i in 1:se.segments+1
         l0 = -(i-1)*se.l0/se.segments
+        v0 = (i-1)*se.v0/se.segments
         POS0[:, i] .= [sin(se.α0) * l0, 0, cos(se.α0) * l0]
-        VEL0[:, i] .= [0, 0, 0]
+        VEL0[:, i] .= [sin(se.α0) * v0, 0, cos(se.α0) * v0]
     end
     for i in 1:se.segments
         ACC0[:, i+1] .= se.g_earth
@@ -85,7 +88,7 @@ function model(se)
 
     local cb
     for i in 1:se.segments
-        cbi = [norm([pos[1, i+1] - pos[1, i], pos[2, i+1] - pos[2, i], pos[3, i+1] - pos[3, i]]) ~ abs(se.l0)]
+        cbi = [norm([pos[1, i+1] - pos[1, i], pos[2, i+1] - pos[2, i], pos[3, i+1] - pos[3, i]]) ~ abs(se.l0)/se.segments]
         if i == 1
             cb = cbi
         else
@@ -99,17 +102,16 @@ function model(se)
 end
 
 function simulate(se, simple_sys)
-    dt = 0.02
     tol = 1e-6
     tspan = (0.0, se.duration)
-    ts    = 0:dt:se.duration
+    ts    = 0:se.dt:se.duration
     prob = ODEProblem(simple_sys, nothing, tspan)
-    @time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
+    @time sol = solve(prob, Rodas5(), dt=se.dt, abstol=tol, reltol=tol, saveat=ts)
     sol
 end
 
 function plot2d(se, sol, pos, reltime, line, sc, txt, j)
-    index = Int64(round(reltime*50+1))
+    index = findfirst(x -> x>=reltime, sol.t)
     x, z = Float64[], Float64[]
     for particle in 1:se.segments+1
         push!(x, (sol(sol.t, idxs=pos[1, particle]))[index])
@@ -156,8 +158,10 @@ function main()
     simple_sys, pos, vel = model(se)
     sol = simulate(se, simple_sys)
     play(se, sol, pos)
-    sol
+    println("Events: $(Int64(round(length(sol.t)- se.duration/se.dt)-1))")
+    sol, pos, vel
 end
 
-sol = main()
+sol, pos, vel = main()
+vel_z = stack(sol[vel], dims=1)[:, 3, 5]
 nothing
