@@ -4,7 +4,6 @@ using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers
 
 G_EARTH::Vector{Float64} = [0.0, 0.0, -9.81]    # gravitational acceleration     [m/s²]
 L0::Float64 = 50.0                              # initial tether length             [m]
-V0::Float64 = 2                                 # initial velocity of lowest mass [m/s]
 V_RO::Float64 = 2.0                             # reel-out speed                  [m/s]
 D_TETHER::Float64 = 4                           # tether diameter                  [mm]
 RHO_TETHER::Float64 = 724.0                     # density of Dyneema            [kg/m³] 
@@ -16,25 +15,27 @@ duration = 10                                   # duration of the simulation    
 SAVE = false                                    # save png files in folder video
 mass_per_meter::Float64 = RHO_TETHER * SEGMENTS * (D_TETHER/2000.0)^2
 
-# calculating consistant initial conditions
-POS0 = zeros(3, SEGMENTS+1)
-VEL0 = zeros(3, SEGMENTS+1)
-ACC0 = zeros(3, SEGMENTS+1)
-SEGMENTS0 = zeros(3, SEGMENTS) 
-UNIT_VECTORS0 = zeros(3, SEGMENTS)
-for i in 1:SEGMENTS+1
-    l0 = -(i-1)*L0/SEGMENTS
-    v0 = (i-1)*V0/SEGMENTS
-    POS0[:, i] .= [sin(α0) * l0, 0, cos(α0) * l0]
-    VEL0[:, i] .= [sin(α0) * v0, 0, cos(α0) * v0]
-end
-for i in 1:SEGMENTS
-    ACC0[:, i+1] .= G_EARTH
-    UNIT_VECTORS0[:, i] .= [0, 0, 1.0]
-    SEGMENTS0[:, i] .= POS0[:, i+1] - POS0[:, i]
+function calc_initial_state(LO, α0, G_EARTH)
+    POS0 = zeros(3, SEGMENTS+1)
+    VEL0 = zeros(3, SEGMENTS+1)
+    ACC0 = zeros(3, SEGMENTS+1)
+    SEGMENTS0 = zeros(3, SEGMENTS) 
+    UNIT_VECTORS0 = zeros(3, SEGMENTS)
+    for i in 1:SEGMENTS+1
+        l0 = -(i-1)*L0/SEGMENTS
+        POS0[:, i] .= [sin(α0) * l0, 0, cos(α0) * l0]
+        VEL0[:, i] .= [0, 0, 0]
+    end
+    for i in 1:SEGMENTS
+        ACC0[:, i+1] .= G_EARTH
+        UNIT_VECTORS0[:, i] .= [0, 0, 1.0]
+        SEGMENTS0[:, i] .= POS0[:, i+1] - POS0[:, i]
+    end
+    POS0, VEL0, ACC0, SEGMENTS0, UNIT_VECTORS0
 end
 
-function model(C_SPRING, L0, SEGMENTS, POS0, VEL0, ACC0, UNIT_VECTORS0, DAMPING)
+function model(C_SPRING, L0, α0, V_RO, mass_per_meter, SEGMENTS, DAMPING, G_EARTH)
+    POS0, VEL0, ACC0, SEGMENTS0, UNIT_VECTORS0 = calc_initial_state(L0, α0, G_EARTH)
     # defining the model, Z component upwards
     @parameters c_spring0=C_SPRING/(L0/SEGMENTS) l_seg=L0/SEGMENTS
     @variables t 
@@ -86,18 +87,17 @@ function model(C_SPRING, L0, SEGMENTS, POS0, VEL0, ACC0, UNIT_VECTORS0, DAMPING)
     simple_sys, pos, vel
 end
 
-simple_sys, pos, vel = model(C_SPRING, L0, SEGMENTS, POS0, VEL0, ACC0, UNIT_VECTORS0, DAMPING)
+function simulate(simple_sys)
+    dt = 0.02
+    tol = 1e-6
+    tspan = (0.0, duration)
+    ts    = 0:dt:duration
+    prob = ODEProblem(simple_sys, nothing, tspan)
+    @time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
+    sol
+end
 
-# running the simulation
-dt = 0.02
-tol = 1e-6
-tspan = (0.0, duration)
-ts    = 0:dt:duration
-
-prob = ODEProblem(simple_sys, nothing, tspan)
-@time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
-
-function plot2d(sol, reltime, segments, line, sc, txt, j)
+function plot2d(sol, pos, reltime, segments, line, sc, txt, j)
     index = Int64(round(reltime*50+1))
     x, z = Float64[], Float64[]
     for particle in 1:segments+1
@@ -123,7 +123,7 @@ function plot2d(sol, reltime, segments, line, sc, txt, j)
     line, sc, txt
 end
 
-function play()
+function play(sol, pos)
     PyPlot.close()
     dt = 0.151
     ylim(-1.2*(L0+V_RO*duration), 0.5)
@@ -132,13 +132,18 @@ function play()
     tight_layout(rect=(0, 0, 0.98, 0.98))
     line, sc, txt = nothing, nothing, nothing
     start = time_ns()
-    j = 0
     mkpath("video")
-    for time in 0:dt:duration
-        line, sc, txt = plot2d(sol, time, SEGMENTS, line, sc, txt, j)
-        j += 1
+    for (j, time) in pairs(0:dt:duration)
+        line, sc, txt = plot2d(sol, pos, time, SEGMENTS, line, sc, txt, j)
         wait_until(start + 0.5*time*1e9)
     end
     nothing
 end
-play()
+
+function main()
+    simple_sys, pos, vel = model(C_SPRING, L0, α0, V_RO, mass_per_meter, SEGMENTS, DAMPING, G_EARTH)
+    sol = simulate(simple_sys)
+    play(sol, pos)
+end
+
+main()
