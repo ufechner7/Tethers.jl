@@ -28,10 +28,8 @@ for i in 1:SEGMENTS+1
     POS0[:, i] .= [sin(α0) * l0, 0, cos(α0) * l0]
     VEL0[:, i] .= [sin(α0) * v0, 0, cos(α0) * v0]
 end
-for i in 2:SEGMENTS+1
-    ACC0[:, i] .= G_EARTH
-end
 for i in 1:SEGMENTS
+    ACC0[:, i+1] .= G_EARTH
     UNIT_VECTORS0[:, i] .= [0, 0, 1.0]
     SEGMENTS0[:, i] .= POS0[:, i+1] - POS0[:, i]
 end
