@@ -10,11 +10,13 @@ D_TETHER::Float64 = 4                           # tether diameter               
 RHO_TETHER::Float64 = 724.0                     # density of Dyneema            [kg/m³] 
 C_SPRING::Float64 = 614600.0                    # unit spring constant              [N]
 DAMPING::Float64  = 473                         # unit damping constant            [Ns]
-SEGMENTS::Int64 = 7                             # number of tether segments         [-]
+SEGMENTS::Int64 = 5                             # number of tether segments         [-]
 α0 = π/10                                       # initial tether angle            [rad]
-duration = 22.1                                 # duration of the simulation        [s]
+duration = 10                                 # duration of the simulation        [s]
 SAVE = false                                    # save png files in folder video
 mass_per_meter::Float64 = RHO_TETHER * SEGMENTS * (D_TETHER/2000.0)^2
+
+# calculating consistant initial conditions
 POS0 = zeros(3, SEGMENTS+1)
 VEL0 = zeros(3, SEGMENTS+1)
 ACC0 = zeros(3, SEGMENTS+1)
