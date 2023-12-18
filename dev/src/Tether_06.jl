@@ -2,7 +2,7 @@
 # for l < l_0), n tether segments and reel-in and reel-out. 
 using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers
 
-G_EARTH     = Float64[0.0, 0.0, -9.81]          # gravitational acceleration     [m/s²]
+G_EARTH::Vector{Float64} = [0.0, 0.0, -9.81]    # gravitational acceleration     [m/s²]
 L0::Float64 = 50.0                              # initial tether length             [m]
 V0::Float64 = 2                                 # initial velocity of lowest mass [m/s]
 V_RO::Float64 = 2.0                             # reel-out speed                  [m/s]
