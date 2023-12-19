@@ -5,11 +5,10 @@
 ## Inputs and outputs
 A general tether model should be able to simulate a tether that connects to arbitrary points in space. The first tutorial examples assume one (fixed) point to be at the coordinate [0,0,0].
 
-We assume that one end of the tether is either fixed or attached to a winch, and the other end
-is attached to a load that applies a force on the tether.
+We assume that one end of the tether is either fixed or attached to a winch, and the other end is attached to a load that applies a force on the tether.
 
 ### Inputs
-Either or
+- Either or
   - pos1: [x1,y1,z1] vector [m] and vel1: speed vector of point one [m/s]
   - force1: vector of force applied to point one
 - Either or
@@ -28,16 +27,16 @@ if `fixed_point_two`:
 - forces: vector of the scalar forces per tether segment [N]
 
 ### Configuration
+- `fixed_point_one`: boolean 
+- `fixed_point_two`: boolean 
+- segments: number of tether segments [-]
 - d_tether: tether diameter [mm]
 - rho_tether: tether density [kg/m³]
 - c_spring: unit spring constant [N]
 - damping: unit damping constant [Ns]
-- segments: number of tether segments [-]
 - l0: initial unstretched tether length [m]
 - v_ro0: initial reel-out speed [m/s]
 - vel2: initial speed vector of point two [m/s]
-- `fixed_point_one`: boolean 
-- `fixed_point_two`: boolean 
 - rho: density of the fluid at position zero and 15 °C (water, air) [kg/m³]
 - h_ref: reference height for the wind speed [m]
 - alpha: exponent of the wind profile law [-]
