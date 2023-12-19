@@ -1,6 +1,20 @@
 # This is the old code from KiteSim.jl that simulates the tether numerically without
 # using ModelingToolkit, just as reference.
 
+"""
+    calc_drag(s::KPS3, v_segment, unit_vector, rho, last_tether_drag, v_app_perp)
+
+Calculate the drag of one tether segment, result stored in parameter `last_tether_drag`.
+Return the norm of the apparent wind velocity.
+"""
+function calc_drag(s::KPS3, v_segment, unit_vector, rho, v_app_perp, area)
+    s.v_apparent .= s.v_wind_tether - v_segment
+    v_app_norm = norm(s.v_apparent)
+    v_app_perp .= s.v_apparent .- s.v_apparent ⋅ unit_vector .* unit_vector
+    s.last_tether_drag .= -0.5 * s.set.cd_tether * rho * norm(v_app_perp) * area .* v_app_perp
+    v_app_norm
+end 
+
 # Calculate the vector res1, that depends on the velocity and the acceleration.
 # The drag force of each segment is distributed equaly on both particles.
 function calc_res(s::KPS3, pos1, pos2, vel1, vel2, mass, veld, result, i)
