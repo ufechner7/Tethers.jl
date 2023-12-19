@@ -57,14 +57,13 @@ Now the parameters of the integrator are defined:
 duration = 10.0
 dt = 0.02
 tol = 1e-6
-tspan = (0.0, duration)
 ts    = 0:dt:duration
 ```
 The time step $dt$ is the interval in which the solution shall be stored, NOT the time step of the integrator. The integrator uses a variable time step which can be much smaller or much larger as determined by the required tolerance, in this example set to $tol=10^{-6}$. The variable $ts$ is a range object defining the sampling times for the result.
 
-In the next lines, we define the ODE problem and finally, we solve it using the Rodas5 solver with the given parameters.
+In the next lines, we define the ODE problem and finally, we solve it using the Rodas5 solver with the given parameters. The second parameter defines the initial conditions. We use `nothing` here because we defined the initial conditions already in the model.
 ```julia
-prob = ODEProblem(simple_sys, nothing, tspan)
+prob = ODEProblem(simple_sys, nothing, (0.0, duration))
 @time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
 ```
 The macro `@time` measures the compilation and execution time of calling the function `solve()`. The function is compiled only when called the first time. 
