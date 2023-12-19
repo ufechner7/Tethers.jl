@@ -3,7 +3,7 @@
 # Math
 
 ## Inputs and outputs
-A general tether model should be able to simulate a tether that connects to arbitrary points in space. The first tutorial examples assume one (fixed) point to be at the coordinate [0,0,0].
+A general tether model should be able to simulate a tether that connects two arbitrary points in space. The first tutorial examples assume one (fixed) point to be at the coordinate [0,0,0].
 
 We assume that one end of the tether is either fixed or attached to a winch, and the other end is fixed or attached to a load that applies a force on the tether.
 
