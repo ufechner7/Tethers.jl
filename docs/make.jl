@@ -30,6 +30,7 @@ makedocs(;
     doctest = false,
     pages=[
         "Readme" => "index.md",
+        "Theory" => "theory.md",
         "Examples" => "examples.md",
         "VSCode IDE" => "vscode.md",
         "Python and Julia" => "python.md",
