@@ -9,16 +9,18 @@ We assume that one end of the tether is either fixed or attached to a winch, and
 is attached to a load that applies a force on the tether.
 
 ### Inputs
-- pos1: [x1,y1,z1] vector
-- pos2: [x2,y2,z2] vector
-- v_ro: reel-out speed at point one, scalar
-- force2: [fx2, fy2, fz2] vector of the force applied to point two
+- pos1: [x1,y1,z1] vector [m]
+- pos2: [x2,y2,z2] vector [m]
+- vel1: speed vector of point one [m/s]
+- v_ro: reel-out speed at point one, scalar [m/s]
+- force2: [fx2, fy2, fz2] vector of the force applied to point two [N]
+- v_wind: vector of the wind speed at 10 m height [m/s]
 
 ### Outputs
-- force1: [fx1, fy1, fz1] force vector, felt at point one
-- pos: vector of the position vectors of the tether particles
-- vel: vector of the velocity vectors of the tether particles
-- forces: vector of the scalar forces per tether segment
+- force1: [fx1, fy1, fz1] force vector, felt at point one [N]
+- pos: vector of the position vectors of the tether particles [m]
+- vel: vector of the velocity vectors of the tether particles [m/s]
+- forces: vector of the scalar forces per tether segment [N]
 
 ### Configuration
 - d_tether: tether diameter [mm]
@@ -27,7 +29,9 @@ is attached to a load that applies a force on the tether.
 - damping: unit damping constant [Ns]
 - segments: number of tether segments [-]
 - l0: initial unstretched tether length [m]
-- v_ro0: initial
+- v_ro0: initial reel-out speed [m/s]
+- vel2: initial speed vector of point two [m/s] 
+- rho: density of the fluid at position zero (water, air) [kg/m³]
 
 ## Model export as functional mockup unit
 Functional mockup units (FMUs) are a standard to exchange models between different
@@ -46,7 +50,7 @@ to provide a tether model as FMU, but this will not be possible before this [iss
 **Nomenclature:**
 - FMU: Functional mockup unit
 - FMI: Functional mockup interface
-- FMI for model exchange: A model without solver
+- FMI for model exchange: A model without a solver
 - FMI for co-simulation: A model that includes its own solver
 
 ## Open questions
