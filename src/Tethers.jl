@@ -7,7 +7,11 @@ function docu(build=true)
     # if build
     #     include("docs/make.jl")
     # end
-    Base.invokelatest(LiveServer.servedocs; skip_dir="docs", launch_browser=true)
+    if Sys.islinux()
+        Base.run(`xdg-open "docs/build/index.html"`; wait=false)
+    else
+        Base.invokelatest(LiveServer.servedocs; skip_dir="docs", launch_browser=true)
+    end
 end
 
 end

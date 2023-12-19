@@ -61,7 +61,7 @@ ts    = 0:dt:duration
 ```
 The time step $dt$ is the interval in which the solution shall be stored, NOT the time step of the integrator. The integrator uses a variable time step which can be much smaller or much larger as determined by the required tolerance, in this example set to $tol=10^{-6}$. The variable $ts$ is a range object defining the sampling times for the result.
 
-In the next lines, we define the ODE problem and finally, we solve it using the Rodas5 solver with the given parameters. The second parameter defines the initial conditions. We use `nothing` here because we defined the initial conditions already in the model.
+In the next lines, we define the ODE problem and finally, we solve it using the Rodas5 solver with the given parameters. The second parameter defines the initial conditions. We use `nothing` here because we defined the initial conditions already in the [model](https://github.com/ufechner7/Tethers.jl/blob/87635d9df32f3ded49d0a394b613b412c2c83d55/src/Tether_01.jl#L7C1-L9C44).
 ```julia
 prob = ODEProblem(simple_sys, nothing, (0.0, duration))
 @time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
@@ -211,7 +211,7 @@ Using 2D arrays of variables allows to simulate a multi-segment tether:
 ```
 In this case, it is important to calculate the initial conditions of each particle such that they are physically feasible:
 ```julia
-G_EARTH::Vector{Float64} = [0.0, 0.0, -9.81]          # gravitational acceleration     [m/s²]
+G_EARTH::Vector{Float64} = [0.0, 0.0, -9.81]    # gravitational acceleration     [m/s²]
 L0::Float64 = 10.0                              # initial segment length            [m]
 V0::Float64 = 4                                 # initial velocity of lowest mass [m/s]
 segments::Int64 = 2                             # number of tether segments         [-]
@@ -261,7 +261,7 @@ In this example, we assume a constant reel-out speed of $V_{RO}=2m/s$. When reel
 - spring constant
 - damping constant
 
-We do this in the following way at [line 80ff](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_06.jl#L80):
+We do this in the following way at [line 76ff](https://github.com/ufechner7/Tethers.jl/blob/87635d9df32f3ded49d0a394b613b412c2c83d55/src/Tether_06.jl#L76C1-L79C59):
 ```julia
 length            ~ L0 + V_RO*t 
 m_tether_particle ~ mass_per_meter * (length/segments)
