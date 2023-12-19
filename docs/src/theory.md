@@ -48,3 +48,6 @@ to provide a tether model as FMU, but this will not be possible before this [iss
 - FMI: Functional mockup interface
 - FMI for model exchange: A model without solver
 - FMI for co-simulation: A model that includes its own solver
+
+## Open questions
+- should the atmospheric model be part of the tether model or not?
