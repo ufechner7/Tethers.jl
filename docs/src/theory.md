@@ -31,7 +31,10 @@ is attached to a load that applies a force on the tether.
 - l0: initial unstretched tether length [m]
 - v_ro0: initial reel-out speed [m/s]
 - vel2: initial speed vector of point two [m/s] 
-- rho: density of the fluid at position zero (water, air) [kg/m³]
+- rho: density of the fluid at position zero and 15 °C (water, air) [kg/m³]
+- alpha: exponent of the wind profile law [-]
+- z0: surface roughness [m]
+- profile_law: integer, 1=EXP, 2=LOG, 3=EXPLOG, 4=FAST_EXP, 5=FAST_LOG, 6=FAST_EXPLOG  
 
 ## Model export as functional mockup unit
 Functional mockup units (FMUs) are a standard to exchange models between different
