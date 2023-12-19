@@ -10,11 +10,12 @@ is attached to a load that applies a force on the tether.
 
 ### Inputs
 - pos1: [x1,y1,z1] vector [m]
-- pos2: [x2,y2,z2] vector [m]
 - vel1: speed vector of point one [m/s]
 - v_ro: reel-out speed at point one, scalar [m/s]
-- force2: [fx2, fy2, fz2] vector of the force applied to point two [N]
-- v_wind: vector of the wind speed at 10 m height [m/s]
+- Either or
+  - pos2: [x2,y2,z2] vector [m]
+  - force2: [fx2, fy2, fz2] vector of the force applied to point two [N]
+- v_wind: vector of the wind speed at reference height [m/s]
 
 ### Outputs
 - force1: [fx1, fy1, fz1] force vector, felt at point one [N]
@@ -30,8 +31,10 @@ is attached to a load that applies a force on the tether.
 - segments: number of tether segments [-]
 - l0: initial unstretched tether length [m]
 - v_ro0: initial reel-out speed [m/s]
-- vel2: initial speed vector of point two [m/s] 
+- vel2: initial speed vector of point two [m/s]
+- fixed_point_two: boolean 
 - rho: density of the fluid at position zero and 15 °C (water, air) [kg/m³]
+- h_ref: reference height for the wind speed [m]
 - alpha: exponent of the wind profile law [-]
 - z0: surface roughness [m]
 - profile_law: integer, 1=EXP, 2=LOG, 3=EXPLOG, 4=FAST_EXP, 5=FAST_LOG, 6=FAST_EXPLOG  
