@@ -19,7 +19,10 @@ Either or
 - v_wind: vector of the wind speed at reference height [m/s]
 
 ### Outputs
-- force1: [fx1, fy1, fz1] force vector, felt at point one [N]
+If `fixed_point_one`:
+  - force1: [fx1, fy1, fz1] force vector, felt at point one [N]
+if `fixed_point_two`:
+  - force2: [fx1, fy1, fz1] force vector, felt at point one [N]
 - pos: vector of the position vectors of the tether particles [m]
 - vel: vector of the velocity vectors of the tether particles [m/s]
 - forces: vector of the scalar forces per tether segment [N]
