@@ -18,9 +18,9 @@ We assume that one end of the tether is either fixed or attached to a winch, and
 - v_wind: vector of the wind speed at reference height [m/s]
 
 ### Outputs
-- If `fixed_point_one`:
+- If `fixed_point_one`
   - force1: [fx1, fy1, fz1] force vector, felt at point one [N]
-- if `fixed_point_two`:
+- if `fixed_point_two`
   - force2: [fx1, fy1, fz1] force vector, felt at point one [N]
 - pos: vector of the position vectors of the tether particles [m]
 - vel: vector of the velocity vectors of the tether particles [m/s]
