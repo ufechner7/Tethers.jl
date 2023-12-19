@@ -212,7 +212,7 @@ Using 2D arrays of variables allows to simulate a multi-segment tether:
 ```
 In this case, it is important to calculate the initial conditions of each particle such that they are physically feasible:
 ```julia
-G_EARTH     = Float64[0.0, 0.0, -9.81]          # gravitational acceleration     [m/s²]
+G_EARTH::Vector{Float64} = [0.0, 0.0, -9.81]          # gravitational acceleration     [m/s²]
 L0::Float64 = 10.0                              # initial segment length            [m]
 V0::Float64 = 4                                 # initial velocity of lowest mass [m/s]
 segments::Int64 = 2                             # number of tether segments         [-]
