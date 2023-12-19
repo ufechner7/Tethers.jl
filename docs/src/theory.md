@@ -5,7 +5,7 @@
 ## Inputs and outputs
 A general tether model should be able to simulate a tether that connects to arbitrary points in space. The first tutorial examples assume one (fixed) point to be at the coordinate [0,0,0].
 
-We assume that one end of the tether is either fixed or attached to a winch, and the other end is attached to a load that applies a force on the tether.
+We assume that one end of the tether is either fixed or attached to a winch, and the other end is fixed or attached to a load that applies a force on the tether.
 
 ### Inputs
 - Either or
@@ -18,9 +18,9 @@ We assume that one end of the tether is either fixed or attached to a winch, and
 - v_wind: vector of the wind speed at reference height [m/s]
 
 ### Outputs
-If `fixed_point_one`:
+- If `fixed_point_one`:
   - force1: [fx1, fy1, fz1] force vector, felt at point one [N]
-if `fixed_point_two`:
+- if `fixed_point_two`:
   - force2: [fx1, fy1, fz1] force vector, felt at point one [N]
 - pos: vector of the position vectors of the tether particles [m]
 - vel: vector of the velocity vectors of the tether particles [m/s]
@@ -36,7 +36,10 @@ if `fixed_point_two`:
 - damping: unit damping constant [Ns]
 - l0: initial unstretched tether length [m]
 - v_ro0: initial reel-out speed [m/s]
-- vel2: initial speed vector of point two [m/s]
+- pos1_0: initial position of point one [m/s]
+- pos2_0: initial position of point two [m/s]
+- vel1_0: initial speed vector of point one [m/s]
+- vel2_0: initial speed vector of point two [m/s]
 - rho: density of the fluid at position zero and 15 °C (water, air) [kg/m³]
 - h_ref: reference height for the wind speed [m]
 - alpha: exponent of the wind profile law [-]
