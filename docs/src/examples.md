@@ -129,7 +129,7 @@ We only have to add the following lines of code:
 function condition(u, t, integrator) # Event when condition(u,t,integrator) == 0
     norm(u[1:3]) - abs(L0)
 end
-`function affect!(integrator)
+function affect!(integrator)
     println(integrator.t)            # Not needed, just to show that the callback works
 end
 cb = ContinuousCallback(condition, affect!)
