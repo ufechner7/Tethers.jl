@@ -9,12 +9,13 @@ We assume that one end of the tether is either fixed or attached to a winch, and
 is attached to a load that applies a force on the tether.
 
 ### Inputs
-- pos1: [x1,y1,z1] vector [m]
-- vel1: speed vector of point one [m/s]
-- v_ro: reel-out speed at point one, scalar [m/s]
+Either or
+  - pos1: [x1,y1,z1] vector [m] and vel1: speed vector of point one [m/s]
+  - force1: vector of force applied to point one
 - Either or
-  - pos2: [x2,y2,z2] vector [m]
+  - pos2: [x2,y2,z2] vector [m] and vel2: speed vector of point two [m/s]
   - force2: [fx2, fy2, fz2] vector of the force applied to point two [N]
+- v_ro: reel-out speed at point one, scalar [m/s]
 - v_wind: vector of the wind speed at reference height [m/s]
 
 ### Outputs
@@ -32,6 +33,7 @@ is attached to a load that applies a force on the tether.
 - l0: initial unstretched tether length [m]
 - v_ro0: initial reel-out speed [m/s]
 - vel2: initial speed vector of point two [m/s]
+- `fixed_point_one`: boolean 
 - `fixed_point_two`: boolean 
 - rho: density of the fluid at position zero and 15 °C (water, air) [kg/m³]
 - h_ref: reference height for the wind speed [m]
@@ -58,6 +60,3 @@ to provide a tether model as FMU, but this will not be possible before this [iss
 - FMI: Functional mockup interface
 - FMI for model exchange: A model without a solver
 - [FMI for co-simulation](https://fmi-standard.org/docs/3.0.1/#_fmi_for_co_simulation_cs): A model that includes its own solver
-
-## Open questions
-- should the atmospheric model be part of the tether model or not?
