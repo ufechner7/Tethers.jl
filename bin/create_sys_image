@@ -2,9 +2,15 @@
 if [[ $(basename $(pwd)) == "bin" ]]; then
     cd ..
 fi
+sudo /bin/bash -c "echo '1' | tee -a /proc/sys/vm/overcommit_memory"
+sudo systemctl disable --now systemd-oomd
+
+juliaup add 1.10
+juliaup default 1.10
 
 export KMP_DUPLICATE_LIB_OK=TRUE
-export JULIA_IMAGE_THREADS=8
+export JULIA_IMAGE_THREADS=1
+export JULIA_PKG_PRESERVE_TIERED_INSTALLED=true
 
 julia_version=$(julia --version | awk '{print($3)}')
 julia_major=${julia_version:0:3} 
@@ -19,13 +25,14 @@ echo "Updating packages..."
 if test -f "Manifest.toml"; then
    rm Manifest.toml
 fi
+julia --pkgimages=no --project -e "ENV[\"PYTHON\"]=\"\"; using Pkg; Pkg.add(\"PyCall\"); Pkg.build(\"PyCall\")"
 julia --pkgimages=no --project -e "include(\"./test/update_packages.jl\");"
 
 julia --pkgimages=no --project -t 4 -e "using Pkg; Pkg.precompile()"
 if [[ $julia_major == "1.9" ]]; then
     julia --pkgimages=no --project -t 4 -e "include(\"./test/create_sys_image.jl\");"
 else
-    julia --pkgimages=no --project -t 4 --gcthreads=4,1 -e "include(\"./test/create_sys_image.jl\");"
+    julia --pkgimages=no --project -t 4 --gcthreads=4,1 --heap-size-hint=8G -e "include(\"./test/create_sys_image.jl\");"
 fi
 mv kps-image_tmp.so bin/kps-image-${julia_major}.so
 julia -J  bin/kps-image-${julia_major}.so --project -q -t 4 -e "using ModelingToolkit, OrdinaryDiffEq, PyPlot, LinearAlgebra, Timers"
