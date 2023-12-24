@@ -9,6 +9,8 @@ juliaup add 1.10
 juliaup default 1.10
 
 export KMP_DUPLICATE_LIB_OK=TRUE
+export MPLBACKEND=qt5agg
+
 export JULIA_IMAGE_THREADS=1
 export JULIA_PKG_PRESERVE_TIERED_INSTALLED=true
 
