@@ -4,6 +4,7 @@ authors = ["Uwe Fechner <uwe.fechner.msc@gmail.com> and contributors"]
 version = "0.1.0"
 
 [deps]
+Conda = "8f4d0f93-b110-5947-807f-2305c1781a2d"
 CondaPkg = "992eb4ea-22a4-4c89-a5bb-47a3300528ab"
 LiveServer = "16fef848-5104-11e9-1b77-fb7a48bbb589"
 ModelingToolkit = "961ee093-0014-501f-94e3-6117800e7a78"
