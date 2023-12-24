@@ -11,8 +11,13 @@ juliaup default 1.10
 export KMP_DUPLICATE_LIB_OK=TRUE
 export MPLBACKEND=qt5agg
 
-export JULIA_IMAGE_THREADS=1
-export JULIA_PKG_PRESERVE_TIERED_INSTALLED=true
+# total memory in kB
+MEM=$(grep MemTotal /proc/meminfo | awk '{print $2}')
+
+if [[ $MEM <  15000000]]; then
+    export JULIA_IMAGE_THREADS=1
+    export JULIA_PKG_PRESERVE_TIERED_INSTALLED=true
+fi
 
 julia_version=$(julia --version | awk '{print($3)}')
 julia_major=${julia_version:0:3} 
