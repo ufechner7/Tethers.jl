@@ -3,11 +3,18 @@ if [[ $(basename $(pwd)) == "bin" ]]; then
     cd ..
 fi
 
+if ! command -v juliaup &> /dev/null; then
+    echo "Please install the Julia installer 'juliup'!"
+    echo "See: https://github.com/JuliaLang/juliaup"
+    exit 1
+fi
+
 juliaup add 1.10
 juliaup default 1.10
 
 export KMP_DUPLICATE_LIB_OK=TRUE
 export MPLBACKEND=qt5agg
+export PYTHON=""
 
 # total memory in kB
 MEM=$(grep MemTotal /proc/meminfo | awk '{print $2}')
@@ -32,7 +39,9 @@ echo "Updating packages..."
 if test -f "Manifest.toml"; then
    rm Manifest.toml
 fi
-julia --pkgimages=no --project -e "ENV[\"PYTHON\"]=\"\"; using Pkg; Pkg.add(\"PyCall\"); Pkg.build(\"PyCall\")"
+julia --pkgimages=no --project -e "using Pkg; Pkg.add(\"PyCall\"); Pkg.build(\"PyCall\")"
+julia --pkgimages=no --project -e "using Pkg; Pkg.add(\"Conda\"); using Conda; Conda.add(\"matplotlib\")"
+julia --pkgimages=no --project -e "using PyPlot"
 julia --pkgimages=no --project -e "include(\"./test/update_packages.jl\");"
 
 julia --pkgimages=no --project -t 4 -e "using Pkg; Pkg.precompile()"
