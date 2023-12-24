@@ -4,7 +4,7 @@ if [[ $(basename $(pwd)) == "bin" ]]; then
 fi
 
 if ! command -v juliaup &> /dev/null; then
-    echo "Please install the Julia installer 'juliup'!"
+    echo "Please install the Julia installer 'juliaup'!"
     echo "See: https://github.com/JuliaLang/juliaup"
     exit 1
 fi
