@@ -44,10 +44,7 @@ julia --pkgimages=no --project -e "using Pkg; Pkg.add(\"Conda\"); using Conda; C
 julia --pkgimages=no --project -e "using PyPlot"
 julia --pkgimages=no --project -e "include(\"./test/update_packages.jl\");"
 
-julia --pkgimages=no --project -t 4 -e "using Pkg; Pkg.precompile()"
-if [[ $julia_major == "1.9" ]]; then
-    julia --pkgimages=no --project -t 4 -e "include(\"./test/create_sys_image.jl\");"
-else
-    julia --pkgimages=no --project -t 4 --gcthreads=4,1 -e "include(\"./test/create_sys_image.jl\");"
-fi
+julia --pkgimages=no --project -t auto -e "using Pkg; Pkg.precompile()"
+julia --pkgimages=no --project -t auto --gcthreads=4,1 -e "include(\"./test/create_sys_image.jl\");"
+
 mv kps-image_tmp.so bin/kps-image-${julia_major}.so
