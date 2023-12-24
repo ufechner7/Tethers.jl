@@ -19,7 +19,7 @@ export PYTHON=""
 # total memory in kB
 MEM=$(grep MemTotal /proc/meminfo | awk '{print $2}')
 
-if [[ $MEM <  15000000 ]]; then
+if (( $MEM <  15000000 )); then
     sudo /bin/bash -c "echo '1' | tee -a /proc/sys/vm/overcommit_memory"
     sudo systemctl disable --now systemd-oomd
     export JULIA_IMAGE_THREADS=1
