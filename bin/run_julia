@@ -1,7 +1,12 @@
 #!/bin/bash
 
 export KMP_DUPLICATE_LIB_OK=TRUE
-export MPLBACKEND=qt5agg
+
+# total memory in kB
+MEM=$(grep MemTotal /proc/meminfo | awk '{print $2}')
+if (( $MEM >=  15000000 )); then
+    export MPLBACKEND=qt5agg
+fi
 
 if [[ $(basename $(pwd)) == "bin" ]]; then
     cd ..

@@ -13,7 +13,6 @@ juliaup add 1.10
 juliaup default 1.10
 
 export KMP_DUPLICATE_LIB_OK=TRUE
-export MPLBACKEND=qt5agg
 export PYTHON=""
 
 # total memory in kB
@@ -24,6 +23,8 @@ if (( $MEM <  15000000 )); then
     sudo systemctl disable --now systemd-oomd
     export JULIA_IMAGE_THREADS=1
     export JULIA_PKG_PRESERVE_TIERED_INSTALLED=true
+else
+    export MPLBACKEND=qt5agg
 fi
 
 julia_version=$(julia --version | awk '{print($3)}')
