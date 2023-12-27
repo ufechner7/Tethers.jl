@@ -1,4 +1,4 @@
-#!/bin/bash -eu
+#!/bin/bash
 if [[ $(basename $(pwd)) == "bin" ]]; then
     cd ..
 fi
