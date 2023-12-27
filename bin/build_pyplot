@@ -1,0 +1,3 @@
+julia --pkgimages=no --project -e "using Pkg; Pkg.add(\"PyCall\"); Pkg.build(\"PyCall\")"
+julia --pkgimages=no --project -e "using Pkg; Pkg.add(\"Conda\"); using Conda; Conda.add(\"matplotlib\")"
+julia --pkgimages=no --project -e "using PyPlot"
