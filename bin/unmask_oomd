@@ -1,0 +1,9 @@
+#!/bin/bash
+
+MASKED=$(systemctl is-enabled systemd-oomd)
+if [[ $MASKED == "masked" ]]; then
+    sudo systemctl unmask systemd-oomd
+    sudo systemctl enable --now systemd-oomd
+else
+    echo "Already unmasked!"
+fi
