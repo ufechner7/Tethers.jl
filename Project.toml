@@ -17,11 +17,17 @@ PyPlot = "d330b81b-6aea-500a-939a-2ce795aea3ee"
 Timers = "21f18d07-b854-4dab-86f0-c15a3821819a"
 
 [compat]
+Conda = "=1.10.0"
 CondaPkg = "=0.2.22"
+LiveServer = "=1.2.7"
 ModelingToolkit = "=8.74.0"
 OrdinaryDiffEq = "=6.63.0"
 PackageCompiler = "=2.1.16"
+Parameters = "=0.12.3"
+Pkg = "=1.10.0"
+PyCall = "=1.96.4"
 PyPlot = "=2.11.2"
+Timers = "=0.1.5"
 julia = "~1.10"
 
 [extras]
