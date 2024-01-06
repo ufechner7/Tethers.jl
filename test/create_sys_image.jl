@@ -1,5 +1,5 @@
 @info "Loading packages ..."
-using ModelingToolkit, OrdinaryDiffEq, PackageCompiler, PyPlot, Timers
+using ModelingToolkit, OrdinaryDiffEq, PackageCompiler, PyPlot, Timers, REPL.TerminalMenus
 
 FAST=true
 
