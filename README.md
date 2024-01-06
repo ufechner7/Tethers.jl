@@ -58,6 +58,13 @@ You should see a plot similar to:
 
 This example shows a mass that is thrown upwards, slows down and then falls.
 
+**TIP:**  
+You get a menu from which you can run any of the examples by typing
+```julia
+menu()
+```
+at the Julia prompt.
+
 **Julia code:** [Tether_01.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_01.jl)
 
 ## Python version as comparison
