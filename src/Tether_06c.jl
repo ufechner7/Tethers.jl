@@ -2,7 +2,7 @@
 # for l < l_0), n tether segments, reel-in and reel-out and continues callbacks. 
 using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, Parameters
 
-@with_kw mutable struct Settings @deftype Float64
+@with_kw mutable struct Settings2 @deftype Float64
     g_earth::Vector{Float64} = [0.0, 0.0, -9.81] # gravitational acceleration     [m/s²]
     l0 = 50                                      # initial tether length             [m]
     v0 = 0                                       # initial speed                   [m/s]
@@ -157,7 +157,7 @@ function play(se, sol, pos)
     nothing
 end
 
-function main(se = Settings();play_=true)
+function main(se = Settings2();play_=true)
     simple_sys, pos, vel = model(se)
     sol = simulate(se, simple_sys)
     if play_
@@ -168,7 +168,7 @@ function main(se = Settings();play_=true)
 end
 
 # plot vertical velocity of last particle with and without callbacks
-function compare(se=Settings())
+function compare(se=Settings2())
     PyPlot.close()
     se.callbacks = false
     se.v_ro = 2
