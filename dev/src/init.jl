@@ -22,9 +22,13 @@ end
 options = ["include(\"src/Tether_01.jl\")",
            "include(\"src/Tether_02.jl\")",
            "include(\"src/Tether_03.jl\")",
+           "include(\"src/Tether_03b.jl\")",
+           "include(\"src/Tether_03c.jl\")",
            "include(\"src/Tether_04.jl\")",
            "include(\"src/Tether_05.jl\")",
            "include(\"src/Tether_06.jl\")",
+           "include(\"src/Tether_06b.jl\")",
+           "include(\"src/Tether_06c.jl\")",
            "quit()"]
 
 function menu()

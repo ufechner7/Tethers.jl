@@ -79,7 +79,6 @@ function plt(sol; title="")
     nothing
 end
 
-PyPlot.clear()
 println("Solving the system without callback...")
 simple_sys, pos, vel, c_spring = model3(G_EARTH, L0, V0)
 sol = solve3(simple_sys, L0, V0; cb=false)
