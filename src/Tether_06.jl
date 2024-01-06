@@ -40,7 +40,7 @@ end
 @variables acc(t)[1:3, 1:SEGMENTS+1]  = ACC0
 @variables segment(t)[1:3, 1:SEGMENTS]  = SEGMENTS0
 @variables unit_vector(t)[1:3, 1:SEGMENTS]  = UNIT_VECTORS0
-@variables length(t) = L0
+@variables len(t) = L0
 @variables c_spring(t) = c_spring0
 @variables damping(t) = DAMPING  / l_seg
 @variables m_tether_particle(t) = mass_per_meter * l_seg
@@ -62,8 +62,8 @@ for i in SEGMENTS:-1:1
     eqs2 = vcat(eqs2, unit_vector[:, i] ~ -segment[:, i]/norm1[i])
     eqs2 = vcat(eqs2, rel_vel[:, i] ~ vel[:, i+1] - vel[:, i])
     eqs2 = vcat(eqs2, spring_vel[i] ~ -unit_vector[:, i] ⋅ rel_vel[:, i])
-    eqs2 = vcat(eqs2, c_spr[i] ~ c_spring * (norm1[i] > length/SEGMENTS))
-    eqs2 = vcat(eqs2, spring_force[:, i] ~ (c_spr[i] * (norm1[i] - (length/SEGMENTS)) + damping * spring_vel[i]) * unit_vector[:, i])
+    eqs2 = vcat(eqs2, c_spr[i] ~ c_spring * (norm1[i] > len/SEGMENTS))
+    eqs2 = vcat(eqs2, spring_force[:, i] ~ (c_spr[i] * (norm1[i] - (len/SEGMENTS)) + damping * spring_vel[i]) * unit_vector[:, i])
     if i == SEGMENTS
         eqs2 = vcat(eqs2, total_force[:, i] ~ spring_force[:, i])
         eqs2 = vcat(eqs2, acc[:, i+1] .~ G_EARTH + total_force[:, i] / 0.5*(m_tether_particle))
@@ -73,10 +73,10 @@ for i in SEGMENTS:-1:1
     end
 end
 eqs2 = vcat(eqs2, acc[:, 1] .~ zeros(3))
-eqs2 = vcat(eqs2, length ~ L0 + V_RO*t)
-eqs2 = vcat(eqs2, c_spring ~ C_SPRING / (length/SEGMENTS))
-eqs2 = vcat(eqs2, m_tether_particle ~ mass_per_meter * (length/SEGMENTS))
-eqs2 = vcat(eqs2, damping  ~ DAMPING  / (length/SEGMENTS))
+eqs2 = vcat(eqs2, len ~ L0 + V_RO*t)
+eqs2 = vcat(eqs2, c_spring ~ C_SPRING / (len/SEGMENTS))
+eqs2 = vcat(eqs2, m_tether_particle ~ mass_per_meter * (len/SEGMENTS))
+eqs2 = vcat(eqs2, damping  ~ DAMPING  / (len/SEGMENTS))
 eqs = vcat(eqs1..., eqs2)
      
 @named sys = ODESystem(eqs, t)
