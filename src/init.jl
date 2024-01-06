@@ -24,7 +24,8 @@ options = ["include(\"src/Tether_01.jl\")",
            "include(\"src/Tether_03.jl\")",
            "include(\"src/Tether_04.jl\")",
            "include(\"src/Tether_05.jl\")",
-           "include(\"src/Tether_06.jl\")"]
+           "include(\"src/Tether_06.jl\")",
+           "quit()"]
 
 function menu()
     active = true
