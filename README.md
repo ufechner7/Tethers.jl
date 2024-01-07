@@ -58,7 +58,7 @@ You should see a plot similar to:
 
 This example shows a mass that is thrown upwards, slows down and then falls.
 
-**TIP:**  
+**HINT**  
 You get a menu from which you can run any of the examples by typing
 ```julia
 menu()
