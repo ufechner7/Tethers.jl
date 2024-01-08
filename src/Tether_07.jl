@@ -1,5 +1,6 @@
 # Tutorial example simulating a 3D mass-spring system with a nonlinear spring (no spring forces
 # for l < l_0), n tether segments and reel-in and reel-out. 
+using PyPlot
 using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, Parameters
 
 # TODO: Add aerodynamic drag
@@ -39,7 +40,7 @@ end
 
 function model(se)
     POS0, VEL0, ACC0, SEGMENTS0, UNIT_VECTORS0 = calc_initial_state(se)
-    mass_per_meter = se.rho_tether * se.segments * (se.d_tether/2000.0)^2
+    mass_per_meter = se.rho_tether * pi * (se.d_tether/2000.0)^2    # rho * cross-section
     @parameters c_spring0=se.c_spring/(se.l0/se.segments) l_seg=se.l0/se.segments
     @variables t 
     @variables pos(t)[1:3, 1:se.segments+1]  = POS0
@@ -56,7 +57,7 @@ function model(se)
     @variables spring_vel(t)[1:se.segments] = zeros(se.segments)
     @variables c_spr(t)[1:se.segments] = c_spring0 * ones(se.segments)
     @variables spring_force(t)[1:3, 1:se.segments] = zeros(3, se.segments)
-    @variables total_force(t)[1:3, 1:se.segments] = zeros(3, se.segments)
+    @variables total_force(t)[1:3, 1:se.segments+1] = zeros(3, se.segments+1)
     D = Differential(t)
 
     eqs1 = vcat(D.(pos) ~ vel,
@@ -70,14 +71,28 @@ function model(se)
         eqs2 = vcat(eqs2, spring_vel[i] ~ -unit_vector[:, i] ⋅ rel_vel[:, i])
         eqs2 = vcat(eqs2, c_spr[i] ~ c_spring * (norm1[i] > length/se.segments))
         eqs2 = vcat(eqs2, spring_force[:, i] ~ (c_spr[i] * (norm1[i] - (length/se.segments)) + damping * spring_vel[i]) * unit_vector[:, i])
-        if i == se.segments
-            eqs2 = vcat(eqs2, total_force[:, i] ~ spring_force[:, i])
-            eqs2 = vcat(eqs2, acc[:, i+1] .~ se.g_earth + total_force[:, i] / 0.5*(m_tether_particle))
+#         if i == se.segments
+#             eqs2 = vcat(eqs2, total_force[:, i] ~ spring_force[:, i])
+#             eqs2 = vcat(eqs2, acc[:, i+1] .~ se.g_earth + total_force[:, i] / 0.5*(m_tether_particle))
+#         else
+#             eqs2 = vcat(eqs2, total_force[:, i] ~ spring_force[:, i]- spring_force[:, i+1])
+#             eqs2 = vcat(eqs2, acc[:, i+1] .~ se.g_earth + total_force[:, i] / m_tether_particle)
+#         end
+    end
+
+    for i in 1:(se.segments+1)
+        if i == 1   #fist node
+            eqs2 = vcat(eqs2, total_force[:, 1] ~ spring_force[:, 1]) # forces are applied, but fixed position
+            eqs2 = vcat(eqs2, acc[:, 1] .~ zeros(3))    #FIXED position
+        elseif i == (se.segments+1) #letzter Knoten
+            eqs2 = vcat(eqs2, total_force[:, i] ~ spring_force[:, i-1])
+            eqs2 = vcat(eqs2, acc[:, i] .~ se.g_earth + total_force[:, i] / m_tether_particle)
         else
-            eqs2 = vcat(eqs2, total_force[:, i] ~ spring_force[:, i]- spring_force[:, i+1])
-            eqs2 = vcat(eqs2, acc[:, i+1] .~ se.g_earth + total_force[:, i] / m_tether_particle)
+            eqs2 = vcat(eqs2, total_force[:, i] ~ spring_force[:, i-1]- spring_force[:, i])
+            eqs2 = vcat(eqs2, acc[:, i] .~ se.g_earth + total_force[:, i] / m_tether_particle)
         end
     end
+
     eqs2 = vcat(eqs2, acc[:, 1] .~ zeros(3))
     eqs2 = vcat(eqs2, length ~ se.l0 + se.v_ro*t)
     eqs2 = vcat(eqs2, c_spring ~ se.c_spring / (length/se.segments))
