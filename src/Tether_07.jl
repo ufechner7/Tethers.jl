@@ -14,7 +14,7 @@ using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, Parameters
     damping = 473                                # unit damping constant            [Ns]
     segments::Int64 = 5                          # number of tether segments         [-]
     α0 = π/10                                    # initial tether angle            [rad]
-    duration = 10                                # duration of the simulation        [s]
+    duration = 20                                # duration of the simulation        [s]
     save::Bool = false                           # save png files in folder video
 end
                               
@@ -59,30 +59,30 @@ function model(se)
     @variables total_force(t)[1:3, 1:se.segments] = zeros(3, se.segments)
     D = Differential(t)
 
-    eqs1 = vcat(D.(pos) ~ vel,
-                D.(vel) ~ acc)
+    eqs1 = vcat(D.(pos) .~ vel,
+                D.(vel) .~ acc)
     eqs2 = []
     for i in se.segments:-1:1
-        eqs2 = vcat(eqs2, segment[:, i] ~ pos[:, i+1] - pos[:, i])
-        eqs2 = vcat(eqs2, norm1[i] ~ norm(segment[:, i]))
-        eqs2 = vcat(eqs2, unit_vector[:, i] ~ -segment[:, i]/norm1[i])
-        eqs2 = vcat(eqs2, rel_vel[:, i] ~ vel[:, i+1] - vel[:, i])
-        eqs2 = vcat(eqs2, spring_vel[i] ~ -unit_vector[:, i] ⋅ rel_vel[:, i])
-        eqs2 = vcat(eqs2, c_spr[i] ~ c_spring * (norm1[i] > length/se.segments))
-        eqs2 = vcat(eqs2, spring_force[:, i] ~ (c_spr[i] * (norm1[i] - (length/se.segments)) + damping * spring_vel[i]) * unit_vector[:, i])
+        eqs2 = vcat(eqs2, segment[:, i] .~ pos[:, i+1] - pos[:, i])
+        eqs2 = vcat(eqs2, norm1[i] .~ norm(segment[:, i]))
+        eqs2 = vcat(eqs2, unit_vector[:, i] .~ -segment[:, i]/norm1[i])
+        eqs2 = vcat(eqs2, rel_vel[:, i] .~ vel[:, i+1] - vel[:, i])
+        eqs2 = vcat(eqs2, spring_vel[i] .~ -unit_vector[:, i] ⋅ rel_vel[:, i])
+        eqs2 = vcat(eqs2, c_spr[i] .~ c_spring * (norm1[i] > length/se.segments))
+        eqs2 = vcat(eqs2, spring_force[:, i] .~ (c_spr[i] * (norm1[i] - (length/se.segments)) + damping * spring_vel[i]) * unit_vector[:, i])
         if i == se.segments
-            eqs2 = vcat(eqs2, total_force[:, i] ~ spring_force[:, i])
+            eqs2 = vcat(eqs2, total_force[:, i] .~ spring_force[:, i])
             eqs2 = vcat(eqs2, acc[:, i+1] .~ se.g_earth + total_force[:, i] / 0.5*(m_tether_particle))
         else
-            eqs2 = vcat(eqs2, total_force[:, i] ~ spring_force[:, i]- spring_force[:, i+1])
+            eqs2 = vcat(eqs2, total_force[:, i] .~ spring_force[:, i]- spring_force[:, i+1])
             eqs2 = vcat(eqs2, acc[:, i+1] .~ se.g_earth + total_force[:, i] / m_tether_particle)
         end
     end
     eqs2 = vcat(eqs2, acc[:, 1] .~ zeros(3))
-    eqs2 = vcat(eqs2, length ~ se.l0 + se.v_ro*t)
-    eqs2 = vcat(eqs2, c_spring ~ se.c_spring / (length/se.segments))
-    eqs2 = vcat(eqs2, m_tether_particle ~ mass_per_meter * (length/se.segments))
-    eqs2 = vcat(eqs2, damping  ~ se.damping  / (length/se.segments))
+    eqs2 = vcat(eqs2, length .~ se.l0 + se.v_ro*t)
+    eqs2 = vcat(eqs2, c_spring .~ se.c_spring / (length/se.segments))
+    eqs2 = vcat(eqs2, m_tether_particle .~ mass_per_meter * (length/se.segments))
+    eqs2 = vcat(eqs2, damping  .~ se.damping  / (length/se.segments))
     eqs = vcat(eqs1..., eqs2)
         
     @named sys = ODESystem(eqs, t)
