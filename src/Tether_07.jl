@@ -138,7 +138,7 @@ function play(se, sol, pos)
     mkpath("video")
     for (j, time) in pairs(0:dt:se.duration)
         line, sc, txt = plot2d(se, sol, pos, time, line, sc, txt, j)
-        wait_until(start + 0.5*time*1e9)
+        wait_until(start + 5.0*time*1e9)
     end
     nothing
 end
@@ -147,7 +147,7 @@ function main()
     se = Settings()
     simple_sys, pos, vel = model(se)
     sol = simulate(se, simple_sys)
-    println("sol and pos ", sol, "\n\t", pos)
+    # println("sol and pos ", sol, "\n\t", pos)
     play(se, sol, pos)
 end
 

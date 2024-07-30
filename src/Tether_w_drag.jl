@@ -6,15 +6,18 @@ using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, Parameters
 
 @with_kw mutable struct Settings @deftype Float64
     g_earth::Vector{Float64} = [0.0, 0.0, -9.81] # gravitational acceleration     [m/s²]
+    v_wind_tether::Vector{Float64} = [5.0, 0.0, 0.0]
+    rho = 1.225
+    cd_tether = 0.958
     l0 = 50                                      # initial tether length             [m]
     v_ro = 2                                     # reel-out speed                  [m/s]
-    d_tether = 4                                 # tether diameter                  [mm]
+    d_tether = 10                                 # tether diameter                  [mm]
     rho_tether = 724                             # density of Dyneema            [kg/m³]
     c_spring = 614600                            # unit spring constant              [N]
     damping = 473                                # unit damping constant            [Ns]
     segments::Int64 = 5                          # number of tether segments         [-]
     α0 = π/10                                    # initial tether angle            [rad]
-    duration = 10                                # duration of the simulation        [s]
+    duration = 20.0                             # duration of the simulation        [s]
     save::Bool = false                           # save png files in folder video
 end
                               
@@ -42,11 +45,9 @@ function model(se)
     mass_per_meter = se.rho_tether * se.segments * (se.d_tether/2000.0)^2
     @parameters c_spring0=se.c_spring/(se.l0/se.segments) l_seg=se.l0/se.segments
     @variables t 
-    
     @variables pos(t)[1:3, 1:se.segments+1]  = POS0
     @variables vel(t)[1:3, 1:se.segments+1]  = VEL0
     @variables acc(t)[1:3, 1:se.segments+1]  = ACC0
-
     @variables segment(t)[1:3, 1:se.segments]  = SEGMENTS0
     @variables unit_vector(t)[1:3, 1:se.segments]  = UNIT_VECTORS0
     @variables length(t) = se.l0
@@ -58,39 +59,53 @@ function model(se)
     @variables spring_vel(t)[1:se.segments] = zeros(se.segments)
     @variables c_spr(t)[1:se.segments] = c_spring0 * ones(se.segments)
     @variables spring_force(t)[1:3, 1:se.segments] = zeros(3, se.segments)
+    @variables v_apparent(t)[1:3, 1:se.segments] = zeros(3, se.segments)
+    @variables v_app_perp(t)[1:3, 1:se.segments] = zeros(3, se.segments)
+    @variables norm_v_app(t)[1:se.segments] = ones(se.segments)
+    @variables drag_force(t)[1:3, 1:se.segments] = zeros(3, se.segments)
     @variables total_force(t)[1:3, 1:se.segments] = zeros(3, se.segments)
 
     D = Differential(t)
 
-    eqs1 = vcat(D.(pos) ~ vel,
-                D.(vel) ~ acc)
+    eqs1 = vcat(D.(pos) .~ vel,
+                D.(vel) .~ acc)
     eqs2 = []
     for i in se.segments:-1:1
-        eqs2 = vcat(eqs2, segment[:, i] ~ pos[:, i+1] - pos[:, i])
+        eqs2 = vcat(eqs2, segment[:, i] .~ pos[:, i+1] - pos[:, i])
         eqs2 = vcat(eqs2, norm1[i] ~ norm(segment[:, i]))
-        eqs2 = vcat(eqs2, unit_vector[:, i] ~ -segment[:, i]/norm1[i])
-        eqs2 = vcat(eqs2, rel_vel[:, i] ~ vel[:, i+1] - vel[:, i])
-        eqs2 = vcat(eqs2, spring_vel[i] ~ -unit_vector[:, i] ⋅ rel_vel[:, i])
-        eqs2 = vcat(eqs2, c_spr[i] ~ c_spring * (norm1[i] > length/se.segments))
-        eqs2 = vcat(eqs2, spring_force[:, i] ~ (c_spr[i] * (norm1[i] - (length/se.segments)) + damping * spring_vel[i]) * unit_vector[:, i])
+        eqs2 = vcat(eqs2, unit_vector[:, i] .~ -segment[:, i]/norm1[i])
+        eqs2 = vcat(eqs2, rel_vel[:, i] .~ vel[:, i+1] - vel[:, i])
+        eqs2 = vcat(eqs2, spring_vel[i] .~ -unit_vector[:, i] ⋅ rel_vel[:, i])
+        eqs2 = vcat(eqs2, c_spr[i] .~ c_spring * (norm1[i] > length/se.segments))
+        eqs2 = vcat(eqs2, spring_force[:, i] .~ (c_spr[i] * (norm1[i] - (length/se.segments)) + damping * spring_vel[i]) * unit_vector[:, i])
+
+        eqs2 = vcat(eqs2, v_apparent[:, i] .~ se.v_wind_tether .- vel[:, i])
+        # eqs2 = vcat(eqs2, v_apparent[:, i] .~ [0.0, 0.0, 0.0])
+        eqs2 = vcat(eqs2, v_app_perp[:, i] .~ v_apparent[:, i] - (v_apparent[:, i] ⋅ unit_vector[:, i]) .* unit_vector[:, i])
+        # eqs2 = vcat(eqs2, v_app_perp[:, i] .~ [0.0, 0.0, 0.0])
+        eqs2 = vcat(eqs2, norm_v_app[i] ~ norm(v_app_perp[:, i]))
+        # eqs2 = vcat(eqs2, norm_v_app[i] ~ 0.0)
+        eqs2 = vcat(eqs2, drag_force[:, i] .~ (0.5 * se.rho * se.cd_tether * norm_v_app[i] * (norm1[i]*se.d_tether/1000.0)) .* v_app_perp[:, i])
+        # eqs2 = vcat(eqs2, drag_force[:, i] .~ 0.0)
         if i == se.segments
-            eqs2 = vcat(eqs2, total_force[:, i] ~ spring_force[:, i])
+            eqs2 = vcat(eqs2, total_force[:, i] .~ spring_force[:, i] + drag_force[:,i]/2)
             eqs2 = vcat(eqs2, acc[:, i+1] .~ se.g_earth + total_force[:, i] / 0.5*(m_tether_particle))
         else
-            eqs2 = vcat(eqs2, total_force[:, i] ~ spring_force[:, i]- spring_force[:, i+1])
+            # println(spring_force[:, i]+drag_force[:, i])
+            # println(drag_force[:, i])
+            eqs2 = vcat(eqs2, total_force[:, i] .~ spring_force[:, i]- spring_force[:, i+1] + drag_force[:,i])
             eqs2 = vcat(eqs2, acc[:, i+1] .~ se.g_earth + total_force[:, i] / m_tether_particle)
         end
     end
     eqs2 = vcat(eqs2, acc[:, 1] .~ zeros(3))
-    eqs2 = vcat(eqs2, length ~ se.l0 + se.v_ro*t)
-    eqs2 = vcat(eqs2, c_spring ~ se.c_spring / (length/se.segments))
-    eqs2 = vcat(eqs2, m_tether_particle ~ mass_per_meter * (length/se.segments))
-    eqs2 = vcat(eqs2, damping  ~ se.damping  / (length/se.segments))
+    eqs2 = vcat(eqs2, length .~ se.l0 + se.v_ro*t)
+    eqs2 = vcat(eqs2, c_spring .~ se.c_spring / (length/se.segments))
+    eqs2 = vcat(eqs2, m_tether_particle .~ mass_per_meter * (length/se.segments))
+    eqs2 = vcat(eqs2, damping  .~ se.damping  / (length/se.segments))
     eqs = vcat(eqs1..., eqs2)
         
     @named sys = ODESystem(eqs, t)
     simple_sys = structural_simplify(sys)
-    println(simple_sys)
     simple_sys, pos, vel
 end
 
@@ -100,7 +115,7 @@ function simulate(se, simple_sys)
     tspan = (0.0, se.duration)
     ts    = 0:dt:se.duration
     prob = ODEProblem(simple_sys, nothing, tspan)
-    @time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
+    @time sol = solve(prob, Rodas5P(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
     sol
 end
 
@@ -142,7 +157,7 @@ function play(se, sol, pos)
     mkpath("video")
     for (j, time) in pairs(0:dt:se.duration)
         line, sc, txt = plot2d(se, sol, pos, time, line, sc, txt, j)
-        wait_until(start + 0.5*time*1e9)
+        wait_until(start + 2.0*time*1e9)
     end
     nothing
 end
@@ -151,6 +166,7 @@ function main()
     se = Settings()
     simple_sys, pos, vel = model(se)
     sol = simulate(se, simple_sys)
+    # println("sol and pos ", sol, "\n\t", pos)
     play(se, sol, pos)
 end
 
