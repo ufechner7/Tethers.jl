@@ -17,7 +17,7 @@ using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, Parameters
     damping = 473                                # unit damping constant            [Ns]
     segments::Int64 = 5                          # number of tether segments         [-]
     α0 = π/10                                    # initial tether angle            [rad]
-    duration = 20.0                             # duration of the simulation        [s]
+    duration = 30.0                             # duration of the simulation        [s]
     save::Bool = false                           # save png files in folder video
 end
                               
@@ -62,7 +62,7 @@ function model(se)
     @variables v_apparent(t)[1:3, 1:se.segments] = zeros(3, se.segments)
     @variables v_app_perp(t)[1:3, 1:se.segments] = zeros(3, se.segments)
     @variables norm_v_app(t)[1:se.segments] = ones(se.segments)
-    @variables drag_force(t)[1:3, 1:se.segments] = zeros(3, se.segments)
+    @variables half_drag_force(t)[1:3, 1:se.segments] = zeros(3, se.segments)
     @variables total_force(t)[1:3, 1:se.segments] = zeros(3, se.segments)
 
     D = Differential(t)
@@ -79,21 +79,20 @@ function model(se)
         eqs2 = vcat(eqs2, c_spr[i] .~ c_spring * (norm1[i] > length/se.segments))
         eqs2 = vcat(eqs2, spring_force[:, i] .~ (c_spr[i] * (norm1[i] - (length/se.segments)) + damping * spring_vel[i]) * unit_vector[:, i])
 
-        eqs2 = vcat(eqs2, v_apparent[:, i] .~ se.v_wind_tether .- vel[:, i])
-        # eqs2 = vcat(eqs2, v_apparent[:, i] .~ [0.0, 0.0, 0.0])
+        eqs2 = vcat(eqs2, v_apparent[:, i] .~ se.v_wind_tether .- (vel[:, i] + vel[:, i+1])/2)
         eqs2 = vcat(eqs2, v_app_perp[:, i] .~ v_apparent[:, i] - (v_apparent[:, i] ⋅ unit_vector[:, i]) .* unit_vector[:, i])
-        # eqs2 = vcat(eqs2, v_app_perp[:, i] .~ [0.0, 0.0, 0.0])
         eqs2 = vcat(eqs2, norm_v_app[i] ~ norm(v_app_perp[:, i]))
-        # eqs2 = vcat(eqs2, norm_v_app[i] ~ 0.0)
-        eqs2 = vcat(eqs2, drag_force[:, i] .~ (0.5 * se.rho * se.cd_tether * norm_v_app[i] * (norm1[i]*se.d_tether/1000.0)) .* v_app_perp[:, i])
-        # eqs2 = vcat(eqs2, drag_force[:, i] .~ 0.0)
+        eqs2 = vcat(eqs2, half_drag_force[:, i] .~ (0.25 * se.rho * se.cd_tether * norm_v_app[i] * (norm1[i]*se.d_tether/1000.0)) .* v_app_perp[:, i])
         if i == se.segments
-            eqs2 = vcat(eqs2, total_force[:, i] .~ spring_force[:, i] + drag_force[:,i]/2)
+            eqs2 = vcat(eqs2, total_force[:, i] .~ spring_force[:, i] + half_drag_force[:,i] + half_drag_force[:,i-1])
             eqs2 = vcat(eqs2, acc[:, i+1] .~ se.g_earth + total_force[:, i] / 0.5*(m_tether_particle))
+        elseif i == 1
+            eqs2 = vcat(eqs2, total_force[:, i] .~ spring_force[:, i]- spring_force[:, i+1] + half_drag_force[:,i])
+            eqs2 = vcat(eqs2, acc[:, i+1] .~ se.g_earth + total_force[:, i] / m_tether_particle)
         else
             # println(spring_force[:, i]+drag_force[:, i])
             # println(drag_force[:, i])
-            eqs2 = vcat(eqs2, total_force[:, i] .~ spring_force[:, i]- spring_force[:, i+1] + drag_force[:,i])
+            eqs2 = vcat(eqs2, total_force[:, i] .~ spring_force[:, i]- spring_force[:, i+1] + half_drag_force[:,i] + half_drag_force[:,i-1])
             eqs2 = vcat(eqs2, acc[:, i+1] .~ se.g_earth + total_force[:, i] / m_tether_particle)
         end
     end
@@ -157,7 +156,7 @@ function play(se, sol, pos)
     mkpath("video")
     for (j, time) in pairs(0:dt:se.duration)
         line, sc, txt = plot2d(se, sol, pos, time, line, sc, txt, j)
-        wait_until(start + 2.0*time*1e9)
+        wait_until(start + 1.0*time*1e9)
     end
     nothing
 end
