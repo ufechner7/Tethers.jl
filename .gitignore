@@ -10,4 +10,5 @@ docs/src/docs
 docs/src/docs/src
 docs/src/index.md
 video
+.venv
 kps-image_tmp.so
