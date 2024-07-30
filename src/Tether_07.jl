@@ -147,6 +147,7 @@ function main()
     se = Settings()
     simple_sys, pos, vel = model(se)
     sol = simulate(se, simple_sys)
+    println("sol and pos ", sol, "\n\t", pos)
     play(se, sol, pos)
 end
 
