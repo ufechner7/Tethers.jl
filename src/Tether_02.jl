@@ -17,13 +17,15 @@ D = Differential(t)
 vel = collect(vel)
 acc = collect(acc)
 pos = collect(pos)
+unit_vector = collect(unit_vector)
+spring_force = collect(spring_force)
 
 eqs = vcat(D.(pos)      .~ vel,
            D.(vel)      .~ acc,
-           norm1        .~ norm(pos),
+           norm1        ~ norm(pos),
            unit_vector  .~ -pos/norm1,         # direction from point mass to origin
            spring_vel   .~ -unit_vector ⋅ vel,
-           spring_force .~ (c_spring * (norm1 - abs(l0)) + damping * spring_vel) * unit_vector,
+           spring_force .~ (c_spring * (norm1 - abs(l0)) .+ damping .* spring_vel) * unit_vector,
            acc          .~ G_EARTH + spring_force/mass)
 
 @named sys = ODESystem(eqs, t)

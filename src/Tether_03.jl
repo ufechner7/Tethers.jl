@@ -20,6 +20,8 @@ D = Differential(t)
 vel = collect(vel)
 acc = collect(acc)
 pos = collect(pos)
+unit_vector = collect(unit_vector)
+spring_force = collect(spring_force)
 
 eqs = vcat(D.(pos)      .~ vel,
            D.(vel)      .~ acc,
