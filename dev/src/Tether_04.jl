@@ -43,18 +43,22 @@ end
 @variables spring_force(t)[1:3, 1:segments] = zeros(3, segments)
 D = Differential(t)
 
-eqs1 = vcat(D.(pos) ~ vel,
-            D.(vel) ~ acc)
+vel = collect(vel)
+acc = collect(acc)
+pos = collect(pos)
+
+eqs1 = vcat(D.(pos) .~ vel,
+            D.(vel) .~ acc)
 eqs2 = []
 for i in 1:segments
     global eqs2
-    eqs2 = vcat(eqs2, segment[:, i] ~ pos[:, i+1] - pos[:, i])
-    eqs2 = vcat(eqs2, norm1[i] ~ norm(segment[:, i]))
-    eqs2 = vcat(eqs2, unit_vector[:, i] ~ -segment[:, i]/norm1[i])
-    eqs2 = vcat(eqs2, rel_vel[:, i] ~ vel[:, i+1] - vel[:, i])
-    eqs2 = vcat(eqs2, spring_vel[i] ~ -unit_vector[:, i] ⋅ rel_vel[:, i])
-    eqs2 = vcat(eqs2, c_spring[i] ~ c_spring0 * (norm1[i] > l_seg))
-    eqs2 = vcat(eqs2, spring_force[:, i] ~ (c_spring[i] * (norm1[i] - l_seg) + damping * spring_vel[i]) * unit_vector[:, i])
+    eqs2 = vcat(eqs2, segment[:, i] .~ pos[:, i+1] - pos[:, i])
+    eqs2 = vcat(eqs2, norm1[i] .~ norm(segment[:, i]))
+    eqs2 = vcat(eqs2, unit_vector[:, i] .~ -segment[:, i]/norm1[i])
+    eqs2 = vcat(eqs2, rel_vel[:, i] .~ vel[:, i+1] - vel[:, i])
+    eqs2 = vcat(eqs2, spring_vel[i] .~ -unit_vector[:, i] ⋅ rel_vel[:, i])
+    eqs2 = vcat(eqs2, c_spring[i] .~ c_spring0 * (norm1[i] > l_seg))
+    eqs2 = vcat(eqs2, spring_force[:, i] .~ (c_spring[i] * (norm1[i] - l_seg) + damping * spring_vel[i]) * unit_vector[:, i])
     # TODO: the spring_force must be distributed
     eqs2 = vcat(eqs2, acc[:, i+1] .~ G_EARTH + spring_force[:, i] / mass)
 end
