@@ -93,7 +93,7 @@ function model(se)
             # eqs2 = vcat(eqs2, segment[j, i] ~ ifelse(length>0, pos[j, i+1] - pos[j, i], pos[j, i+1] + pos[j, i]))
             segment[j, i] = ifelse(length>0, pos[j, i+1] - pos[j, i], pos[j, i+1] + pos[j, i])
         end
-        norm1[i] = norm(segment[:, i])
+        eqs2 = vcat(eqs2, norm1[i] ~ norm(segment[:, i]))
         eqs2 = vcat(eqs2, unit_vector[:, i] .~ -segment[:, i]/norm1[i])
         eqs2 = vcat(eqs2, rel_vel[:, i] .~ vel[:, i+1] - vel[:, i])
         eqs2 = vcat(eqs2, spring_vel[i] .~ -unit_vector[:, i] ⋅ rel_vel[:, i])
@@ -103,7 +103,12 @@ function model(se)
         eqs2 = vcat(eqs2, v_apparent[:, i] .~ se.v_wind_tether .- (vel[:, i] + vel[:, i+1])/2)
         eqs2 = vcat(eqs2, v_app_perp[:, i] .~ v_apparent[:, i] - (v_apparent[:, i] ⋅ unit_vector[:, i]) .* unit_vector[:, i])
         eqs2 = vcat(eqs2, norm_v_app[i] ~ norm(v_app_perp[:, i]))
+        last_drag_force_i = size(eqs2, 1)+1
         eqs2 = vcat(eqs2, half_drag_force[:, i] .~ (0.25 * se.rho * cd_tether * norm_v_app[i] * (norm1[i]*se.d_tether/1000.0)) .* v_app_perp[:, i])
+        for j in 1:3
+            eqs2 = vcat(eqs2, half_drag_force[j, i] ~ eqs2[last_drag_force_i-1+j].rhs*10 .+ (0.25 * se.rho * cd_tether * norm_v_app[i] * (norm1[i]*se.d_tether/1000.0)) .* v_app_perp[j, i])
+            deleteat!(eqs2, last_drag_force_i)
+        end
         if i == se.segments
             eqs2 = vcat(eqs2, total_force[:, i] .~ spring_force[:, i] + half_drag_force[:,i] + half_drag_force[:,i-1])
             eqs2 = vcat(eqs2, acc[:, i+1] .~ se.g_earth .+ total_force[:, i] / 0.5.*(m_tether_particle))
