@@ -6,7 +6,8 @@ L0::Float64 = -10.0                             # initial spring length      [m]
 
 # defing the model, Z component upwards
 @parameters mass=1.0 c_spring=50.0 damping=0.5 l0=L0
-@variables t pos(t)[1:3] = [0.0, 0.0,  L0]
+@independent_variables t
+@variables   pos(t)[1:3] = [0.0, 0.0,  L0]
 @variables   vel(t)[1:3] = [0.0, 0.0,  0.0] 
 @variables   acc(t)[1:3] = G_EARTH
 @variables unit_vector(t)[1:3]  = [0.0, 0.0, -sign(L0)]
@@ -17,10 +18,12 @@ D = Differential(t)
 vel = collect(vel)
 acc = collect(acc)
 pos = collect(pos)
+unit_vector = collect(unit_vector)
+spring_force = collect(spring_force)
 
 eqs = vcat(D.(pos)      .~ vel,
            D.(vel)      .~ acc,
-           norm1        .~ norm(pos),
+           norm1        ~ norm(pos),
            unit_vector  .~ -pos/norm1,         # direction from point mass to origin
            spring_vel   .~ -unit_vector ⋅ vel,
            spring_force .~ (c_spring * (norm1 - abs(l0)) + damping * spring_vel) * unit_vector,

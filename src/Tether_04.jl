@@ -30,7 +30,7 @@ end
 
 # defining the model, Z component upwards
 @parameters mass=1.0 c_spring0=50.0 damping=0.5 l_seg=L0
-@variables t 
+@independent_variables t
 @variables pos(t)[1:3, 1:segments+1]  = POS0
 @variables vel(t)[1:3, 1:segments+1]  = VEL0
 @variables acc(t)[1:3, 1:segments+1]  = ACC0
@@ -46,6 +46,11 @@ D = Differential(t)
 vel = collect(vel)
 acc = collect(acc)
 pos = collect(pos)
+unit_vector = collect(unit_vector)
+spring_force = collect(spring_force)
+segment = collect(segment)
+rel_vel = collect(rel_vel)
+
 
 eqs1 = vcat(D.(pos) .~ vel,
             D.(vel) .~ acc)
