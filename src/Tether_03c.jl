@@ -9,7 +9,8 @@ V0::Float64 = 4.0                               # initial velocity           [m/
 function model3(G_EARTH, L0, V0)
     # defining the model, Z component upwards
     @parameters mass=1.0 c_spring0=50.0 damping=0.5 l0=L0
-    @variables t pos(t)[1:3] = [0.0, 0.0,  L0]
+    @independent_variables t
+    @variables   pos(t)[1:3] = [0.0, 0.0,  L0]
     @variables   vel(t)[1:3] = [0.0, 0.0,  V0] 
     @variables   acc(t)[1:3] = G_EARTH
     @variables unit_vector(t)[1:3]  = [0.0, 0.0, -sign(L0)]
@@ -21,6 +22,8 @@ function model3(G_EARTH, L0, V0)
     vel = collect(vel)
     acc = collect(acc)
     pos = collect(pos)
+    unit_vector = collect(unit_vector)
+    spring_force = collect(spring_force)
 
     eqs = vcat(D.(pos)      .~ vel,
             D.(vel)      .~ acc,

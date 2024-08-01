@@ -39,7 +39,7 @@ function model(se)
     POS0, VEL0, ACC0, SEGMENTS0, UNIT_VECTORS0 = calc_initial_state(se)
     mass_per_meter = se.rho_tether * se.segments * (se.d_tether/2000.0)^2
     @parameters c_spring0=se.c_spring/(se.l0/se.segments) l_seg=se.l0/se.segments
-    @variables t 
+    @independent_variables t 
     @variables pos(t)[1:3, 1:se.segments+1]  = POS0
     @variables vel(t)[1:3, 1:se.segments+1]  = VEL0
     @variables acc(t)[1:3, 1:se.segments+1]  = ACC0
@@ -56,6 +56,15 @@ function model(se)
     @variables spring_force(t)[1:3, 1:se.segments] = zeros(3, se.segments)
     @variables total_force(t)[1:3, 1:se.segments] = zeros(3, se.segments)
     D = Differential(t)
+
+    vel = collect(vel)
+    acc = collect(acc)
+    pos = collect(pos)
+    unit_vector = collect(unit_vector)
+    spring_force = collect(spring_force)
+    segment = collect(segment)
+    rel_vel = collect(rel_vel)
+    total_force = collect(total_force)
 
     eqs1 = vcat(D.(pos) .~ vel,
                 D.(vel) .~ acc)
