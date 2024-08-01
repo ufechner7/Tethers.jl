@@ -9,7 +9,7 @@ root_eqs = [x ~ 0]
 affect   = [v ~ -v, switch ~ 1-switch]
 
 @named ball = ODESystem([
-    D(x) ~ ifelse(switch==1, v, 2*v)
+    D(x) ~ ifelse(v>0, v, 2*v)
     D(v) ~ -9.8
     D(switch) ~ 0
 ], t; continuous_events = [root_eqs => affect])
