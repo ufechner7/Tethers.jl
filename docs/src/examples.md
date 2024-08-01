@@ -10,7 +10,7 @@ a full segmented tether model with real-out and aerodynamic drag attached.
 | Tether_04  | [Multi-segment tether](@ref) | Learn how to use arrays of equations |
 | Tether_05  | [Segmented tether with correct force distribution](@ref)  | Learn how to distribute the spring force over two masses   |
 | Tether_06  | [Multi-segment tether reeling out](@ref)  | Learn to model a tether with changing unstretched length |
-| Tether_07  | Segmented tether with aerodynamic drag | Learn how to model tether drag |
+| Tether_07  | [Segmented tether with aerodynamic drag](@ref) | Learn how to model tether drag |
 
 **Nomenclature:**
 - ODE: Ordinary differential equations
@@ -347,3 +347,5 @@ for i in 1:se.segments
 end
 @named sys = ODESystem(eqs, t; continuous_events = cb)
 ```
+## Segmented tether with aerodynamic drag
+In the script [Tether_07.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_07.jl), the tether drag has been added.
