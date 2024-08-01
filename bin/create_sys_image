@@ -73,8 +73,6 @@ if test -f "Manifest.toml"; then
    rm Manifest.toml
 fi
 julia --pkgimages=no --project -e "using Pkg; Pkg.add(\"PyCall\"); Pkg.build(\"PyCall\")"
-# not needed: using PyPlot will automatically install Conda and matplotlib if necessary.
-# julia --pkgimages=no --project -e "using Pkg; Pkg.add(\"Conda\"); using Conda; Conda.update(); Conda.add(\"matplotlib\")"
 julia --pkgimages=no --project -e "using PyPlot"
 julia --pkgimages=no --project -e "using Pkg; Pkg.update()"
 
