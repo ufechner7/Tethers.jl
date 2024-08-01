@@ -65,7 +65,6 @@ function model(se)
     @variables norm_v_app(t)[1:se.segments] = ones(se.segments)
     @variables half_drag_force(t)[1:3, 1:se.segments] = zeros(3, se.segments)
     @variables total_force(t)[1:3, 1:se.segments] = zeros(3, se.segments)
-    @variables ifCond1(t) = true
 
     D = Differential(t)
 
@@ -85,22 +84,12 @@ function model(se)
     half_drag_force = collect(half_drag_force)
     total_force = collect(total_force)
 
-    continuous_events = [
-        (length ~ 0) => [ifCond1 ~ true]
-    ]
-    
     eqs1 = vcat(D.(pos) .~ vel,
                 D.(vel) .~ acc)
     eqs2 = []
-    eqs2 = vcat(eqs2, 
-                D(ifCond1) ~ 0,
-                )
     for i in se.segments:-1:1
-        # eqs2 = vcat(eqs2, segment[:, i] .~ pos[:, i+1] .- pos[:, i])
-        # eqs2 = vcat(eqs2, segment[:, i] .~ IfElse.ifelse(ifCond1==true, pos[:, i+1] .- pos[:, i], pos[:, i+1] .+ pos[:, i]))
-        
         for j in 1:3
-            # eqs2 = vcat(eqs2, segment[j, i] ~ pos[j, i+1] - pos[j, i])
+            # does nothing good, just a test
             eqs2 = vcat(eqs2, segment[j, i] ~ ifelse(length>0, pos[j, i+1] - pos[j, i], pos[j, i+1] + pos[j, i]))
         end
         eqs2 = vcat(eqs2, norm1[i] ~ norm(segment[:, i]))
@@ -132,7 +121,7 @@ function model(se)
     eqs2 = vcat(eqs2, damping  .~ se.damping  / (length/se.segments))
     eqs = vcat(eqs1..., eqs2)
         
-    @named sys = ODESystem(eqs, t; continuous_events)
+    @named sys = ODESystem(eqs, t)
     # wk2_sys = structural_simplify(sys; check_consistency=false)
     # println(equations(wk2_sys))
     simple_sys = structural_simplify(sys)
