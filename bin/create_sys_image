@@ -76,7 +76,7 @@ julia --pkgimages=no --project -e "using Pkg; Pkg.add(\"PyCall\"); Pkg.build(\"P
 # not needed: using PyPlot will automatically install Conda and matplotlib if necessary.
 # julia --pkgimages=no --project -e "using Pkg; Pkg.add(\"Conda\"); using Conda; Conda.update(); Conda.add(\"matplotlib\")"
 julia --pkgimages=no --project -e "using PyPlot"
-julia --pkgimages=no --project -e "include(\"./test/update_packages.jl\");"
+julia --pkgimages=no --project -e "using Pkg; Pkg.update()"
 
 julia --pkgimages=no --project -t auto -e "using Pkg; Pkg.precompile()"
 julia --pkgimages=no --project -t auto --gcthreads=4,1 -e "include(\"./test/create_sys_image.jl\");"
