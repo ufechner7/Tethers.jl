@@ -65,7 +65,7 @@ function model(se)
     @variables norm_v_app(t)[1:se.segments] = ones(se.segments)
     @variables half_drag_force(t)[1:3, 1:se.segments] = zeros(3, se.segments)
     @variables total_force(t)[1:3, 1:se.segments] = zeros(3, se.segments)
-    @parameters ifCond1 = true
+    @variables ifCond1(t) = true
 
     D = Differential(t)
 
@@ -74,9 +74,6 @@ function model(se)
     acc = collect(acc)
     segment = collect(segment)
     unit_vector = collect(unit_vector)
-    c_spring = collect(c_spring)
-    damping = collect(damping)
-    m_tether_particle = collect(m_tether_particle)
     norm1 = collect(norm1)
     rel_vel = collect(rel_vel)
     spring_vel = collect(spring_vel)
@@ -89,20 +86,22 @@ function model(se)
     total_force = collect(total_force)
 
     continuous_events = [
-        # (c_spring0 ~ 0) => [ifCond1 ~ true]
-        ifCond1 ~ c_spring0 > 0
+        (length ~ 0) => [ifCond1 ~ true]
     ]
     
     eqs1 = vcat(D.(pos) .~ vel,
                 D.(vel) .~ acc)
     eqs2 = []
+    eqs2 = vcat(eqs2, 
+                D(ifCond1) ~ 0,
+                )
     for i in se.segments:-1:1
         # eqs2 = vcat(eqs2, segment[:, i] .~ pos[:, i+1] .- pos[:, i])
         # eqs2 = vcat(eqs2, segment[:, i] .~ IfElse.ifelse(ifCond1==true, pos[:, i+1] .- pos[:, i], pos[:, i+1] .+ pos[:, i]))
         
         for j in 1:3
             # eqs2 = vcat(eqs2, segment[j, i] ~ pos[j, i+1] - pos[j, i])
-            eqs2 = vcat(eqs2, segment[j, i] ~ IfElse.ifelse(ifCond1==true, pos[j, i+1] - pos[j, i], pos[j, i+1] + pos[j, i]))
+            eqs2 = vcat(eqs2, segment[j, i] ~ ifelse(length>0, pos[j, i+1] - pos[j, i], pos[j, i+1] + pos[j, i]))
         end
         eqs2 = vcat(eqs2, norm1[i] ~ norm(segment[:, i]))
         eqs2 = vcat(eqs2, unit_vector[:, i] .~ -segment[:, i]/norm1[i])
@@ -133,7 +132,7 @@ function model(se)
     eqs2 = vcat(eqs2, damping  .~ se.damping  / (length/se.segments))
     eqs = vcat(eqs1..., eqs2)
         
-    @named sys = ODESystem(eqs, t; continuous_events=continuous_events)
+    @named sys = ODESystem(eqs, t; continuous_events)
     # wk2_sys = structural_simplify(sys; check_consistency=false)
     # println(equations(wk2_sys))
     simple_sys = structural_simplify(sys)
