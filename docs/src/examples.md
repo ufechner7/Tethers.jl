@@ -347,5 +347,13 @@ for i in 1:se.segments
 end
 @named sys = ODESystem(eqs, t; continuous_events = cb)
 ```
+
 ## Segmented tether with aerodynamic drag
 In the script [Tether_07.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_07.jl), the tether drag has been added.
+
+The following lines calculate the tether drag and add half of the drag force to the two particles at the end of each segment:
+```julia
+eqs2 = vcat(eqs2, v_app_perp[:, i] .~ v_apparent[:, i] - (v_apparent[:, i] ⋅ unit_vector[:, i]) .* unit_vector[:, i])
+eqs2 = vcat(eqs2, norm_v_app[i] ~ norm(v_app_perp[:, i]))
+eqs2 = vcat(eqs2, half_drag_force[:, i] .~ (0.25 * se.rho * se.cd_tether * norm_v_app[i] * (norm1[i]*se.d_tether/1000.0)) .* v_app_perp[:, i])
+```
