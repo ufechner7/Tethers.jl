@@ -14,19 +14,19 @@ L0::Float64 = -10.0                             # initial spring length      [m]
 @variables force(t) = 0.0 norm1(t) = abs(l0) spring_vel(t) = 0.0
 D = Differential(t)
 
-vel = collect(vel)
-acc = collect(acc)
-pos = collect(pos)
-unit_vector = collect(unit_vector)
-spring_force = collect(spring_force)
+# vel = collect(vel)
+# acc = collect(acc)
+# pos = collect(pos)
+# unit_vector = collect(unit_vector)
+# spring_force = collect(spring_force)
 
-eqs = vcat(D.(pos)      .~ vel,
-           D.(vel)      .~ acc,
+eqs = vcat(D.(pos)      ~ vel,
+           D.(vel)      ~ acc,
            norm1        ~ norm(pos),
-           unit_vector  .~ -pos/norm1,         # direction from point mass to origin
-           spring_vel   .~ -unit_vector ⋅ vel,
-           spring_force .~ (c_spring * (norm1 - abs(l0)) .+ damping .* spring_vel) * unit_vector,
-           acc          .~ G_EARTH + spring_force/mass)
+           unit_vector  ~ -pos/norm1,         # direction from point mass to origin
+           spring_vel   ~ -unit_vector ⋅ vel,
+           spring_force ~ (c_spring * (norm1 - abs(l0)) .+ damping .* spring_vel) * unit_vector,
+           acc          ~ G_EARTH + spring_force/mass)
 
 @named sys = ODESystem(eqs, t)
 simple_sys = structural_simplify(sys)

@@ -6,18 +6,18 @@ import IfElse
 
 @with_kw mutable struct Settings @deftype Float64
     g_earth::SVector{3,Float64} = SVector{3,Float64}([0.0, 0.0, -9.81]) # gravitational acceleration     [m/s²]
-    v_wind_tether::SVector{3,Float64} = SVector{3,Float64}([5.0, 0.0, 0.0])
+    v_wind_tether::SVector{3,Float64} = SVector{3,Float64}([10.0, 0.0, 0.0])
     rho = 1.225
     cd_tether = 0.958
     l0 = 50                                      # initial tether length             [m]
-    v_ro = 4                                     # reel-out speed                  [m/s]
+    v_ro = 1                                     # reel-out speed                  [m/s]
     d_tether = 4                                 # tether diameter                  [mm]
     rho_tether = 724                             # density of Dyneema            [kg/m³]
     c_spring = 614600                            # unit spring constant              [N]
     damping = 473                                # unit damping constant            [Ns]
     segments::Int64 = 5                          # number of tether segments         [-]
     α0 = π/10                                    # initial tether angle            [rad]
-    duration = 3.0                             # duration of the simulation        [s]
+    duration = 10.0                             # duration of the simulation        [s]
     save::Bool = false                           # save png files in folder video
     dt = 0.2
 end
@@ -84,8 +84,21 @@ function model(se)
     half_drag_force = collect(half_drag_force)
     total_force = collect(total_force)
 
-    eqs1 = vcat(D.(pos) .~ vel,
-                D.(vel) .~ acc)
+    eqs1 = []
+    for i in 1
+        eqs1 = vcat(
+            eqs1,
+            D.(pos[:,i]) .~ 0.0, # fix pos of s.num_E-2 and s.num_E-1
+            D.(vel[:,i]) .~ 0.0
+        )
+    end
+    for i in 2:se.segments+1
+        eqs1 = vcat(
+            eqs1,
+            D.(pos[:,i]) .~ vel[:,i],
+            D.(vel[:,i]) .~ acc[:,i]
+        )
+    end
     eqs2 = []
     for i in se.segments:-1:1
         for j in 1:3
@@ -106,7 +119,8 @@ function model(se)
         last_drag_force_i = size(eqs2, 1)+1
         eqs2 = vcat(eqs2, half_drag_force[:, i] .~ (0.25 * se.rho * cd_tether * norm_v_app[i] * (norm1[i]*se.d_tether/1000.0)) .* v_app_perp[:, i])
         for j in 1:3
-            eqs2 = vcat(eqs2, half_drag_force[j, i] ~ eqs2[last_drag_force_i-1+j].rhs*10 .+ (0.25 * se.rho * cd_tether * norm_v_app[i] * (norm1[i]*se.d_tether/1000.0)) .* v_app_perp[j, i])
+            println(eqs2[last_drag_force_i-1+j].rhs)
+            eqs2 = vcat(eqs2, half_drag_force[j, i] ~ eqs2[last_drag_force_i-1+j].rhs*0.1 .+ (0.25 * se.rho * cd_tether * norm_v_app[i] * (norm1[i]*se.d_tether/1000.0)) .* v_app_perp[j, i])
             deleteat!(eqs2, last_drag_force_i)
         end
         if i == se.segments
@@ -180,7 +194,7 @@ function play(se, simple_sys, pos)
     for (j, time) in pairs(0:se.dt:se.duration)
         next_step(se, integrator)
         line, sc, txt = plot2d(se, integrator, pos, time, line, sc, txt, j)
-        wait_until(start + 1.0*time*1e9)
+        wait_until(start + 0.2*time*1e9)
     end
     nothing
 end
