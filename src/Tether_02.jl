@@ -12,7 +12,7 @@ L0::Float64 = -10.0                             # initial spring length      [m]
 @variables   acc(t)[1:3] = G_EARTH
 @variables unit_vector(t)[1:3]  = [0.0, 0.0, -sign(L0)]
 @variables spring_force(t)[1:3] = [0.0, 0.0, 0.0]
-@variables force(t) = 0.0 norm1(t) = abs(l0) spring_vel(t) = 0.0
+@variables norm1(t) = abs(l0) spring_vel(t) = 0.0
 D = Differential(t)
 
 vel = collect(vel)
