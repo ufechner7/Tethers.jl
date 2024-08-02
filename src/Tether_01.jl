@@ -10,13 +10,9 @@ G_EARTH::Vector{Float64} = [0.0, 0.0, -9.81]    # gravitational acceleration    
 @variables   acc(t)[1:3]=[0.0, 0.0, -9.81] 
 D = Differential(t)
 
-pos = collect(pos)
-vel = collect(vel)
-acc = collect(acc)
-
-eqs = vcat(D.(pos) .~ vel,
-           D.(vel) .~ acc,
-           acc    .~ G_EARTH)
+eqs = vcat(D.(pos) ~ vel,
+           D.(vel) ~ acc,
+           acc     ~ G_EARTH)
 
 @named sys = ODESystem(eqs, t)
 simple_sys = structural_simplify(sys)
