@@ -1,6 +1,7 @@
 # Example two: Falling mass, attached to non-linear spring without compression stiffness,
 # initially moving upwards with 4 m/s.
 using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra
+using ModelingToolkit: t_nounits as t, D_nounits as D
 
 G_EARTH::Vector{Float64} = [0.0, 0.0, -9.81]    # gravitational acceleration     [m/s²]
 L0::Float64 = -10.0                             # initial spring length      [m]
@@ -9,7 +10,6 @@ V0::Float64 = 4.0                               # initial velocity           [m/
 function model3(G_EARTH, L0, V0)
     # defining the model, Z component upwards
     @parameters mass=1.0 c_spring0=50.0 damping=0.5 l0=L0
-    @independent_variables t
     @variables   pos(t)[1:3] = [0.0, 0.0,  L0]
     @variables   vel(t)[1:3] = [0.0, 0.0,  V0] 
     @variables   acc(t)[1:3] = G_EARTH
@@ -17,7 +17,6 @@ function model3(G_EARTH, L0, V0)
     @variables c_spring(t) = c_spring0
     @variables spring_force(t)[1:3] = [0.0, 0.0, 0.0]
     @variables force(t) = 0.0 norm1(t) = abs(l0) spring_vel(t) = 0.0
-    D = Differential(t)
 
     vel = collect(vel)
     acc = collect(acc)
