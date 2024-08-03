@@ -184,11 +184,12 @@ function compare(se=Settings2())
     se.v0 = 0
     sol, pos, vel = main(se, play_=false)
     vel_z1 = stack(sol[vel], dims=1)[:, 3, 5]
-    plot(sol.t, vel_z1)
+    plot(sol.t, vel_z1, color="blue")
+    # figure()
     se.callbacks = true
     sol, pos, vel = main(se, play_=false)
     vel_z2 = stack(sol[vel], dims=1)[:, 3, 5]
-    plot(sol.t, vel_z2)
+    plot(sol.t, vel_z2, color="red")
 end
 
 if (! @isdefined __BENCH__) || __BENCH__ == false
