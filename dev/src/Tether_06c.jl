@@ -191,6 +191,9 @@ function compare(se=Settings2())
     plot(sol.t, vel_z2)
 end
 
-sol, pos, vel = main()
-vel_z = stack(sol[vel], dims=1)[:, 3, 5]
+if (! @isdefined __BENCH__) || __BENCH__ == false
+    sol, pos, vel = main()
+    vel_z = stack(sol[vel], dims=1)[:, 3, 5]    
+end
+__BENCH__ = false
 nothing
