@@ -18,6 +18,12 @@ using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, Parameters
     duration = 30.0                              # duration of the simulation        [s]
     save::Bool = false                           # save png files in folder video
 end
+
+function set_tether_diameter!(se, d; c_spring_4mm = 614600, damping_4mm = 473)
+    se.d_tether = d
+    se.c_spring = c_spring_4mm * (d/4.0)^2
+    se.damping = damping_4mm * (d/4.0)^2
+end
                               
 function calc_initial_state(se)
     POS0 = zeros(3, se.segments+1)
@@ -174,6 +180,7 @@ end
 
 function main()
     se = Settings()
+    set_tether_diameter!(se, 4)
     simple_sys, pos, vel = model(se)
     sol, elapsed_time = simulate(se, simple_sys)
     # println("sol and pos ", sol, "\n\t", pos)
