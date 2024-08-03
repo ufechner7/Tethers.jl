@@ -9,7 +9,7 @@ using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, Parameters
     cd_tether = 0.958
     l0 = 50                                      # initial tether length             [m]
     v_ro = 2                                     # reel-out speed                  [m/s]
-    d_tether = 10                                # tether diameter                  [mm]
+    d_tether = 4                                # tether diameter                  [mm]
     rho_tether = 724                             # density of Dyneema            [kg/m³]
     c_spring = 614600                            # unit spring constant              [N]
     damping = 473                                # unit damping constant            [Ns]
