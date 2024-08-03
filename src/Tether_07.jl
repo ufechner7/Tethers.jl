@@ -125,8 +125,8 @@ function simulate(se, simple_sys)
     tspan = (0.0, se.duration)
     ts    = 0:dt:se.duration
     prob = ODEProblem(simple_sys, nothing, tspan)
-    @time sol = solve(prob, Rodas5P(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
-    sol
+    elapsed_time = @elapsed sol = solve(prob, Rodas5P(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
+    sol, elapsed_time
 end
 
 function plot2d(se, sol, pos, reltime, line, sc, txt, j)
@@ -175,9 +175,14 @@ end
 function main()
     se = Settings()
     simple_sys, pos, vel = model(se)
-    sol = simulate(se, simple_sys)
+    sol, elapsed_time = simulate(se, simple_sys)
     # println("sol and pos ", sol, "\n\t", pos)
     play(se, sol, pos)
 end
 
-main()
+
+if (! @isdefined __BENCH__) || __BENCH__ == false
+    main()
+end
+__BENCH__ = false
+nothing
