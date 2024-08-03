@@ -1,6 +1,7 @@
 # Tutorial example simulating a 3D mass-spring system with a nonlinear spring (no spring forces
 # for l < l_0), n tether segments, reel-in and reel-out and continues callbacks. 
 using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, Parameters
+using ModelingToolkit: t_nounits as t, D_nounits as D
 
 @with_kw mutable struct Settings2 @deftype Float64
     g_earth::Vector{Float64} = [0.0, 0.0, -9.81] # gravitational acceleration     [m/s²]
@@ -43,7 +44,6 @@ function model(se)
     POS0, VEL0, ACC0, SEGMENTS0, UNIT_VECTORS0 = calc_initial_state(se)
     mass_per_meter = se.rho_tether * se.segments * (se.d_tether/2000.0)^2
     @parameters c_spring0=se.c_spring/(se.l0/se.segments) l_seg=se.l0/se.segments
-    @independent_variables t 
     @variables pos(t)[1:3, 1:se.segments+1]  = POS0
     @variables vel(t)[1:3, 1:se.segments+1]  = VEL0
     @variables acc(t)[1:3, 1:se.segments+1]  = ACC0
@@ -59,7 +59,6 @@ function model(se)
     @variables c_spr(t)[1:se.segments] = c_spring0 * ones(se.segments)
     @variables spring_force(t)[1:3, 1:se.segments] = zeros(3, se.segments)
     @variables total_force(t)[1:3, 1:se.segments] = zeros(3, se.segments)
-    D = Differential(t)
 
     vel = collect(vel)
     acc = collect(acc)
@@ -119,8 +118,8 @@ function simulate(se, simple_sys)
     tspan = (0.0, se.duration)
     ts    = 0:se.dt:se.duration
     prob = ODEProblem(simple_sys, nothing, tspan)
-    @time sol = solve(prob, Rodas5(), dt=se.dt, abstol=tol, reltol=tol, saveat=ts)
-    sol
+    elapsed_time = @elapsed sol = solve(prob, Rodas5P(), dt=se.dt, abstol=tol, reltol=tol, saveat=ts)
+    sol, elapsed_time
 end
 
 function plot2d(se, sol, pos, reltime, line, sc, txt, j)
@@ -166,9 +165,10 @@ function play(se, sol, pos)
     nothing
 end
 
-function main(se = Settings2();play_=true)
+function main(se = Settings2(); play_=true)
     simple_sys, pos, vel = model(se)
-    sol = simulate(se, simple_sys)
+    sol, elapsed_time = simulate(se, simple_sys)
+    println("Elapsed time: $(elapsed_time) s")
     if play_
         play(se, sol, pos)
     end
