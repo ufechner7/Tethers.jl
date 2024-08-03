@@ -1,6 +1,7 @@
 # Tutorial example simulating a 3D mass-spring system with a nonlinear spring (no spring forces
 # for l < l_0), n tether segments and reel-in and reel-out. 
 using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers
+using ModelingToolkit: t_nounits as t, D_nounits as D
 
 G_EARTH::Vector{Float64} = [0.0, 0.0, -9.81]    # gravitational acceleration     [m/s²]
 L0::Float64 = 50.0                              # initial tether length             [m]
@@ -34,7 +35,6 @@ end
 
 # defining the model, Z component upwards
 @parameters c_spring0=C_SPRING/(L0/SEGMENTS) l_seg=L0/SEGMENTS
-@independent_variables t 
 @variables pos(t)[1:3, 1:SEGMENTS+1]  = POS0
 @variables vel(t)[1:3, 1:SEGMENTS+1]  = VEL0
 @variables acc(t)[1:3, 1:SEGMENTS+1]  = ACC0
@@ -50,7 +50,6 @@ end
 @variables c_spr(t)[1:SEGMENTS] = c_spring0 * ones(SEGMENTS)
 @variables spring_force(t)[1:3, 1:SEGMENTS] = zeros(3, SEGMENTS)
 @variables total_force(t)[1:3, 1:SEGMENTS] = zeros(3, SEGMENTS)
-D = Differential(t)
 
 vel = collect(vel)
 acc = collect(acc)
