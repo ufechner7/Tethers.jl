@@ -1,6 +1,7 @@
 # Tutorial example simulating a 3D mass-spring system with a nonlinear spring (no spring forces
 # for l < l_0), n tether segments, tether drag and reel-in and reel-out. 
 using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, Parameters
+using ModelingToolkit: t_nounits as t, D_nounits as D
 
 @with_kw mutable struct Settings @deftype Float64
     g_earth::Vector{Float64} = [0.0, 0.0, -9.81] # gravitational acceleration     [m/s²]
@@ -48,7 +49,6 @@ function model(se)
     POS0, VEL0, ACC0, SEGMENTS0, UNIT_VECTORS0 = calc_initial_state(se)
     mass_per_meter = se.rho_tether * se.segments * (se.d_tether/2000.0)^2
     @parameters c_spring0=se.c_spring/(se.l0/se.segments) l_seg=se.l0/se.segments
-    @independent_variables t 
     @variables pos(t)[1:3, 1:se.segments+1]  = POS0
     @variables vel(t)[1:3, 1:se.segments+1]  = VEL0
     @variables acc(t)[1:3, 1:se.segments+1]  = ACC0
@@ -68,8 +68,6 @@ function model(se)
     @variables norm_v_app(t)[1:se.segments] = ones(se.segments)
     @variables half_drag_force(t)[1:3, 1:se.segments] = zeros(3, se.segments)
     @variables total_force(t)[1:3, 1:se.segments] = zeros(3, se.segments)
-
-    D = Differential(t)
 
     vel = collect(vel)
     acc = collect(acc)
