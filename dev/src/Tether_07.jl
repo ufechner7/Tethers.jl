@@ -167,7 +167,7 @@ function play(se, sol, pos)
     mkpath("video")
     for (j, time) in pairs(0:dt:se.duration)
         line, sc, txt = plot2d(se, sol, pos, time, line, sc, txt, j)
-        wait_until(start + 1.0*time*1e9)
+        wait_until(start + 0.5*time*1e9)
     end
     nothing
 end
