@@ -64,38 +64,27 @@ function solve3(simple_sys, L0, V0; cb=true)
     sol
 end
 
-function plt(sol; title="")
-    fig = figure(title)
+function plot2(sol; title="")
     X = sol.t
     POS_Z = stack(sol[pos], dims=1)[:,3]
     VEL_Z = stack(sol[vel], dims=1)[:,3]
-
-    lns1 = plot(X, POS_Z, color="green", label="pos_z")
-    xlabel("time [s]")
-    ylabel("pos_z [m]")
-    lns2 = plot(X, L0.+0.005 .* sol[c_spring], color="grey", label="c_spring")
-    PyPlot.grid(true)
-    twinx()
-    ylabel("vel_z [m/s]") 
-    lns3 = plot(X, VEL_Z, color="red", label="vel_z")
-    lns = vcat(lns1, lns2, lns3)
-    labs = [l.get_label() for l in lns]
-    legend(lns, labs) 
-    PyPlot.show(block=false)
+    p = plot(X, [POS_Z, L0.+0.005 .* sol[c_spring]], VEL_Z; xlabel="time [s]", ylabels=["pos_z [m]", "vel_z [m/s]"], 
+        labels=["pos_z [m]", "c_spring", "vel_z [m/s]"], fig=title)
+    display(p)
     nothing
 end
 
 println("Solving the system without callback...")
 simple_sys, pos, vel, c_spring = model3(G_EARTH, L0, V0)
 sol = solve3(simple_sys, L0, V0; cb=false)
-plt(sol; title="Solution without callback")
+plot2(sol; title="Solution without callback")
 println("Press any key...")
 if ! @isdefined __PC
     readline()
 end
 println("Solving the system with callback...")
 sol = solve3(simple_sys, L0, V0; cb=true)
-plt(sol; title="Solution with callback")
+plot2(sol; title="Solution with callback")
 println("If you zoom in to the points in time where pos_z crosses -10m")
 println("you should see a difference...")
 nothing

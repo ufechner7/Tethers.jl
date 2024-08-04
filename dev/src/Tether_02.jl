@@ -46,14 +46,6 @@ X = sol.t
 POS_Z = stack(sol[pos], dims=1)[:,3]
 VEL_Z = stack(sol[vel], dims=1)[:,3]
 
-PyPlot.close()
-line1, = plot(X, POS_Z, color="green", label="pos_z")
-xlabel("time [s]")
-ylabel("pos_z [m]")
-PyPlot.grid(true)
-twinx()
-ylabel("vel_z [m/s]") 
-tight_layout(rect=(0, 0, 0.98, 0.98))
-line2, = plot(X, VEL_Z, color="red", label="vel_z")
-legend(handles=[line1, line2]) 
-nothing
+p = plot(X, POS_Z, VEL_Z; xlabel="time [s]", ylabels=["pos_z [m]", "vel_z [m/s]"], 
+         labels=["pos_z [m]", "vel_z [m/s]"], fig="falling mass, linear spring")
+display(p)
