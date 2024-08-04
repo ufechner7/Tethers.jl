@@ -15,7 +15,7 @@ SEGMENTS::Int64 = 5                             # number of tether segments     
 α0 = π/10                                       # initial tether angle            [rad]
 duration = 10                                   # duration of the simulation        [s]
 SAVE = false                                    # save png files in folder video
-mass_per_meter::Float64 = RHO_TETHER * SEGMENTS * (D_TETHER/2000.0)^2
+mass_per_meter::Float64 = RHO_TETHER * π * (D_TETHER/2000.0)^2
 
 # calculating consistant initial conditions
 POS0 = zeros(3, SEGMENTS+1)
