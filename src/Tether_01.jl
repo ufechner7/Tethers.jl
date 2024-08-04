@@ -30,11 +30,5 @@ X = sol.t
 POS_Z = stack(sol[pos], dims=1)[:,3]
 VEL_Z = stack(sol[vel], dims=1)[:,3]
 
-plot(X, POS_Z, color="green")
-xlabel("time [s]")
-ylabel("pos_z [m]")
-PyPlot.grid(true)
-twinx()
-ylabel("vel_z [m/s]") 
-plot(X, VEL_Z, color="red")
-nothing
+plot(X, POS_Z, VEL_Z; xlabel="time [s]", ylabels=["pos_z [m]", "vel_z [m/s]"], 
+     labels=["pos_z [m]", "vel_z [m/s]"], fig="falling mass")

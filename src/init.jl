@@ -1,23 +1,7 @@
 println("Running init...")
 
-import PyPlot
-import PyPlot: plot as pl
-import PyPlot: xlabel, ylabel, xlim, ylim, twinx, legend, figure, scatter, annotate, gcf,
-               tight_layout
+using ControlPlots
 using REPL.TerminalMenus
-
-function plot(x...; y...)
-    res = pl(x...; y...)
-    PyPlot.show(block=false)
-    res
-end
-
-function grid(x...; y...)
-    res = PyPlot.grid(x; y...)
-    PyPlot.pause(0.01)
-    PyPlot.show(block=false)
-    res
-end
 
 options = ["include(\"src/Tether_01.jl\")",
            "include(\"src/Tether_02.jl\")",
