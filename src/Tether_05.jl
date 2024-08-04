@@ -88,20 +88,13 @@ ts    = 0:dt:duration
 prob = ODEProblem(simple_sys, nothing, tspan)
 @time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
 
-function plot2d_(pos_matrix, reltime; segments, xlim, ylim, xy)
-    pos_vectors = Vector{Float64}[]
-    for particle in 1:segments+1
-        push!(pos_vectors, pos_matrix[:, particle])
-    end
-    plot2d(pos_vectors, reltime; segments, zoom=false, xlim, ylim, xy)
-end
-
 function play()
     dt = 0.15
     ylim = (-1.2*segments*L0, 0.5)
     xlim = (-segments*L0/2, segments*L0/2)
     z_max = 0.0
-    xy=(segments*L0/4.2, z_max-3.0*segments/5)
+    # text position
+    xy = (segments*L0/4.2, z_max-3.0*segments/5)
     start = time_ns()
     i = 1
     for time in 0:dt:duration
@@ -110,7 +103,7 @@ function play()
         while sol.t[i] < time
             i += 1
         end
-        plot2d_(sol[pos][i], time; segments, xlim, ylim, xy)
+        plot2d(sol[pos][i], time; segments, xlim, ylim, xy)
         wait_until(start + 0.5*time*1e9)
     end
     nothing
