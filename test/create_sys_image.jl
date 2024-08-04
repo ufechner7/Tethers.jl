@@ -1,5 +1,5 @@
 @info "Loading packages ..."
-using ModelingToolkit, OrdinaryDiffEq, PackageCompiler, PyPlot, Timers, REPL.TerminalMenus
+using ModelingToolkit, OrdinaryDiffEq, PackageCompiler, ControlPlots, Timers, REPL.TerminalMenus
 
 FAST=true
 
@@ -8,7 +8,7 @@ push!(LOAD_PATH,joinpath(pwd(),"src"))
 
 pkgs=[:ModelingToolkit, :OrdinaryDiffEq, :Timers]
 if FAST
-    push!(pkgs, :PyPlot)
+    push!(pkgs, :ControlPlots)
 end 
 
 PackageCompiler.create_sysimage(

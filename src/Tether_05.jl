@@ -88,38 +88,22 @@ ts    = 0:dt:duration
 prob = ODEProblem(simple_sys, nothing, tspan)
 @time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
 
-function plot2d(sol, reltime, segments, line, sc, txt)
-    index = Int64(round(reltime*50+1))
-    x, z = Float64[], Float64[]
-    for particle in 1:segments+1
-        push!(x, (sol(sol.t, idxs=pos[1, particle]))[index])
-        push!(z, (sol(sol.t, idxs=pos[3, particle]))[index])
-    end
-    z_max = maximum(z)
-    if isnothing(line)
-        line, = plot(x,z; linewidth="1")
-        sc  = scatter(x, z; s=15, color="red") 
-        txt = annotate("t=$(round(reltime,digits=1)) s",  
-                            xy=(segments*L0/4.2, z_max-3.0*segments/5), fontsize = 12)
-    else
-        line.set_xdata(x)
-        line.set_ydata(z)
-        sc.set_offsets(hcat(x,z))
-        txt.set_text("t=$(round(reltime,digits=1)) s")
-        gcf().canvas.draw()
-    end
-    line, sc, txt
-end
-
 function play()
     dt = 0.15
-    ylim(-1.2*segments*L0, 0.5)
-    xlim(-segments*L0/2, segments*L0/2)
-    grid(true; color="grey", linestyle="dotted")
-    line, sc, txt = nothing, nothing, nothing
+    ylim = (-1.2*segments*L0, 0.5)
+    xlim = (-segments*L0/2, segments*L0/2)
+    z_max = 0.0
+    # text position
+    xy = (segments*L0/4.2, z_max-3.0*segments/5)
     start = time_ns()
+    i = 1
     for time in 0:dt:duration
-        line, sc, txt = plot2d(sol, time, segments, line, sc, txt)
+        # while we run the simulation in steps of 20ms, we update the plot only every 150ms
+        # therefore we have to skip some steps of the result
+        while sol.t[i] < time
+            i += 1
+        end
+        plot2d(sol[pos][i], time; segments, xlim, ylim, xy)
         wait_until(start + 0.5*time*1e9)
     end
     nothing

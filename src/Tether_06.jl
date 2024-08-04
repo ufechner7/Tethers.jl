@@ -2,6 +2,7 @@
 # for l < l_0), n tether segments and reel-in and reel-out. 
 using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers
 using ModelingToolkit: t_nounits as t, D_nounits as D
+using ControlPlots
 
 G_EARTH::Vector{Float64} = [0.0, 0.0, -9.81]    # gravitational acceleration     [m/s²]
 L0::Float64 = 50.0                              # initial tether length             [m]
@@ -99,44 +100,23 @@ ts    = 0:dt:duration
 prob = ODEProblem(simple_sys, nothing, tspan)
 @time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
 
-function plot2d(sol, reltime, segments, line, sc, txt, j)
-    index = Int64(round(reltime*50+1))
-    x, z = Float64[], Float64[]
-    for particle in 1:segments+1
-        push!(x, (sol(sol.t, idxs=pos[1, particle]))[index])
-        push!(z, (sol(sol.t, idxs=pos[3, particle]))[index])
-    end
-    z_max = maximum(z)
-    if isnothing(line)
-        line, = plot(x,z; linewidth="1")
-        sc  = scatter(x, z; s=15, color="red") 
-        txt = annotate("t=$(round(reltime,digits=1)) s",  
-                        xy=(L0/4.2, z_max-7), fontsize = 12)
-    else
-        line.set_xdata(x)
-        line.set_ydata(z)
-        sc.set_offsets(hcat(x,z))
-        txt.set_text("t=$(round(reltime,digits=1)) s")
-        gcf().canvas.draw()
-    end
-    if SAVE
-        PyPlot.savefig("video/"*"img-"*lpad(j,4,"0"))
-    end
-    line, sc, txt
-end
-
+# plotting the result
 function play()
-    PyPlot.close()
     dt = 0.151
-    ylim(-1.2*(L0+V_RO*duration), 0.5)
-    xlim(-L0/2, L0/2)
-    grid(true; color="grey", linestyle="dotted")
-    tight_layout(rect=(0, 0, 0.98, 0.98))
-    line, sc, txt = nothing, nothing, nothing
+    ylim=(-1.2*(L0+V_RO*duration), 0.5)
+    xlim=(-L0/2, L0/2)
+    z_max = 0.0
+    # text position
+    xy = (L0/4.2, z_max-7)
     start = time_ns()
-    mkpath("video")
-    for (j, time) in pairs(0:dt:duration)
-        line, sc, txt = plot2d(sol, time, SEGMENTS, line, sc, txt, j)
+    i = 1
+    for time in 0:dt:duration
+        # while we run the simulation in steps of 20ms, we update the plot only every 150ms
+        # therefore we have to skip some steps of the result
+        while sol.t[i] < time
+            i += 1
+        end
+        plot2d(sol[pos][i], time; segments=SEGMENTS, xlim, ylim, xy)
         wait_until(start + 0.5*time*1e9)
     end
     nothing

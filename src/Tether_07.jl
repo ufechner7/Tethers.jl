@@ -2,8 +2,9 @@
 # for l < l_0), n tether segments, tether drag and reel-in and reel-out. 
 using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, Parameters
 using ModelingToolkit: t_nounits as t, D_nounits as D
+using ControlPlots
 
-@with_kw mutable struct Settings @deftype Float64
+@with_kw mutable struct Settings3 @deftype Float64
     g_earth::Vector{Float64} = [0.0, 0.0, -9.81] # gravitational acceleration     [m/s²]
     v_wind_tether::Vector{Float64} = [5.0, 0.0, 0.0]
     rho = 1.225
@@ -133,58 +134,43 @@ function simulate(se, simple_sys)
     sol, elapsed_time
 end
 
-function plot2d(se, sol, pos, reltime, line, sc, txt, j)
-    index = Int64(round(reltime*50+1))
-    x, z = Float64[], Float64[]
-    for particle in 1:se.segments+1
-        push!(x, (sol(sol.t, idxs=pos[1, particle]))[index])
-        push!(z, (sol(sol.t, idxs=pos[3, particle]))[index])
-    end
-    z_max = maximum(z)
-    if isnothing(line)
-        line, = plot(x,z; linewidth="1")
-        sc  = scatter(x, z; s=15, color="red") 
-        txt = annotate("t=$(round(reltime,digits=1)) s",  
-                        xy=(se.l0/4.2, z_max-7), fontsize = 12)
-    else
-        line.set_xdata(x)
-        line.set_ydata(z)
-        sc.set_offsets(hcat(x,z))
-        txt.set_text("t=$(round(reltime,digits=1)) s")
-        gcf().canvas.draw()
+function play(se, sol, pos)
+    dt = 0.151
+    ylim = (-1.2*(se.l0+se.v_ro*se.duration), 0.5)
+    xlim = (-se.l0/2, se.l0/2)
+    mkpath("video")
+    z_max = 0.0
+    # text position
+    xy = (se.l0/4.2, z_max-7)
+    start = time_ns()
+    i = 1; j = 0
+    for time in 0:dt:se.duration
+        # while we run the simulation in steps of 20ms, we update the plot only every 150ms
+        # therefore we have to skip some steps of the result
+        while sol.t[i] < time
+            i += 1
+        end
+        plot2d(sol[pos][i], time; segments=se.segments, xlim, ylim, xy)
+        if se.save
+            ControlPlots.plt.savefig("video/"*"img-"*lpad(j,4,"0"))
+        end
+        j += 1
+        wait_until(start + 0.5*time*1e9)
     end
     if se.save
-        PyPlot.savefig("video/"*"img-"*lpad(j,4,"0"))
-    end
-    line, sc, txt
-end
-
-function play(se, sol, pos)
-    PyPlot.close()
-    dt = 0.151
-    ylim(-1.2*(se.l0+se.v_ro*se.duration), 0.5)
-    xlim(-se.l0/2, se.l0/2)
-    grid(true; color="grey", linestyle="dotted")
-    tight_layout(rect=(0, 0, 0.98, 0.98))
-    line, sc, txt = nothing, nothing, nothing
-    start = time_ns()
-    mkpath("video")
-    for (j, time) in pairs(0:dt:se.duration)
-        line, sc, txt = plot2d(se, sol, pos, time, line, sc, txt, j)
-        wait_until(start + 0.5*time*1e9)
+        include("export_gif.jl")
     end
     nothing
 end
 
 function main()
-    se = Settings()
+    se = Settings3()
     set_tether_diameter!(se, 4)
     simple_sys, pos, vel = model(se)
     sol, elapsed_time = simulate(se, simple_sys)
     # println("sol and pos ", sol, "\n\t", pos)
     play(se, sol, pos)
 end
-
 
 if (! @isdefined __BENCH__) || __BENCH__ == false
     main()
