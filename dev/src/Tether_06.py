@@ -26,7 +26,7 @@ RHO_TETHER = 724.0                     # density of Dyneema            [kg/m³]
 
 ZEROS  = np.array([0.0, 0.0, 0.0])
 RESULT = np.zeros(SEGMENTS * 6 + 3).reshape((-1, 3))
-mass_per_meter = RHO_TETHER * SEGMENTS * (D_TETHER/2000.0)**2
+mass_per_meter = RHO_TETHER * math.pi * (D_TETHER/2000.0)**2
 
 # State vector y   = mass0.pos, mass1.pos, mass1.vel
 # Derivative   yd  = mass0.vel, mass1.vel, mass1.acc

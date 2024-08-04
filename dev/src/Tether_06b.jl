@@ -40,7 +40,7 @@ end
 
 function model(se)
     POS0, VEL0, ACC0, SEGMENTS0, UNIT_VECTORS0 = calc_initial_state(se)
-    mass_per_meter = se.rho_tether * se.segments * (se.d_tether/2000.0)^2
+    mass_per_meter = se.rho_tether * π * (se.d_tether/2000.0)^2
     @parameters c_spring0=se.c_spring/(se.l0/se.segments) l_seg=se.l0/se.segments
     @variables pos(t)[1:3, 1:se.segments+1]  = POS0
     @variables vel(t)[1:3, 1:se.segments+1]  = VEL0
