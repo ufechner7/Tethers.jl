@@ -73,7 +73,7 @@ if test -f "Manifest.toml"; then
    rm Manifest.toml
 fi
 julia --pkgimages=no --project -e "using Pkg; Pkg.add(\"PyCall\"); Pkg.build(\"PyCall\")"
-julia --pkgimages=no --project -e "using PyPlot"
+julia --pkgimages=no --project -e "using ControlPlots"
 julia --pkgimages=no --project -e "using Pkg; Pkg.update()"
 
 julia --pkgimages=no --project -t auto -e "using Pkg; Pkg.precompile()"
