@@ -30,5 +30,6 @@ X = sol.t
 POS_Z = stack(sol[pos], dims=1)[:,3]
 VEL_Z = stack(sol[vel], dims=1)[:,3]
 
-plot(X, POS_Z, VEL_Z; xlabel="time [s]", ylabels=["pos_z [m]", "vel_z [m/s]"], 
-     labels=["pos_z [m]", "vel_z [m/s]"], fig="falling mass")
+p = plot(X, POS_Z, VEL_Z; xlabel="time [s]", ylabels=["pos_z [m]", "vel_z [m/s]"], 
+         labels=["pos_z [m]", "vel_z [m/s]"], fig="falling mass")
+display(p)

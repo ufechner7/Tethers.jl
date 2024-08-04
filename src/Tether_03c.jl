@@ -64,7 +64,7 @@ function solve3(simple_sys, L0, V0; cb=true)
     sol
 end
 
-function plt(sol; title="")
+function plot2(sol; title="")
     X = sol.t
     POS_Z = stack(sol[pos], dims=1)[:,3]
     VEL_Z = stack(sol[vel], dims=1)[:,3]
@@ -77,14 +77,14 @@ end
 println("Solving the system without callback...")
 simple_sys, pos, vel, c_spring = model3(G_EARTH, L0, V0)
 sol = solve3(simple_sys, L0, V0; cb=false)
-plt(sol; title="Solution without callback")
+plot2(sol; title="Solution without callback")
 println("Press any key...")
 if ! @isdefined __PC
     readline()
 end
 println("Solving the system with callback...")
 sol = solve3(simple_sys, L0, V0; cb=true)
-plt(sol; title="Solution with callback")
+plot2(sol; title="Solution with callback")
 println("If you zoom in to the points in time where pos_z crosses -10m")
 println("you should see a difference...")
 nothing

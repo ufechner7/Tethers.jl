@@ -4,7 +4,7 @@ using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, Parameters
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using ControlPlots
 
-@with_kw mutable struct Settings @deftype Float64
+@with_kw mutable struct Settings3 @deftype Float64
     g_earth::Vector{Float64} = [0.0, 0.0, -9.81] # gravitational acceleration     [m/s²]
     v_wind_tether::Vector{Float64} = [5.0, 0.0, 0.0]
     rho = 1.225
@@ -152,7 +152,7 @@ function play(se, sol, pos)
         end
         plot2d(sol[pos][i], time; segments=se.segments, xlim, ylim, xy)
         if se.save
-            plt.savefig("video/"*"img-"*lpad(j,4,"0"))
+            ControlPlots.plt.savefig("video/"*"img-"*lpad(j,4,"0"))
         end
         j += 1
         wait_until(start + 0.5*time*1e9)
@@ -164,7 +164,7 @@ function play(se, sol, pos)
 end
 
 function main()
-    se = Settings()
+    se = Settings3()
     set_tether_diameter!(se, 4)
     simple_sys, pos, vel = model(se)
     sol, elapsed_time = simulate(se, simple_sys)

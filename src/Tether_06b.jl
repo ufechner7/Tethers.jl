@@ -128,7 +128,7 @@ function play(se, sol, pos)
         end
         plot2d(sol[pos][i], time; segments=se.segments, xlim, ylim, xy)
         if se.save
-            plt.savefig("video/"*"img-"*lpad(j,4,"0"))
+            ControlPlots.plt.savefig("video/"*"img-"*lpad(j,4,"0"))
         end
         j += 1
         wait_until(start + 0.5*time*1e9)
