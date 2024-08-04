@@ -11,11 +11,11 @@ using ControlPlots
     cd_tether = 0.958
     l0 = 50                                      # initial tether length             [m]
     v_ro = 2                                     # reel-out speed                  [m/s]
-    d_tether = 4                                # tether diameter                  [mm]
+    d_tether = 4                                 # tether diameter                  [mm]
     rho_tether = 724                             # density of Dyneema            [kg/m³]
     c_spring = 614600                            # unit spring constant              [N]
     damping = 473                                # unit damping constant            [Ns]
-    segments::Int64 = 5                          # number of tether segments         [-]
+    segments::Int64 = 10                         # number of tether segments         [-]
     α0 = π/10                                    # initial tether angle            [rad]
     duration = 30.0                              # duration of the simulation        [s]
     save::Bool = false                           # save png files in folder video
@@ -48,7 +48,7 @@ end
 
 function model(se)
     POS0, VEL0, ACC0, SEGMENTS0, UNIT_VECTORS0 = calc_initial_state(se)
-    mass_per_meter = se.rho_tether * se.segments * (se.d_tether/2000.0)^2
+    mass_per_meter = se.rho_tether * π * (se.d_tether/2000.0)^2
     @parameters c_spring0=se.c_spring/(se.l0/se.segments) l_seg=se.l0/se.segments
     @variables pos(t)[1:3, 1:se.segments+1]  = POS0
     @variables vel(t)[1:3, 1:se.segments+1]  = VEL0
