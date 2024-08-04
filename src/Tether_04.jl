@@ -87,18 +87,11 @@ function plt(sol, particle)
     POS_Z = stack(sol[pos], dims=1)[:,3,particle]
     VEL_Z = stack(sol[vel], dims=1)[:,3,particle]
     C_SPRING = stack(sol[c_spring], dims=1)[:, particle-1]
-    # C_SPRING = sol(X, idxs=c_spring[particle-1])
-    lns1 = plot(X, POS_Z, color="green", label="pos_z")
-    xlabel("time [s]")
-    ylabel("pos_z [m]")
-    lns2 = plot(X, -L0.+0.005 .* C_SPRING, color="grey", label="c_spring")
-    PyPlot.grid(true)
-    twinx()
-    ylabel("vel_z [m/s]") 
-    lns3 = plot(X, VEL_Z, color="red", label="vel_z")
-    lns = vcat(lns1, lns2, lns3)
-    labs = [l.get_label() for l in lns]
-    legend(lns, labs) 
+
+    p = plot(X, [POS_Z, -L0.+0.005 .* C_SPRING], VEL_Z; xlabel="time [s]", ylabels=["pos_z [m]", "vel_z [m/s]"], 
+    labels=["pos_z [m]", "c_spring", "vel_z [m/s]"], fig="segmented tether")
+    display(p)
+    nothing
 end
 # plt(sol, 2)
 plt(sol, 3)
