@@ -72,7 +72,7 @@ echo "Updating packages..."
 if test -f "Manifest.toml"; then
    rm Manifest.toml
 fi
-julia --pkgimages=no --project -e "using Pkg; Pkg.add(\"PyCall\"); Pkg.build(\"PyCall\")"
+julia --pkgimages=no --project -e "using Pkg; Pkg.instantiate(); Pkg.add(\"PyCall\"); Pkg.build(\"PyCall\")"
 julia --pkgimages=no --project -e "using ControlPlots"
 julia --pkgimages=no --project -e "using Pkg; Pkg.update()"
 
