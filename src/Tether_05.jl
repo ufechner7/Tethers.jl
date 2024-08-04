@@ -88,38 +88,39 @@ ts    = 0:dt:duration
 prob = ODEProblem(simple_sys, nothing, tspan)
 @time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
 
-function plot2d(sol, reltime, segments, line, sc, txt)
-    index = Int64(round(reltime*50+1))
-    x, z = Float64[], Float64[]
-    for particle in 1:segments+1
-        push!(x, (sol(sol.t, idxs=pos[1, particle]))[index])
-        push!(z, (sol(sol.t, idxs=pos[3, particle]))[index])
-    end
-    z_max = maximum(z)
-    if isnothing(line)
-        line, = plot(x,z; linewidth="1")
-        sc  = scatter(x, z; s=15, color="red") 
-        txt = annotate("t=$(round(reltime,digits=1)) s",  
-                            xy=(segments*L0/4.2, z_max-3.0*segments/5), fontsize = 12)
-    else
-        line.set_xdata(x)
-        line.set_ydata(z)
-        sc.set_offsets(hcat(x,z))
-        txt.set_text("t=$(round(reltime,digits=1)) s")
-        gcf().canvas.draw()
-    end
-    line, sc, txt
-end
+# function plot2d(sol, reltime, segments, line, sc, txt)
+#     index = Int64(round(reltime*50+1))
+#     x, z = Float64[], Float64[]
+#     for particle in 1:segments+1
+#         push!(x, (sol(sol.t, idxs=pos[1, particle]))[index])
+#         push!(z, (sol(sol.t, idxs=pos[3, particle]))[index])
+#     end
+#     z_max = maximum(z)
+#     if isnothing(line)
+#         line, = plot(x,z; linewidth="1")
+#         sc  = scatter(x, z; s=15, color="red") 
+#         txt = annotate("t=$(round(reltime,digits=1)) s",  
+#                             xy=(segments*L0/4.2, z_max-3.0*segments/5), fontsize = 12)
+#     else
+#         line.set_xdata(x)
+#         line.set_ydata(z)
+#         sc.set_offsets(hcat(x,z))
+#         txt.set_text("t=$(round(reltime,digits=1)) s")
+#         gcf().canvas.draw()
+#     end
+#     line, sc, txt
+# end
 
 function play()
     dt = 0.15
-    ylim(-1.2*segments*L0, 0.5)
-    xlim(-segments*L0/2, segments*L0/2)
-    grid(true; color="grey", linestyle="dotted")
-    line, sc, txt = nothing, nothing, nothing
+    plt.ylim(-1.2*segments*L0, 0.5)
+    plt.xlim(-segments*L0/2, segments*L0/2)
+    plt.grid(true; color="grey", linestyle="dotted")
+    lines, sc, txt = nothing, nothing, nothing
     start = time_ns()
     for time in 0:dt:duration
-        line, sc, txt = plot2d(sol, time, segments, line, sc, txt)
+        # plot2d_(pos, reltime; zoom=true, front=false, segments=6, fig="", dz_zoom= 1.5, dz=-5.0, dx=-16.0, lines, sc, txt)
+        lines, sc, txt = plot2d(sol[pos], time; segments, lines, sc, txt)
         wait_until(start + 0.5*time*1e9)
     end
     nothing
