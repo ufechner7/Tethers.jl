@@ -110,20 +110,18 @@ prob = ODEProblem(simple_sys, nothing, tspan)
 #     end
 #     line, sc, txt
 # end
-function plot2d_(pos_matrix, reltime; segments, lines, sc, txt)
+function plot2d_(pos_matrix, reltime; segments, xlim, ylim)
     pos_vectors = Vector{Float64}[]
     for particle in 1:segments+1
         push!(pos_vectors, pos_matrix[:, particle])
     end
-    plot2d(pos_vectors, reltime; segments, lines, sc, txt)
+    plot2d(pos_vectors, reltime; segments, zoom=false, xlim, ylim)
 end
 
 function play()
     dt = 0.15
-    plt.ylim(-1.2*segments*L0, 0.5)
-    plt.xlim(-segments*L0/2, segments*L0/2)
-    plt.grid(true; color="grey", linestyle="dotted")
-    lines, sc, txt = nothing, nothing, nothing
+    ylim = (-1.2*segments*L0, 0.5)
+    xlim = (-segments*L0/2, segments*L0/2)
     start = time_ns()
     i = 1
     for time in 0:dt:duration
@@ -131,7 +129,7 @@ function play()
             i += 1
         end
         # plot2d_(pos, reltime; zoom=true, front=false, segments=6, fig="", dz_zoom= 1.5, dz=-5.0, dx=-16.0, lines, sc, txt)
-        lines, sc, txt = plot2d_(sol[pos][i], time; segments, lines, sc, txt)
+        plot2d_(sol[pos][i], time; segments, xlim, ylim)
         wait_until(start + 0.5*time*1e9)
     end
     nothing
