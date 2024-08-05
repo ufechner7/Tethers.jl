@@ -14,7 +14,7 @@ end
 __BENCH__ = true; 
 let
     include("Tether_07.jl")
-    set = deepcopy(Settings())
+    set = deepcopy(Settings3())
     set.duration = 10.0
     simple_sys, pos, vel = model(set)
     sol, elapsed_time = simulate(set, simple_sys) # warm-up
