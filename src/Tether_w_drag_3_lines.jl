@@ -140,7 +140,8 @@ function model(se)
     eqs2 = vcat(eqs2, m_tether_particle .~ mass_per_meter * (length/se.segments))
     eqs2 = vcat(eqs2, damping  .~ se.damping  / (length/se.segments))
     eqs = vcat(eqs1..., eqs2)
-        
+    println(size(eqs1))
+    @assert false
     @named sys = ODESystem(eqs, t)
     # wk2_sys = structural_simplify(sys; check_consistency=false)
     # println(equations(wk2_sys))
@@ -150,6 +151,7 @@ end
 
 function next_step(se, integrator)
     @time step!(integrator, se.dt, true)
+    println(length(integrator.u))
 end
 
 function plot2d(se, integrator, pos, reltime, line, sc, txt, j)
@@ -190,7 +192,7 @@ function play(se, simple_sys, pos)
     tspan = (0.0, se.dt)
     prob = ODEProblem(simple_sys, nothing, tspan)
     tol=1e-6
-    integrator = init(prob, TRBDF2(); dt=se.dt, abstol=tol, reltol=tol, save_everystep=false)
+    integrator = init(prob, TRBDF2(); dt=se.dt, abstol=tol, reltol=tol, save_everystep=true)
     for (j, time) in pairs(0:se.dt:se.duration)
         next_step(se, integrator)
         line, sc, txt = plot2d(se, integrator, pos, time, line, sc, txt, j)

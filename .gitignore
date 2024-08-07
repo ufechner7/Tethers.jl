@@ -12,3 +12,4 @@ docs/src/index.md
 video
 .venv
 kps-image_tmp.so
+*.code-workspace
