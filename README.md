@@ -92,9 +92,9 @@ Relative and absolute tolerance: $1.0^{-6}$. CPU: Ryzen 9 7950X.
 |Non-linear Spring damper     |     59              | 83         | 0.61            | 20  |
 |dito with callbacks          |     67              | 103        | 0.74            | 31  |
 |swinging tether, 5 segments  |    122              | 150        | 3.50            | 47  |
-|Dyneema tether, reeling out  |    136              | 160        | 20              | 9300 |
-|dito with callbacks          |    168              |            | 26              |      |
-|Dyneema, reeling out with drag |  174              |            | 28              |      |  
+|Dyneema tether, reeling out  |    125              | 160        | 20              | 9300 |
+|dito with callbacks          |    156              |            | 26              |      |
+|Dyneema, reeling out with drag |  162              |            | 28              |      |  
 
 **Tradeoff Julia vs Python:** In Julia, the code is compiled before it is executed, which can cause about one to 10 seconds delay when running a simulation the first time, but speeds up the execution a lot afterward. In addition, Julia can run fully multithreaded, Python cannot make use of multiple CPU cores with multithreading because of the global interpreter lock. 
 
