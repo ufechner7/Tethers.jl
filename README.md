@@ -88,9 +88,9 @@ Relative and absolute tolerance: $1.0^{-6}$. CPU: Ryzen 9 7950X.
 
 | Test-case             | Lines of code (LOC) Julia | LOC Python | Time Julia [ms] | Time Python [ms] |
 |:----------------------------|:-------------------:|:----------:|:---------------:|:---:|
-|Falling mass                 |     41              | 56         | 0.17            | 2.6 |
-|Non-linear Spring damper     |     59              | 83         | 0.61            | 20  |
-|dito with callbacks          |     67              | 103        | 0.74            | 31  |
+|Falling mass                 |     35              | 56         | 0.17            | 2.6 |
+|Non-linear Spring damper     |     49              | 83         | 0.61            | 20  |
+|dito with callbacks          |     57              | 103        | 0.74            | 31  |
 |swinging tether, 5 segments  |    122              | 150        | 3.50            | 47  |
 |Dyneema tether, reeling out  |    125              | 160        | 20              | 9300 |
 |dito with callbacks          |    156              |            | 26              |      |
