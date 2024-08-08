@@ -18,12 +18,6 @@ function model3(G_EARTH, L0, V0)
     @variables spring_force(t)[1:3] = [0.0, 0.0, 0.0]
     @variables force(t) = 0.0 norm1(t) = abs(l0) spring_vel(t) = 0.0
 
-    vel = collect(vel)
-    acc = collect(acc)
-    pos = collect(pos)
-    unit_vector = collect(unit_vector)
-    spring_force = collect(spring_force)
-
     eqs = vcat(D.(pos)      .~ vel,
             D.(vel)      .~ acc,
             norm1        .~ norm(pos),
@@ -33,7 +27,7 @@ function model3(G_EARTH, L0, V0)
             spring_force .~ (c_spring * (norm1 - abs(l0)) + damping * spring_vel) * unit_vector,
             acc          .~ G_EARTH + spring_force/mass)
 
-    @named sys = ODESystem(eqs, t)
+    @named sys = ODESystem(Symbolics.scalarize.(reduce(vcat, Symbolics.scalarize.(eqs))), t)
     simple_sys = structural_simplify(sys)
     simple_sys, pos, vel, c_spring
 end

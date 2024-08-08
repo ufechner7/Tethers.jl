@@ -14,12 +14,6 @@ L0::Float64 = -10.0                             # initial spring length      [m]
 @variables spring_force(t)[1:3] = [0.0, 0.0, 0.0]
 @variables norm1(t) = abs(l0) spring_vel(t) = 0.0
 
-vel = collect(vel)
-acc = collect(acc)
-pos = collect(pos)
-unit_vector = collect(unit_vector)
-spring_force = collect(spring_force)
-
 eqs = vcat(D.(pos)      .~ vel,
            D.(vel)      .~ acc,
            norm1        ~ norm(pos),
@@ -28,7 +22,7 @@ eqs = vcat(D.(pos)      .~ vel,
            spring_force .~ (c_spring * (norm1 - abs(l0)) + damping * spring_vel) * unit_vector,
            acc          .~ G_EARTH + spring_force/mass)
 
-@named sys = ODESystem(eqs, t)
+@named sys = ODESystem(Symbolics.scalarize.(reduce(vcat, Symbolics.scalarize.(eqs))), t)
 simple_sys = structural_simplify(sys)
 
 # running the simulation

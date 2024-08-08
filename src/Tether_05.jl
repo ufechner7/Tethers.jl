@@ -45,15 +45,6 @@ end
 @variables spring_force(t)[1:3, 1:segments] = zeros(3, segments)
 @variables total_force(t)[1:3, 1:segments] = zeros(3, segments)
 
-vel = collect(vel)
-acc = collect(acc)
-pos = collect(pos)
-unit_vector = collect(unit_vector)
-spring_force = collect(spring_force)
-segment = collect(segment)
-rel_vel = collect(rel_vel)
-total_force = collect(total_force)
-
 eqs1 = vcat(D.(pos) .~ vel,
             D.(vel) .~ acc)
 eqs2 = []
@@ -76,7 +67,7 @@ end
 eqs2 = vcat(eqs2, acc[:, 1] .~ zeros(3))
 eqs = vcat(eqs1..., eqs2)
      
-@named sys = ODESystem(eqs, t)
+@named sys = ODESystem(Symbolics.scalarize.(reduce(vcat, Symbolics.scalarize.(eqs))), t)
 simple_sys = structural_simplify(sys)
 
 # running the simulation
