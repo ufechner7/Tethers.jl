@@ -47,18 +47,19 @@ eqs1 = vcat(D.(pos) .~ vel,
 eqs2 = []
 for i in 1:segments
     global eqs2
-    eqs2 = vcat(eqs2, segment[:, i] .~ pos[:, i+1] - pos[:, i])
-    eqs2 = vcat(eqs2, norm1[i] .~ norm(segment[:, i]))
-    eqs2 = vcat(eqs2, unit_vector[:, i] .~ -segment[:, i]/norm1[i])
-    eqs2 = vcat(eqs2, rel_vel[:, i] .~ vel[:, i+1] - vel[:, i])
-    eqs2 = vcat(eqs2, spring_vel[i] .~ -unit_vector[:, i] ⋅ rel_vel[:, i])
-    eqs2 = vcat(eqs2, c_spring[i] .~ c_spring0 * (norm1[i] > l_seg))
-    eqs2 = vcat(eqs2, spring_force[:, i] .~ (c_spring[i] * (norm1[i] - l_seg) + damping * spring_vel[i]) * unit_vector[:, i])
-    # TODO: the spring_force must be distributed
-    eqs2 = vcat(eqs2, acc[:, i+1] .~ G_EARTH + spring_force[:, i] / mass)
+    eqs = [segment[:, i] .~ pos[:, i+1] - pos[:, i],
+           norm1[i] .~ norm(segment[:, i]),
+           unit_vector[:, i] .~ -segment[:, i]/norm1[i],
+           rel_vel[:, i] .~ vel[:, i+1] - vel[:, i],
+           spring_vel[i] .~ -unit_vector[:, i] ⋅ rel_vel[:, i],
+           c_spring[i] .~ c_spring0 * (norm1[i] > l_seg),
+           spring_force[:, i] .~ (c_spring[i] * (norm1[i] - l_seg) + damping * spring_vel[i]) * unit_vector[:, i],
+           # TODO: the spring_force must be distributed
+           acc[:, i+1] .~ G_EARTH + spring_force[:, i] / mass]
+    eqs2 = vcat(eqs2, reduce(vcat, eqs))
 end
 eqs2 = vcat(eqs2, acc[:, 1] .~ zeros(3))
-eqs = vcat(eqs1..., eqs2)
+eqs3 = vcat(eqs1..., eqs2)
      
 @named sys = ODESystem(Symbolics.scalarize.(reduce(vcat, Symbolics.scalarize.(eqs))), t)
 simple_sys = structural_simplify(sys)
