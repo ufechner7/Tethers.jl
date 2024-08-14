@@ -97,12 +97,13 @@ function model(se)
         end
         eqs2 = vcat(eqs2, reduce(vcat, eqs))
     end
-    eqs2 = vcat(eqs2, acc[:, 1] .~ zeros(3))
-    eqs2 = vcat(eqs2, length .~ se.l0 + se.v_ro*t)
-    eqs2 = vcat(eqs2, c_spring .~ se.c_spring / (length/se.segments))
-    eqs2 = vcat(eqs2, m_tether_particle .~ mass_per_meter * (length/se.segments))
-    eqs2 = vcat(eqs2, damping  .~ se.damping  / (length/se.segments))
-    eqs = vcat(eqs1..., eqs2)
+    eqs = [acc[:, 1] .~ zeros(3),
+           length .~ se.l0 + se.v_ro*t,
+           c_spring .~ se.c_spring / (length/se.segments),
+           m_tether_particle .~ mass_per_meter * (length/se.segments),
+           damping  .~ se.damping  / (length/se.segments)]
+    eqs2 = vcat(eqs2, reduce(vcat, eqs))  
+    eqs  = vcat(eqs1..., eqs2)
         
     @named sys = ODESystem(Symbolics.scalarize.(reduce(vcat, Symbolics.scalarize.(eqs))), t)
     simple_sys = structural_simplify(sys)
