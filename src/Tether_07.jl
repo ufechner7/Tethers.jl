@@ -74,18 +74,18 @@ function model(se)
                 D.(vel) .~ acc)
     eqs2 = []
     for i in se.segments:-1:1
-        eqs2 = vcat(eqs2, segment[:, i] .~ pos[:, i+1] - pos[:, i])
-        eqs2 = vcat(eqs2, norm1[i] ~ norm(segment[:, i]))
-        eqs2 = vcat(eqs2, unit_vector[:, i] .~ -segment[:, i]/norm1[i])
-        eqs2 = vcat(eqs2, rel_vel[:, i] .~ vel[:, i+1] - vel[:, i])
-        eqs2 = vcat(eqs2, spring_vel[i] .~ -unit_vector[:, i] ⋅ rel_vel[:, i])
-        eqs2 = vcat(eqs2, c_spr[i] .~ c_spring * (norm1[i] > length/se.segments))
-        eqs2 = vcat(eqs2, spring_force[:, i] .~ (c_spr[i] * (norm1[i] - (length/se.segments)) + damping * spring_vel[i]) * unit_vector[:, i])
-
-        eqs2 = vcat(eqs2, v_apparent[:, i] .~ se.v_wind_tether .- (vel[:, i] + vel[:, i+1])/2)
-        eqs2 = vcat(eqs2, v_app_perp[:, i] .~ v_apparent[:, i] - (v_apparent[:, i] ⋅ unit_vector[:, i]) .* unit_vector[:, i])
-        eqs2 = vcat(eqs2, norm_v_app[i] ~ norm(v_app_perp[:, i]))
-        eqs2 = vcat(eqs2, half_drag_force[:, i] .~ (0.25 * se.rho * se.cd_tether * norm_v_app[i] * (norm1[i]*se.d_tether/1000.0)) .* v_app_perp[:, i])
+        eqs = [segment[:, i] .~ pos[:, i+1] - pos[:, i],
+               norm1[i] ~ norm(segment[:, i]),
+               unit_vector[:, i] .~ -segment[:, i]/norm1[i],
+               rel_vel[:, i] .~ vel[:, i+1] - vel[:, i],
+               spring_vel[i] .~ -unit_vector[:, i] ⋅ rel_vel[:, i],
+               c_spr[i] .~ c_spring * (norm1[i] > length/se.segments),
+               spring_force[:, i] .~ (c_spr[i] * (norm1[i] - (length/se.segments)) + damping * spring_vel[i]) * unit_vector[:, i],
+               v_apparent[:, i] .~ se.v_wind_tether .- (vel[:, i] + vel[:, i+1])/2,
+               v_app_perp[:, i] .~ v_apparent[:, i] - (v_apparent[:, i] ⋅ unit_vector[:, i]) .* unit_vector[:, i],
+               norm_v_app[i] ~ norm(v_app_perp[:, i]),
+               half_drag_force[:, i] .~ (0.25 * se.rho * se.cd_tether * norm_v_app[i] * (norm1[i]*se.d_tether/1000.0)) .* v_app_perp[:, i]]
+        eqs2 = vcat(eqs2, reduce(vcat, eqs))
         if i == se.segments
             eqs2 = vcat(eqs2, total_force[:, i] .~ spring_force[:, i] + half_drag_force[:,i] + half_drag_force[:,i-1])
             eqs2 = vcat(eqs2, acc[:, i+1] .~ se.g_earth + total_force[:, i] / 0.5*(m_tether_particle))
@@ -93,8 +93,6 @@ function model(se)
             eqs2 = vcat(eqs2, total_force[:, i] .~ spring_force[:, i]- spring_force[:, i+1] + half_drag_force[:,i])
             eqs2 = vcat(eqs2, acc[:, i+1] .~ se.g_earth + total_force[:, i] / m_tether_particle)
         else
-            # println(spring_force[:, i]+drag_force[:, i])
-            # println(drag_force[:, i])
             eqs2 = vcat(eqs2, total_force[:, i] .~ spring_force[:, i]- spring_force[:, i+1] + half_drag_force[:,i] + half_drag_force[:,i-1])
             eqs2 = vcat(eqs2, acc[:, i+1] .~ se.g_earth + total_force[:, i] / m_tether_particle)
         end
