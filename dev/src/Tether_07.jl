@@ -85,17 +85,17 @@ function model(se)
                v_app_perp[:, i] .~ v_apparent[:, i] - (v_apparent[:, i] ⋅ unit_vector[:, i]) .* unit_vector[:, i],
                norm_v_app[i] ~ norm(v_app_perp[:, i]),
                half_drag_force[:, i] .~ (0.25 * se.rho * se.cd_tether * norm_v_app[i] * (norm1[i]*se.d_tether/1000.0)) .* v_app_perp[:, i]]
-        eqs2 = vcat(eqs2, reduce(vcat, eqs))
         if i == se.segments
-            eqs2 = vcat(eqs2, total_force[:, i] .~ spring_force[:, i] + half_drag_force[:,i] + half_drag_force[:,i-1])
-            eqs2 = vcat(eqs2, acc[:, i+1] .~ se.g_earth + total_force[:, i] / 0.5*(m_tether_particle))
+            push!(eqs, total_force[:, i] .~ spring_force[:, i] + half_drag_force[:,i] + half_drag_force[:,i-1])
+            push!(eqs, acc[:, i+1] .~ se.g_earth + total_force[:, i] / 0.5*(m_tether_particle))
         elseif i == 1
-            eqs2 = vcat(eqs2, total_force[:, i] .~ spring_force[:, i]- spring_force[:, i+1] + half_drag_force[:,i])
-            eqs2 = vcat(eqs2, acc[:, i+1] .~ se.g_earth + total_force[:, i] / m_tether_particle)
+            push!(eqs, total_force[:, i] .~ spring_force[:, i]- spring_force[:, i+1] + half_drag_force[:,i])
+            push!(eqs, acc[:, i+1] .~ se.g_earth + total_force[:, i] / m_tether_particle)
         else
-            eqs2 = vcat(eqs2, total_force[:, i] .~ spring_force[:, i]- spring_force[:, i+1] + half_drag_force[:,i] + half_drag_force[:,i-1])
-            eqs2 = vcat(eqs2, acc[:, i+1] .~ se.g_earth + total_force[:, i] / m_tether_particle)
+            push!(eqs, total_force[:, i] .~ spring_force[:, i]- spring_force[:, i+1] + half_drag_force[:,i] + half_drag_force[:,i-1])
+            push!(eqs, acc[:, i+1] .~ se.g_earth + total_force[:, i] / m_tether_particle)
         end
+        eqs2 = vcat(eqs2, reduce(vcat, eqs))
     end
     eqs2 = vcat(eqs2, acc[:, 1] .~ zeros(3))
     eqs2 = vcat(eqs2, length .~ se.l0 + se.v_ro*t)
