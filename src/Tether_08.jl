@@ -1,5 +1,6 @@
 # Tutorial example simulating a 3D mass-spring system with a nonlinear spring (no spring forces
 # for l < l_0), n tether segments and reel-in and reel-out. 
+# Adapted from PR #5 by johell, see https://github.com/ufechner7/Tethers.jl/pull/5
 using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, Parameters
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using ControlPlots
