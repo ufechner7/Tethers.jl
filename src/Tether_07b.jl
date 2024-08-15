@@ -7,7 +7,7 @@ using ControlPlots
 
 @with_kw mutable struct Settings3 @deftype Float64
     g_earth::Vector{Float64} = [0.0, 0.0, -9.81] # gravitational acceleration     [m/s²]
-    v_wind_tether::Vector{Float64} = [5.0, 0.0, 0.0]
+    v_wind_tether::Vector{Float64} = [0.01, 0.0, 0.0]
     rho = 1.225
     cd_tether = 0.958
     l0 = 50                                      # initial tether length             [m]
@@ -16,9 +16,9 @@ using ControlPlots
     rho_tether = 724                             # density of Dyneema            [kg/m³]
     c_spring = 614600                            # unit spring constant              [N]
     damping = 473                                # unit damping constant            [Ns]
-    segments::Int64 = 3                          # number of tether segments         [-]
+    segments::Int64 = 2                          # number of tether segments         [-]
     α0 = π/10                                    # initial tether angle            [rad]
-    duration = 0.15                              # duration of the simulation        [s]
+    duration = 10                              # duration of the simulation        [s]
     save::Bool = false                           # save png files in folder video
 end
 
