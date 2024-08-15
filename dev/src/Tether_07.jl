@@ -91,10 +91,11 @@ function model(se)
             push!(eqs, total_force[:, i] ~ spring_force[:, i] + half_drag_force[:,i] + half_drag_force[:,i-1])
             push!(eqs, acc[:, i+1]       ~ se.g_earth + total_force[:, i] / 0.5*(m_tether_particle))
         elseif i == 1
-            push!(eqs, total_force[:, i] ~ spring_force[:, i]- spring_force[:, i+1] + half_drag_force[:,i])
+            push!(eqs, total_force[:, i] ~ spring_force[:, i] - spring_force[:, i+1] + half_drag_force[:,i])
             push!(eqs, acc[:, i+1]       ~ se.g_earth + total_force[:, i] / m_tether_particle)
         else
-            push!(eqs, total_force[:, i] ~ spring_force[:, i]- spring_force[:, i+1] + half_drag_force[:,i] + half_drag_force[:,i-1])
+            push!(eqs, total_force[:, i] ~ spring_force[:, i] - spring_force[:, i+1] 
+                                           + half_drag_force[:,i] + half_drag_force[:,i-1])
             push!(eqs, acc[:, i+1]       ~ se.g_earth + total_force[:, i] / m_tether_particle)
         end
         eqs2 = vcat(eqs2, reduce(vcat, eqs))
