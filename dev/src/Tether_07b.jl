@@ -1,13 +1,12 @@
-# Tutorial example simulating a 3D mass-spring system with a nonlinear spring (no spring forces
+# Tutorial example simulating a 3D mass-spring system with a nonlinear spring (1% stiffnes
 # for l < l_0), n tether segments, tether drag and reel-in and reel-out. 
-# First try to fix https://github.com/ufechner7/Tethers.jl/issues/4 , not yet working.
 using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, Parameters
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using ControlPlots
 
 @with_kw mutable struct Settings3 @deftype Float64
     g_earth::Vector{Float64} = [0.0, 0.0, -9.81] # gravitational acceleration     [m/s²]
-    v_wind_tether::Vector{Float64} = [0.01, 0.0, 0.0]
+    v_wind_tether::Vector{Float64} = [2, 0.0, 0.0]
     rho = 1.225
     cd_tether = 0.958
     l0 = 50                                      # initial tether length             [m]
@@ -16,9 +15,9 @@ using ControlPlots
     rho_tether = 724                             # density of Dyneema            [kg/m³]
     c_spring = 614600                            # unit spring constant              [N]
     damping = 473                                # unit damping constant            [Ns]
-    segments::Int64 = 3                          # number of tether segments         [-]
+    segments::Int64 = 5                          # number of tether segments         [-]
     α0 = π/10                                    # initial tether angle            [rad]
-    duration = 10                              # duration of the simulation        [s]
+    duration = 30                                # duration of the simulation        [s]
     save::Bool = false                           # save png files in folder video
 end
 
@@ -36,8 +35,9 @@ function calc_initial_state(se)
     UNIT_VECTORS0 = zeros(3, se.segments)
     for i in 1:se.segments+1
         l0 = -(i-1)*se.l0/se.segments
+        v0 = -(i-1)*se.v_ro/se.segments
         POS0[:, i] .= [sin(se.α0) * l0, 0, cos(se.α0) * l0]
-        VEL0[:, i] .= [0, 0, 0]
+        VEL0[:, i] .= [sin(se.α0) * v0, 0, cos(se.α0) * v0]
     end
     for i in 1:se.segments
         ACC0[:, i+1] .= se.g_earth
@@ -80,7 +80,7 @@ function model(se)
                unit_vector[:, i]  ~ -segment[:, i]/norm1[i],
                rel_vel[:, i]      ~ vel[:, i+1] - vel[:, i],
                spring_vel[i]      ~ -unit_vector[:, i] ⋅ rel_vel[:, i],
-               c_spr[i]           ~ c_spring * (norm1[i] > length/se.segments),
+               c_spr[i]           ~ c_spring/1.01 * (0.01+(norm1[i] > length/se.segments)),
                spring_force[:, i] ~ (c_spr[i] * (norm1[i] - (length/se.segments)) 
                                      + damping * spring_vel[i]) * unit_vector[:, i],
                v_apparent[:, i]   ~ se.v_wind_tether .- (vel[:, i] + vel[:, i+1])/2,
@@ -112,7 +112,7 @@ function model(se)
         
     @named sys = ODESystem(Symbolics.scalarize.(reduce(vcat, Symbolics.scalarize.(eqs2))), t)
     simple_sys = structural_simplify(sys)
-    simple_sys, pos, vel
+    simple_sys, pos, vel, length, c_spr
 end
 
 function simulate(se, simple_sys)
@@ -155,13 +155,16 @@ function play(se, sol, pos)
 end
 
 function main()
-    global sol, pos
+    global sol, pos, len, c_spr
     se = Settings3()
     set_tether_diameter!(se, 4)
-    simple_sys, pos, vel = model(se)
+    simple_sys, pos, vel, len, c_spr = model(se)
     sol, elapsed_time = simulate(se, simple_sys)
     # println("sol and pos ", sol, "\n\t", pos)
-    println(sol[pos][1])
+    l1 = norm(sol[pos][end][:,2])
+    l2 = norm(sol[pos][end][:,3]-sol[pos][end][:,2])
+
+    println("Segment length at the end: ", l1, " and ", l2)
     play(se, sol, pos)
 end
 
@@ -169,4 +172,4 @@ if (! @isdefined __BENCH__) || __BENCH__ == false
     main()
 end
 __BENCH__ = false
-sol[pos]
+nothing
