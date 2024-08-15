@@ -1,4 +1,4 @@
-# Tutorial example simulating a 3D mass-spring system with a nonlinear spring (no spring forces
+# Tutorial example simulating a 3D mass-spring system with a nonlinear spring (1% stiffnes
 # for l < l_0), n tether segments, tether drag and reel-in and reel-out. 
 using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, Parameters
 using ModelingToolkit: t_nounits as t, D_nounits as D
@@ -6,7 +6,7 @@ using ControlPlots
 
 @with_kw mutable struct Settings3 @deftype Float64
     g_earth::Vector{Float64} = [0.0, 0.0, -9.81] # gravitational acceleration     [m/s²]
-    v_wind_tether::Vector{Float64} = [5.0, 0.0, 0.0]
+    v_wind_tether::Vector{Float64} = [2, 0.0, 0.0]
     rho = 1.225
     cd_tether = 0.958
     l0 = 50                                      # initial tether length             [m]
@@ -15,9 +15,9 @@ using ControlPlots
     rho_tether = 724                             # density of Dyneema            [kg/m³]
     c_spring = 614600                            # unit spring constant              [N]
     damping = 473                                # unit damping constant            [Ns]
-    segments::Int64 = 10                         # number of tether segments         [-]
+    segments::Int64 = 5                          # number of tether segments         [-]
     α0 = π/10                                    # initial tether angle            [rad]
-    duration = 30.0                              # duration of the simulation        [s]
+    duration = 30                                # duration of the simulation        [s]
     save::Bool = false                           # save png files in folder video
 end
 
@@ -35,8 +35,9 @@ function calc_initial_state(se)
     UNIT_VECTORS0 = zeros(3, se.segments)
     for i in 1:se.segments+1
         l0 = -(i-1)*se.l0/se.segments
+        v0 = -(i-1)*se.v_ro/se.segments
         POS0[:, i] .= [sin(se.α0) * l0, 0, cos(se.α0) * l0]
-        VEL0[:, i] .= [0, 0, 0]
+        VEL0[:, i] .= [sin(se.α0) * v0, 0, cos(se.α0) * v0]
     end
     for i in 1:se.segments
         ACC0[:, i+1] .= se.g_earth
@@ -68,7 +69,7 @@ function model(se)
     @variables v_app_perp(t)[1:3, 1:se.segments] = zeros(3, se.segments)
     @variables norm_v_app(t)[1:se.segments] = ones(se.segments)
     @variables half_drag_force(t)[1:3, 1:se.segments] = zeros(3, se.segments)
-    @variables total_force(t)[1:3, 1:se.segments] = zeros(3, se.segments)
+    @variables total_force(t)[1:3, 1:se.segments+1] = zeros(3, se.segments+1)
 
     eqs1 = vcat(D.(pos) .~ vel,
                 D.(vel) .~ acc)
@@ -79,7 +80,7 @@ function model(se)
                unit_vector[:, i]  ~ -segment[:, i]/norm1[i],
                rel_vel[:, i]      ~ vel[:, i+1] - vel[:, i],
                spring_vel[i]      ~ -unit_vector[:, i] ⋅ rel_vel[:, i],
-               c_spr[i]           ~ c_spring * (norm1[i] > length/se.segments),
+               c_spr[i]           ~ c_spring/1.01 * (0.01+(norm1[i] > length/se.segments)),
                spring_force[:, i] ~ (c_spr[i] * (norm1[i] - (length/se.segments)) 
                                      + damping * spring_vel[i]) * unit_vector[:, i],
                v_apparent[:, i]   ~ se.v_wind_tether .- (vel[:, i] + vel[:, i+1])/2,
@@ -88,15 +89,17 @@ function model(se)
                half_drag_force[:, i] .~ 0.25 * se.rho * se.cd_tether * norm_v_app[i] * (norm1[i]*se.d_tether/1000.0)
                                         * v_app_perp[:, i]]
         if i == se.segments
-            push!(eqs, total_force[:, i] ~ spring_force[:, i] + half_drag_force[:,i] + half_drag_force[:,i-1])
-            push!(eqs, acc[:, i+1]       ~ se.g_earth + total_force[:, i] / 0.5*(m_tether_particle))
+            push!(eqs, total_force[:, i+1] ~ spring_force[:, i] + half_drag_force[:,i])
+            push!(eqs, acc[:, i+1]       ~ se.g_earth + total_force[:, i+1] / (0.5*m_tether_particle))
+            push!(eqs, total_force[:, i] ~ spring_force[:, i-1] - spring_force[:, i] 
+                                           + half_drag_force[:,i-1] + half_drag_force[:,i])
         elseif i == 1
-            push!(eqs, total_force[:, i] ~ spring_force[:, i] - spring_force[:, i+1] + half_drag_force[:,i])
-            push!(eqs, acc[:, i+1]       ~ se.g_earth + total_force[:, i] / m_tether_particle)
+            push!(eqs, total_force[:, i] ~ spring_force[:, i] + half_drag_force[:,i])
+            push!(eqs, acc[:, i+1]       ~ se.g_earth + total_force[:, i+1] / (0.5*m_tether_particle))
         else
-            push!(eqs, total_force[:, i] ~ spring_force[:, i] - spring_force[:, i+1] 
-                                           + half_drag_force[:,i] + half_drag_force[:,i-1])
-            push!(eqs, acc[:, i+1]       ~ se.g_earth + total_force[:, i] / m_tether_particle)
+            push!(eqs, total_force[:, i] ~ spring_force[:, i-1] - spring_force[:, i] 
+                                           + half_drag_force[:,i-1] + half_drag_force[:,i])
+            push!(eqs, acc[:, i+1]       ~ se.g_earth + total_force[:, i+1] / m_tether_particle)
         end
         eqs2 = vcat(eqs2, reduce(vcat, eqs))
     end
@@ -109,7 +112,7 @@ function model(se)
         
     @named sys = ODESystem(Symbolics.scalarize.(reduce(vcat, Symbolics.scalarize.(eqs2))), t)
     simple_sys = structural_simplify(sys)
-    simple_sys, pos, vel
+    simple_sys, pos, vel, length, c_spr
 end
 
 function simulate(se, simple_sys)
@@ -152,11 +155,11 @@ function play(se, sol, pos)
 end
 
 function main()
+    global sol, pos, vel, len, c_spr
     se = Settings3()
     set_tether_diameter!(se, 4)
-    simple_sys, pos, vel = model(se)
+    simple_sys, pos, vel, len, c_spr = model(se)
     sol, elapsed_time = simulate(se, simple_sys)
-    # println("sol and pos ", sol, "\n\t", pos)
     play(se, sol, pos)
 end
 
