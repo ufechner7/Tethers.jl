@@ -61,7 +61,7 @@ end
 eqs2 = vcat(eqs2, acc[:, 1] .~ zeros(3))
 eqs3 = vcat(eqs1..., eqs2)
      
-@named sys = ODESystem(Symbolics.scalarize.(reduce(vcat, Symbolics.scalarize.(eqs))), t)
+@named sys = ODESystem(Symbolics.scalarize.(reduce(vcat, Symbolics.scalarize.(eqs3))), t)
 simple_sys = structural_simplify(sys)
 
 # running the simulation
