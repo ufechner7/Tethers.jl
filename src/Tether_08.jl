@@ -1,6 +1,8 @@
 # Tutorial example simulating a 3D mass-spring system with a nonlinear spring (no spring forces
 # for l < l_0), n tether segments and reel-in and reel-out. 
 using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, Parameters
+using ModelingToolkit: t_nounits as t, D_nounits as D
+using ControlPlots
 
 # TODO: Add aerodynamic drag
 
@@ -41,7 +43,6 @@ function model(se)
     POS0, VEL0, ACC0, SEGMENTS0, UNIT_VECTORS0 = calc_initial_state(se)
     mass_per_meter = se.rho_tether * pi * (se.d_tether/2000.0)^2    # rho * cross-section
     @parameters c_spring0=se.c_spring/(se.l0/se.segments) l_seg=se.l0/se.segments
-    @variables t 
     @variables pos(t)[1:3, 1:se.segments+1]  = POS0
     @variables vel(t)[1:3, 1:se.segments+1]  = VEL0
     @variables acc(t)[1:3, 1:se.segments+1]  = ACC0
@@ -57,10 +58,9 @@ function model(se)
     @variables c_spr(t)[1:se.segments] = c_spring0 * ones(se.segments)
     @variables spring_force(t)[1:3, 1:se.segments] = zeros(3, se.segments)
     @variables total_force(t)[1:3, 1:se.segments+1] = zeros(3, se.segments+1)
-    D = Differential(t)
 
-    eqs1 = vcat(D.(pos) ~ vel,
-                D.(vel) ~ acc)
+    eqs1 = vcat(D.(pos) .~ vel,
+                D.(vel) .~ acc)
     eqs2 = []
     for i in se.segments:-1:1
         eqs2 = vcat(eqs2, segment[:, i] ~ pos[:, i+1] - pos[:, i])
