@@ -106,11 +106,11 @@ function model(se)
         end
         eqs2 = vcat(eqs2, reduce(vcat, eqs))
     end
-    eqs = [acc[:, 1]         .~ zeros(3),
-           length            .~ se.l0 + se.v_ro*t,
-           c_spring          .~ se.c_spring / (length/se.segments),
-           m_tether_particle .~ mass_per_meter * (length/se.segments),
-           damping           .~ se.damping  / (length/se.segments)]
+    eqs = [acc[:, 1]         ~ zeros(3),
+           length            ~ se.l0 + se.v_ro*t,
+           c_spring          ~ se.c_spring / (length/se.segments),
+           m_tether_particle ~ mass_per_meter * (length/se.segments),
+           damping           ~ se.damping  / (length/se.segments)]
     eqs2 = vcat(eqs2, reduce(vcat, eqs))  
         
     @named sys = ODESystem(Symbolics.scalarize.(reduce(vcat, Symbolics.scalarize.(eqs2))), t)
