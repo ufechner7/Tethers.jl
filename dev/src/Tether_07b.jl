@@ -16,7 +16,7 @@ using ControlPlots
     rho_tether = 724                             # density of Dyneema            [kg/m³]
     c_spring = 614600                            # unit spring constant              [N]
     damping = 473                                # unit damping constant            [Ns]
-    segments::Int64 = 2                          # number of tether segments         [-]
+    segments::Int64 = 3                          # number of tether segments         [-]
     α0 = π/10                                    # initial tether angle            [rad]
     duration = 10                              # duration of the simulation        [s]
     save::Bool = false                           # save png files in folder video
@@ -97,9 +97,9 @@ function model(se)
             push!(eqs, total_force[:, i] ~ spring_force[:, i] + half_drag_force[:,i])
             push!(eqs, acc[:, i+1]       ~ se.g_earth + total_force[:, i+1] / (0.5*m_tether_particle))
         else
-            push!(eqs, total_force[:, i] ~ spring_force[:, i] - spring_force[:, i+1] 
-                                           + half_drag_force[:,i] + half_drag_force[:,i+1])
-            push!(eqs, acc[:, i+1]       ~ se.g_earth + total_force[:, i] / m_tether_particle)
+            push!(eqs, total_force[:, i] ~ spring_force[:, i-1] - spring_force[:, i] 
+                                           + half_drag_force[:,i-1] + half_drag_force[:,i])
+            push!(eqs, acc[:, i+1]       ~ se.g_earth + total_force[:, i+1] / m_tether_particle)
         end
         eqs2 = vcat(eqs2, reduce(vcat, eqs))
     end
