@@ -91,6 +91,8 @@ function model(se)
         if i == se.segments
             push!(eqs, total_force[:, i+1] ~ spring_force[:, i] + half_drag_force[:,i])
             push!(eqs, acc[:, i+1]       ~ se.g_earth + total_force[:, i+1] / (0.5*m_tether_particle))
+            push!(eqs, total_force[:, i] ~ spring_force[:, i-1] - spring_force[:, i] 
+                                           + half_drag_force[:,i-1] + half_drag_force[:,i])
         elseif i == 1
             push!(eqs, total_force[:, i] ~ spring_force[:, i] + half_drag_force[:,i])
             push!(eqs, acc[:, i+1]       ~ se.g_earth + total_force[:, i+1] / (0.5*m_tether_particle))
