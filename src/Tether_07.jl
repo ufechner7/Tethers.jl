@@ -72,7 +72,7 @@ function model(se)
 
     eqs1 = vcat(D.(pos) .~ vel,
                 D.(vel) .~ acc)
-    eqs2 = []
+    eqs2 = vcat(eqs1...)
     for i in se.segments:-1:1
         eqs = [segment[:, i]      ~ pos[:, i+1] - pos[:, i],
                norm1[i]           ~ norm(segment[:, i]),
@@ -103,9 +103,8 @@ function model(se)
            m_tether_particle .~ mass_per_meter * (length/se.segments),
            damping  .~ se.damping  / (length/se.segments)]
     eqs2 = vcat(eqs2, reduce(vcat, eqs))  
-    eqs  = vcat(eqs1..., eqs2)
         
-    @named sys = ODESystem(Symbolics.scalarize.(reduce(vcat, Symbolics.scalarize.(eqs))), t)
+    @named sys = ODESystem(Symbolics.scalarize.(reduce(vcat, Symbolics.scalarize.(eqs2))), t)
     simple_sys = structural_simplify(sys)
     simple_sys, pos, vel
 end
