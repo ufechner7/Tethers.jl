@@ -65,14 +65,14 @@ for i in SEGMENTS:-1:1
            spring_vel[i]      ~ -unit_vector[:, i] ⋅ rel_vel[:, i],
            c_spr[i]           ~ c_spring * (norm1[i] > len/SEGMENTS),
            spring_force[:, i] ~ (c_spr[i] * (norm1[i] - (len/SEGMENTS)) + damping * spring_vel[i]) * unit_vector[:, i]]
-    eqs2 = vcat(eqs2, reduce(vcat, eqs))
     if i == SEGMENTS
-        eqs2 = vcat(eqs2, total_force[:, i] .~ spring_force[:, i])
-        eqs2 = vcat(eqs2, acc[:, i+1] .~ G_EARTH + total_force[:, i] / 0.5*(m_tether_particle))
+        push!(eqs, total_force[:, i] ~ spring_force[:, i])
+        push!(eqs, acc[:, i+1]       ~ G_EARTH + total_force[:, i] / 0.5*(m_tether_particle))
     else
-        eqs2 = vcat(eqs2, total_force[:, i] .~ spring_force[:, i]- spring_force[:, i+1])
-        eqs2 = vcat(eqs2, acc[:, i+1] .~ G_EARTH + total_force[:, i] / m_tether_particle)
+        push!(eqs, total_force[:, i] ~ spring_force[:, i]- spring_force[:, i+1])
+        push!(eqs, acc[:, i+1]       ~ G_EARTH + total_force[:, i] / m_tether_particle)
     end
+    eqs2 = vcat(eqs2, reduce(vcat, eqs))
 end
 eqs2 = vcat(eqs2, acc[:, 1] .~ zeros(3))
 eqs2 = vcat(eqs2, len .~ L0 + V_RO*t)
