@@ -44,7 +44,7 @@ end
 
 eqs1 = vcat(D.(pos) .~ vel,
             D.(vel) .~ acc)
-eqs2 = Equation[]
+eqs2 = vcat(eqs1...)
 for i in 1:segments
     global eqs2
     eqs = [segment[:, i]      ~ pos[:, i+1] - pos[:, i],
@@ -59,9 +59,8 @@ for i in 1:segments
     eqs2 = vcat(eqs2, reduce(vcat, eqs))
 end
 push!(eqs2, acc[:, 1] ~ zeros(3))
-eqs3 = vcat(eqs1..., eqs2)
      
-@named sys = ODESystem(Symbolics.scalarize.(reduce(vcat, Symbolics.scalarize.(eqs3))), t)
+@named sys = ODESystem(Symbolics.scalarize.(reduce(vcat, Symbolics.scalarize.(eqs2))), t)
 simple_sys = structural_simplify(sys)
 
 # running the simulation
