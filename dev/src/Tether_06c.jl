@@ -19,7 +19,7 @@ using ControlPlots
     duration = 10                                # duration of the simulation        [s]
     dt = 0.02                                    # max time step in the solution     [s]
     save::Bool = false                           # save png files in folder video
-    callbacks::Bool = false                       # use callbacks
+    callbacks::Bool = true                       # use callbacks
 end
                               
 function calc_initial_state(se)
