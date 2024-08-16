@@ -12,6 +12,7 @@ using ControlPlots
     d_tether = 4                                 # tether diameter                  [mm]
     rho_tether = 724                             # density of Dyneema            [kg/m³]
     c_spring = 614600                            # unit spring constant              [N]
+    rel_compression_stiffness = 0.01             # relative compression stiffness    [-]    
     damping = 473                                # unit damping constant            [Ns]
     segments::Int64 = 5                          # number of tether segments         [-]
     α0 = π/10                                    # initial tether angle            [rad]
@@ -45,6 +46,7 @@ function model(se)
     POS0, VEL0, ACC0, SEGMENTS0, UNIT_VECTORS0 = calc_initial_state(se)
     mass_per_meter = se.rho_tether * π * (se.d_tether/2000.0)^2
     @parameters c_spring0=se.c_spring/(se.l0/se.segments) l_seg=se.l0/se.segments
+    @parameters rel_compression_stiffness = se.rel_compression_stiffness    
     @variables pos(t)[1:3, 1:se.segments+1]  = POS0
     @variables vel(t)[1:3, 1:se.segments+1]  = VEL0
     @variables acc(t)[1:3, 1:se.segments+1]  = ACC0
@@ -72,6 +74,8 @@ function model(se)
                rel_vel[:, i]        ~ vel[:, i+1] - vel[:, i],
                spring_vel[i]        ~ -unit_vector[:, i] ⋅ rel_vel[:, i],
                c_spr[i]             ~ c_spring * (norm1[i] > length/se.segments),
+               # c_spr[i]             ~ c_spring/(1+rel_compression_stiffness) 
+               #                        * (rel_compression_stiffness+(norm1[i] > length/se.segments)),               
                spring_force[:, i]  .~ (c_spr[i] * (norm1[i] - (length/se.segments)) 
                                        + damping * spring_vel[i]) * unit_vector[:, i]]
         if i == se.segments
