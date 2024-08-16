@@ -12,7 +12,7 @@ using ControlPlots
     d_tether = 4                                 # tether diameter                  [mm]
     rho_tether = 724                             # density of Dyneema            [kg/m³]
     c_spring = 614600                            # unit spring constant              [N]
-    rel_compression_stiffness = 0.01             # relative compression stiffness    [-]    
+    rel_compression_stiffness = 0.0              # relative compression stiffness    [-]    
     damping = 473                                # unit damping constant            [Ns]
     segments::Int64 = 5                          # number of tether segments         [-]
     α0 = π/10                                    # initial tether angle            [rad]
@@ -73,9 +73,8 @@ function model(se)
                unit_vector[:, i]    ~ -segment[:, i]/norm1[i],
                rel_vel[:, i]        ~ vel[:, i+1] - vel[:, i],
                spring_vel[i]        ~ -unit_vector[:, i] ⋅ rel_vel[:, i],
-               c_spr[i]             ~ c_spring * (norm1[i] > length/se.segments),
-               # c_spr[i]             ~ c_spring/(1+rel_compression_stiffness) 
-               #                        * (rel_compression_stiffness+(norm1[i] > length/se.segments)),               
+               c_spr[i]             ~ c_spring/(1+rel_compression_stiffness) 
+                                      * (rel_compression_stiffness+(norm1[i] > length/se.segments)),               
                spring_force[:, i]  .~ (c_spr[i] * (norm1[i] - (length/se.segments)) 
                                        + damping * spring_vel[i]) * unit_vector[:, i]]
         if i == se.segments
