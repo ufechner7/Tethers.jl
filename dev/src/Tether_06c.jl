@@ -66,28 +66,30 @@ function model(se)
     eqs2 = vcat(eqs1...)
 
     for i in se.segments:-1:1
-        eqs = [segment[:, i] .~ pos[:, i+1] - pos[:, i],
-               norm1[i] .~ norm(segment[:, i]),
-               unit_vector[:, i] .~ -segment[:, i]/norm1[i],
-               rel_vel[:, i] .~ vel[:, i+1] - vel[:, i],
-               spring_vel[i] .~ -unit_vector[:, i] ⋅ rel_vel[:, i],
-               c_spr[i] .~ c_spring * (norm1[i] > length/se.segments),
-               spring_force[:, i] .~ (c_spr[i] * (norm1[i] - (length/se.segments)) + damping * spring_vel[i]) * unit_vector[:, i]]
+        eqs = [segment[:, i]        ~ pos[:, i+1] - pos[:, i],
+               norm1[i]             ~ norm(segment[:, i]),
+               unit_vector[:, i]    ~ -segment[:, i]/norm1[i],
+               rel_vel[:, i]        ~ vel[:, i+1] - vel[:, i],
+               spring_vel[i]        ~ -unit_vector[:, i] ⋅ rel_vel[:, i],
+               c_spr[i]             ~ c_spring * (norm1[i] > length/se.segments),
+               spring_force[:, i]  .~ (c_spr[i] * (norm1[i] - (length/se.segments)) 
+                                       + damping * spring_vel[i]) * unit_vector[:, i]]
         if i == se.segments
             push!(eqs, total_force[:, i] .~ spring_force[:, i])
-            push!(eqs, acc[:, i+1] .~ se.g_earth + total_force[:, i] / 0.5*(m_tether_particle))
+            push!(eqs, acc[:, i+1]       .~ se.g_earth + total_force[:, i] / 0.5*(m_tether_particle))
         else
             push!(eqs, total_force[:, i] .~ spring_force[:, i]- spring_force[:, i+1])
-            push!(eqs, acc[:, i+1] .~ se.g_earth + total_force[:, i] / m_tether_particle)
+            push!(eqs, acc[:, i+1]       .~ se.g_earth + total_force[:, i] / m_tether_particle)
         end
         eqs2 = vcat(eqs2, reduce(vcat, eqs))
     end
 
-    eqs2 = vcat(eqs2, acc[:, 1] .~ zeros(3))
-    eqs2 = vcat(eqs2, length .~ se.l0 + se.v_ro*t)
-    eqs2 = vcat(eqs2, c_spring .~ se.c_spring / (length/se.segments))
-    eqs2 = vcat(eqs2, m_tether_particle .~ mass_per_meter * (length/se.segments))
-    eqs2 = vcat(eqs2, damping  .~ se.damping  / (length/se.segments))
+    eqs = [acc[:, 1]         ~ zeros(3),
+           length            ~ se.l0 + se.v_ro*t,
+           c_spring          ~ se.c_spring / (length/se.segments),
+           m_tether_particle ~ mass_per_meter * (length/se.segments),
+           damping           ~ se.damping  / (length/se.segments)]
+    eqs2 = vcat(eqs2, reduce(vcat, eqs))  
 
     if se.callbacks
         local cb
