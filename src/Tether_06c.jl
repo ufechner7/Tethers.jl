@@ -172,12 +172,9 @@ function compare(se=Settings2())
     se.v0 = 0
     sol1, pos, vel = main(se, play_=false)
     vel_z1 = stack(sol1[vel], dims=1)[:, 3, 5]
-    # plot(sol.t, vel_z1, color="blue")
-    # figure()
     se.callbacks = true
     sol2, pos, vel = main(se, play_=false)
     vel_z2 = stack(sol2[vel], dims=1)[:, 3, 5]
-    # plot(sol.t, vel_z2, color="red")
     i, j = 1, 1
     vel1, vel2 = Float64[], Float64[]
     for time in sol1.t
