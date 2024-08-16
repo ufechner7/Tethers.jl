@@ -19,7 +19,7 @@ using ControlPlots
     duration = 10                                # duration of the simulation        [s]
     dt = 0.02                                    # max time step in the solution     [s]
     save::Bool = false                           # save png files in folder video
-    callbacks::Bool = true                       # use callbacks
+    callbacks::Bool = false                       # use callbacks
 end
                               
 function calc_initial_state(se)
@@ -122,6 +122,7 @@ function simulate(se, simple_sys)
     ts    = 0:se.dt:se.duration
     prob = ODEProblem(simple_sys, nothing, tspan)
     elapsed_time = @elapsed sol = solve(prob, Rodas5P(), dt=se.dt, abstol=tol, reltol=tol, saveat=ts)
+    elapsed_time = @elapsed sol = solve(prob, Rodas5P(), dt=se.dt, abstol=tol, reltol=tol, saveat=ts)
     sol, elapsed_time
 end
 
@@ -172,12 +173,9 @@ function compare(se=Settings2())
     se.v0 = 0
     sol1, pos, vel = main(se, play_=false)
     vel_z1 = stack(sol1[vel], dims=1)[:, 3, 5]
-    # plot(sol.t, vel_z1, color="blue")
-    # figure()
     se.callbacks = true
     sol2, pos, vel = main(se, play_=false)
     vel_z2 = stack(sol2[vel], dims=1)[:, 3, 5]
-    # plot(sol.t, vel_z2, color="red")
     i, j = 1, 1
     vel1, vel2 = Float64[], Float64[]
     for time in sol1.t
