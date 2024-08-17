@@ -56,35 +56,42 @@ function model(se)
     @variables spring_vel(t)[1:se.segments] = zeros(se.segments)
     @variables c_spr(t)[1:se.segments] = c_spring0 * ones(se.segments)
     @variables spring_force(t)[1:3, 1:se.segments] = zeros(3, se.segments)
-    @variables total_force(t)[1:3, 1:se.segments] = zeros(3, se.segments)
+    @variables total_force(t)[1:3, 1:se.segments+1] = zeros(3, se.segments+1)
 
     eqs1 = vcat(D.(pos) .~ vel,
                 D.(vel) .~ acc)
-    eqs2 = []
-    for i in se.segments:-1:1
-        eqs2 = vcat(eqs2, segment[:, i] .~ pos[:, i+1] - pos[:, i])
-        eqs2 = vcat(eqs2, norm1[i] .~ norm(segment[:, i]))
-        eqs2 = vcat(eqs2, unit_vector[:, i] .~ -segment[:, i]/norm1[i])
-        eqs2 = vcat(eqs2, rel_vel[:, i] .~ vel[:, i+1] - vel[:, i])
-        eqs2 = vcat(eqs2, spring_vel[i] .~ -unit_vector[:, i] ⋅ rel_vel[:, i])
-        eqs2 = vcat(eqs2, c_spr[i] .~ c_spring * (norm1[i] > length/se.segments))
-        eqs2 = vcat(eqs2, spring_force[:, i] .~ (c_spr[i] * (norm1[i] - (length/se.segments)) + damping * spring_vel[i]) * unit_vector[:, i])
-        if i == se.segments
-            eqs2 = vcat(eqs2, total_force[:, i] .~ spring_force[:, i])
-            eqs2 = vcat(eqs2, acc[:, i+1] .~ se.g_earth + total_force[:, i] / 0.5*(m_tether_particle))
+    eqs2 = vcat(eqs1...)
+
+    for i in SEGMENTS:-1:1
+        eqs = [segment[:, i]      ~ pos[:, i+1] - pos[:, i],
+               norm1[i]           ~ norm(segment[:, i]),
+               unit_vector[:, i]  ~ -segment[:, i]/norm1[i],
+               rel_vel[:, i]      ~ vel[:, i+1] - vel[:, i],
+               spring_vel[i]      ~ -unit_vector[:, i] ⋅ rel_vel[:, i],
+               c_spr[i]           ~ c_spring/1.01 * (0.01 + (norm1[i] > len/SEGMENTS)),
+               spring_force[:, i] ~ (c_spr[i] * (norm1[i] - (len/SEGMENTS)) + damping * spring_vel[i]) * unit_vector[:, i]]
+        if i == SEGMENTS
+            push!(eqs, total_force[:, i+1] ~ spring_force[:, i])
+            push!(eqs, acc[:, i+1]         ~ G_EARTH + total_force[:, i+1] / (0.5*m_tether_particle))
+            push!(eqs, total_force[:, i]   ~ spring_force[:, i-1] - spring_force[:, i])
+        elseif i == 1
+            push!(eqs, total_force[:, i]   ~ spring_force[:, i])
+            push!(eqs, acc[:, i+1]         ~ G_EARTH + total_force[:, i+1] / m_tether_particle)
         else
-            eqs2 = vcat(eqs2, total_force[:, i] .~ spring_force[:, i]- spring_force[:, i+1])
-            eqs2 = vcat(eqs2, acc[:, i+1] .~ se.g_earth + total_force[:, i] / m_tether_particle)
+            push!(eqs, total_force[:, i] ~ spring_force[:, i-1] - spring_force[:, i])
+            push!(eqs, acc[:, i+1]       ~ G_EARTH + total_force[:, i+1] / m_tether_particle)
         end
+        eqs2 = vcat(eqs2, reduce(vcat, eqs))
     end
-    eqs2 = vcat(eqs2, acc[:, 1] .~ zeros(3))
-    eqs2 = vcat(eqs2, length .~ se.l0 + se.v_ro*t)
-    eqs2 = vcat(eqs2, c_spring .~ se.c_spring / (length/se.segments))
-    eqs2 = vcat(eqs2, m_tether_particle .~ mass_per_meter * (length/se.segments))
-    eqs2 = vcat(eqs2, damping  .~ se.damping  / (length/se.segments))
-    eqs = vcat(eqs1..., eqs2)
+
+    eqs = [acc[:, 1]         .~ zeros(3),
+           len               .~ se.l0 + se.v_ro*t,
+           c_spring          .~ c_spring / (len/se.segments),
+           m_tether_particle .~ mass_per_meter * (len/se.segments),
+           damping           .~ se.damping  / (len/se.segments)]
+    eqs2 = vcat(eqs2, reduce(vcat, eqs))  
         
-    @named sys = ODESystem(Symbolics.scalarize.(reduce(vcat, Symbolics.scalarize.(eqs))), t)
+    @named sys = ODESystem(Symbolics.scalarize.(reduce(vcat, Symbolics.scalarize.(eqs2))), t)
     simple_sys = structural_simplify(sys)
     simple_sys, pos, vel
 end
@@ -101,7 +108,6 @@ end
 
 function play(se, sol, pos)
     dt = 0.151
-    se.save = true # create video pics
     ylim = (-1.2*(se.l0+se.v_ro*se.duration), 0.5)
     xlim = (-se.l0/2, se.l0/2)
     mkpath("video")
