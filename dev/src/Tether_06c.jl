@@ -166,7 +166,7 @@ function main(se = Settings2(); play_=true)
     l_tether_theoretical = se.l0 + se.v_ro * se.duration
     println("Theoretical tether length: $(l_tether_theoretical) m")
     println("Tether length:             $(l_tether(sol, pos)) m")
-    sol, pos, vel
+    sol, pos, vel, simple_sys
 end
 
 # plot vertical velocity of last particle with and without callbacks
@@ -202,7 +202,7 @@ function l_tether(sol, pos; se = Settings2())
 end
 
 if (! @isdefined __BENCH__) || __BENCH__ == false
-    sol, pos, vel = main()
+    sol, pos, vel, simple_sys = main()
     vel_z = stack(sol[vel], dims=1)[:, 3, 5]    
 end
 __BENCH__ = false
