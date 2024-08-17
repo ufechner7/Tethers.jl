@@ -7,7 +7,7 @@ using ControlPlots
 
 @with_kw mutable struct Settings @deftype Float64
     g_earth::Vector{Float64} = [0.0, 0.0, -9.81] # gravitational acceleration     [m/s²]
-    l0 = 50                                      # initial tether length             [m]
+    l0 = 50.0                                    # initial tether length             [m]
     v_ro = 2                                     # reel-out speed                  [m/s]
     d_tether = 4                                 # tether diameter                  [mm]
     rho_tether = 724                             # density of Dyneema            [kg/m³]
