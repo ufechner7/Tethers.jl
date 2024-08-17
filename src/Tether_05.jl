@@ -10,7 +10,7 @@ M0::Float64 = 0.5                               # mass per particle             
 C_SPRING::Float64 = 50                          # spring constant
 segments::Int64 = 5                             # number of tether segments         [-]
 α0 = π/10                                       # initial tether angle            [rad]
-duration = 30.0                                 # duration of the simulation        [s]
+duration = 10.0                                 # duration of the simulation        [s]
 POS0 = zeros(3, segments+1)
 VEL0 = zeros(3, segments+1)
 ACC0 = zeros(3, segments+1)
@@ -82,7 +82,9 @@ tspan = (0.0, duration)
 ts    = 0:dt:duration
 
 prob = ODEProblem(simple_sys, nothing, tspan)
-@time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
+elapsed_time = @elapsed sol = solve(prob, KenCarp4(autodiff=false); dt, abstol=tol, reltol=tol, saveat=ts)
+elapsed_time = @elapsed sol = solve(prob, KenCarp4(autodiff=false); dt, abstol=tol, reltol=tol, saveat=ts)
+println("Elapsed time: $(elapsed_time) s, speed: $(round(duration/elapsed_time)) times real-time")
 
 function play()
     dt = 0.15
