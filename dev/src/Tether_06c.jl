@@ -163,6 +163,9 @@ function main(se = Settings2(); play_=true)
         play(se, sol, pos)
     end
     println("Events: $(Int64(round(length(sol.t)- se.duration/se.dt)-1))")
+    l_tether_theoretical = se.l0 + se.v_ro * se.duration
+    println("Theoretical tether length: $(l_tether_theoretical) m")
+    println("Tether length:             $(l_tether(sol)) m")
     sol, pos, vel
 end
 
@@ -187,6 +190,15 @@ function compare(se=Settings2())
         i += 1
     end
     plot(sol1.t, [vel1, vel2]; xlabel="time [s]", ylabel="velocity [m/s]", labels=["without callbacks" "with callbacks"]) 
+end
+
+function l_tether(sol; se = Settings2())
+    l = 0.0
+    for i in 2:se.segments+1
+        seg = sol[pos][end][:,i] - sol[pos][end][:,i-1]
+        l += norm(seg)
+    end
+    l
 end
 
 if (! @isdefined __BENCH__) || __BENCH__ == false
