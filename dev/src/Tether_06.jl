@@ -69,9 +69,12 @@ for i in SEGMENTS:-1:1
         push!(eqs, total_force[:, i+1] ~ spring_force[:, i])
         push!(eqs, acc[:, i+1]         ~ G_EARTH + total_force[:, i+1] / (0.5*m_tether_particle))
         push!(eqs, total_force[:, i]   ~ spring_force[:, i-1] - spring_force[:, i])
+    elseif i == 1
+        push!(eqs, total_force[:, i]   ~ spring_force[:, i])
+        push!(eqs, acc[:, i+1]         ~ G_EARTH + total_force[:, i+1] / m_tether_particle)
     else
-        push!(eqs, total_force[:, i] ~ spring_force[:, i]- spring_force[:, i+1])
-        push!(eqs, acc[:, i+1]       ~ G_EARTH + total_force[:, i] / m_tether_particle)
+        push!(eqs, total_force[:, i] ~ spring_force[:, i-1] - spring_force[:, i])
+        push!(eqs, acc[:, i+1]       ~ G_EARTH + total_force[:, i+1] / m_tether_particle)
     end
     eqs2 = vcat(eqs2, reduce(vcat, eqs))
 end
