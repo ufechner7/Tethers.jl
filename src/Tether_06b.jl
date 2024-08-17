@@ -47,7 +47,7 @@ function model(se)
     @variables acc(t)[1:3, 1:se.segments+1]  = ACC0
     @variables segment(t)[1:3, 1:se.segments]  = SEGMENTS0
     @variables unit_vector(t)[1:3, 1:se.segments]  = UNIT_VECTORS0
-    @variables length(t) = se.l0
+    @variables len(t) = se.l0
     @variables c_spring(t) = c_spring0
     @variables damping(t) = se.damping  / l_seg
     @variables m_tether_particle(t) = mass_per_meter * l_seg
@@ -62,24 +62,24 @@ function model(se)
                 D.(vel) .~ acc)
     eqs2 = vcat(eqs1...)
 
-    for i in SEGMENTS:-1:1
+    for i in se.segments:-1:1
         eqs = [segment[:, i]      ~ pos[:, i+1] - pos[:, i],
                norm1[i]           ~ norm(segment[:, i]),
                unit_vector[:, i]  ~ -segment[:, i]/norm1[i],
                rel_vel[:, i]      ~ vel[:, i+1] - vel[:, i],
                spring_vel[i]      ~ -unit_vector[:, i] ⋅ rel_vel[:, i],
-               c_spr[i]           ~ c_spring/1.01 * (0.01 + (norm1[i] > len/SEGMENTS)),
-               spring_force[:, i] ~ (c_spr[i] * (norm1[i] - (len/SEGMENTS)) + damping * spring_vel[i]) * unit_vector[:, i]]
-        if i == SEGMENTS
+               c_spr[i]           ~ c_spring/1.01 * (0.01 + (norm1[i] > len/se.segments)),
+               spring_force[:, i] ~ (c_spr[i] * (norm1[i] - (len/se.segments)) + damping * spring_vel[i]) * unit_vector[:, i]]
+        if i == se.segments
             push!(eqs, total_force[:, i+1] ~ spring_force[:, i])
-            push!(eqs, acc[:, i+1]         ~ G_EARTH + total_force[:, i+1] / (0.5*m_tether_particle))
+            push!(eqs, acc[:, i+1]         ~ se.g_earth + total_force[:, i+1] / (0.5*m_tether_particle))
             push!(eqs, total_force[:, i]   ~ spring_force[:, i-1] - spring_force[:, i])
         elseif i == 1
             push!(eqs, total_force[:, i]   ~ spring_force[:, i])
-            push!(eqs, acc[:, i+1]         ~ G_EARTH + total_force[:, i+1] / m_tether_particle)
+            push!(eqs, acc[:, i+1]         ~ se.g_earth + total_force[:, i+1] / m_tether_particle)
         else
             push!(eqs, total_force[:, i] ~ spring_force[:, i-1] - spring_force[:, i])
-            push!(eqs, acc[:, i+1]       ~ G_EARTH + total_force[:, i+1] / m_tether_particle)
+            push!(eqs, acc[:, i+1]       ~ se.g_earth + total_force[:, i+1] / m_tether_particle)
         end
         eqs2 = vcat(eqs2, reduce(vcat, eqs))
     end
