@@ -43,31 +43,36 @@ end
 @variables spring_vel(t)[1:segments] = zeros(segments)
 @variables c_spring(t)[1:segments] = c_spring0 * ones(segments)
 @variables spring_force(t)[1:3, 1:segments] = zeros(3, segments)
-@variables total_force(t)[1:3, 1:segments] = zeros(3, segments)
+@variables total_force(t)[1:3, 1:segments+1] = zeros(3, segments+1)
 
 eqs1 = vcat(D.(pos) .~ vel,
             D.(vel) .~ acc)
-eqs2 = []
+eqs2 = vcat(eqs1...)
 for i in segments:-1:1
-    global eqs2
-    eqs2 = vcat(eqs2, segment[:, i] .~ pos[:, i+1] - pos[:, i])
-    eqs2 = vcat(eqs2, norm1[i] .~ norm(segment[:, i]))
-    eqs2 = vcat(eqs2, unit_vector[:, i] .~ -segment[:, i]/norm1[i])
-    eqs2 = vcat(eqs2, rel_vel[:, i] .~ vel[:, i+1] - vel[:, i])
-    eqs2 = vcat(eqs2, spring_vel[i] .~ -unit_vector[:, i] ⋅ rel_vel[:, i])
-    eqs2 = vcat(eqs2, c_spring[i] .~ c_spring0 * (norm1[i] > l_seg))
-    eqs2 = vcat(eqs2, spring_force[:, i] .~ (c_spring[i] * (norm1[i] - l_seg) + damping * spring_vel[i]) * unit_vector[:, i])
+    global eqs2; local eqs
+    eqs = [segment[:, i]      ~ pos[:, i+1] - pos[:, i],
+           norm1[i]           ~ norm(segment[:, i]),
+           unit_vector[:, i]  ~ -segment[:, i]/norm1[i],
+           rel_vel[:, i]      ~ vel[:, i+1] - vel[:, i],
+           spring_vel[i]      ~ -unit_vector[:, i] ⋅ rel_vel[:, i],
+           c_spring[i]           ~ c_spring0 * (norm1[i] > l_seg),
+           spring_force[:, i] ~ (c_spring[i] * (norm1[i] - l_seg) + damping * spring_vel[i]) * unit_vector[:, i]]
     if i == segments
-        eqs2 = vcat(eqs2, total_force[:, i] .~ spring_force[:, i])
+        push!(eqs, total_force[:, i+1] ~ spring_force[:, i])
+        push!(eqs, acc[:, i+1]         ~ G_EARTH + total_force[:, i+1] / (0.5 * mass))
+        push!(eqs, total_force[:, i]   ~ spring_force[:, i-1] - spring_force[:, i])
+    elseif i == 1
+        push!(eqs, total_force[:, i]   ~ spring_force[:, i])
+        push!(eqs, acc[:, i+1]         ~ G_EARTH + total_force[:, i+1] / mass)
     else
-        eqs2 = vcat(eqs2, total_force[:, i] .~ spring_force[:, i]- spring_force[:, i+1])
+        push!(eqs, total_force[:, i] ~ spring_force[:, i-1] - spring_force[:, i])
+        push!(eqs, acc[:, i+1]       ~ G_EARTH + total_force[:, i+1] / mass)
     end
-    eqs2 = vcat(eqs2, acc[:, i+1] .~ G_EARTH + total_force[:, i] / mass)
+    eqs2 = vcat(eqs2, reduce(vcat, eqs))
 end
 eqs2 = vcat(eqs2, acc[:, 1] .~ zeros(3))
-eqs = vcat(eqs1..., eqs2)
      
-@named sys = ODESystem(Symbolics.scalarize.(reduce(vcat, Symbolics.scalarize.(eqs))), t)
+@named sys = ODESystem(Symbolics.scalarize.(reduce(vcat, Symbolics.scalarize.(eqs2))), t)
 simple_sys = structural_simplify(sys)
 
 # running the simulation
