@@ -18,8 +18,8 @@ SEGMENTS0 = zeros(3, segments)
 UNIT_VECTORS0 = zeros(3, segments)
 for i in 1:segments+1
     local l0
-    l0 = -(i-1)*L0
-    v0 = (i-1)*V0/segments
+    l0 = -(i-1) * L0
+    v0 = (i-1) * V0/segments
     POS0[:, i] .= [sin(α0) * l0, 0, cos(α0) * l0]
     VEL0[:, i] .= [sin(α0) * v0, 0, cos(α0) * v0]
 end
@@ -88,11 +88,11 @@ println("Elapsed time: $(elapsed_time) s, speed: $(round(duration/elapsed_time))
 
 function play()
     dt = 0.15
-    ylim = (-1.2*segments*L0, 0.5)
-    xlim = (-segments*L0/2, segments*L0/2)
+    ylim = (-1.2 * segments * L0, 0.5)
+    xlim = (-segments * L0/2, segments * L0/2)
     z_max = 0.0
     # text position
-    xy = (segments*L0/4.2, z_max-3.0*segments/5)
+    xy = (segments * L0/4.2, z_max-3.0*segments/5)
     start = time_ns()
     i = 1
     for time in 0:dt:duration
@@ -102,7 +102,7 @@ function play()
             i += 1
         end
         plot2d(sol[pos][i], time; segments, xlim, ylim, xy)
-        wait_until(start + 0.5*time*1e9)
+        wait_until(start + 0.5 * time * 1e9)
     end
     nothing
 end
