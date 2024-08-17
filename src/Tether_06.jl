@@ -50,7 +50,7 @@ end
 @variables spring_vel(t)[1:SEGMENTS] = zeros(SEGMENTS)
 @variables c_spr(t)[1:SEGMENTS] = c_spring0 * ones(SEGMENTS)
 @variables spring_force(t)[1:3, 1:SEGMENTS] = zeros(3, SEGMENTS)
-@variables total_force(t)[1:3, 1:SEGMENTS] = zeros(3, SEGMENTS)
+@variables total_force(t)[1:3, 1:SEGMENTS+1] = zeros(3, SEGMENTS+1)
 
 eqs1 = vcat(D.(pos) .~ vel,
             D.(vel) .~ acc)
@@ -66,8 +66,9 @@ for i in SEGMENTS:-1:1
            c_spr[i]           ~ c_spring * (norm1[i] > len/SEGMENTS),
            spring_force[:, i] ~ (c_spr[i] * (norm1[i] - (len/SEGMENTS)) + damping * spring_vel[i]) * unit_vector[:, i]]
     if i == SEGMENTS
-        push!(eqs, total_force[:, i] ~ spring_force[:, i])
-        push!(eqs, acc[:, i+1]       ~ G_EARTH + total_force[:, i] / 0.5*(m_tether_particle))
+        push!(eqs, total_force[:, i+1] ~ spring_force[:, i])
+        push!(eqs, acc[:, i+1]         ~ G_EARTH + total_force[:, i+1] / (0.5*m_tether_particle))
+        push!(eqs, total_force[:, i]   ~ spring_force[:, i-1] - spring_force[:, i])
     else
         push!(eqs, total_force[:, i] ~ spring_force[:, i]- spring_force[:, i+1])
         push!(eqs, acc[:, i+1]       ~ G_EARTH + total_force[:, i] / m_tether_particle)
