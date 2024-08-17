@@ -1,5 +1,6 @@
-# Tutorial example simulating a 3D mass-spring system with a nonlinear spring (no spring forces
-# for l < l_0), n tether segments and reel-in and reel-out. 
+# Tutorial example simulating a 3D mass-spring system with a nonlinear spring (1% spring forces
+# for l < l_0), n tether segments and reel-in and reel-out. The compression stiffness is hardcoded
+# to 1% of the spring stiffness.
 using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using ControlPlots
@@ -63,7 +64,7 @@ for i in SEGMENTS:-1:1
            unit_vector[:, i]  ~ -segment[:, i]/norm1[i],
            rel_vel[:, i]      ~ vel[:, i+1] - vel[:, i],
            spring_vel[i]      ~ -unit_vector[:, i] ⋅ rel_vel[:, i],
-           c_spr[i]           ~ c_spring * (norm1[i] > len/SEGMENTS),
+           c_spr[i]           ~ c_spring/1.01 * (0.01 + (norm1[i] > len/SEGMENTS)),
            spring_force[:, i] ~ (c_spr[i] * (norm1[i] - (len/SEGMENTS)) + damping * spring_vel[i]) * unit_vector[:, i]]
     if i == SEGMENTS
         push!(eqs, total_force[:, i+1] ~ spring_force[:, i])
