@@ -46,7 +46,7 @@ eqs1 = vcat(D.(pos) .~ vel,
             D.(vel) .~ acc)
 eqs2 = vcat(eqs1...)
 for i in 1:segments
-    global eqs2
+    global eqs2; local eqs
     eqs = [segment[:, i]      ~ pos[:, i+1] - pos[:, i],
            norm1[i]           ~ norm(segment[:, i]),
            unit_vector[:, i]  ~ -segment[:, i]/norm1[i],
