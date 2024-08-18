@@ -255,8 +255,8 @@ for i in 1:(segments+1)
     eqs2 = vcat(eqs2, reduce(vcat, eqs))
 end
 ```
-We loop over the particles. The first and the last particle only one spring force is acting. 
-On the other particles two spring forces are acting in the opposite direction. Because the first particle is fixed
+We loop over the particles. On the first and the last particle only one spring force is acting. 
+On the other particles, two spring forces are acting in the opposite direction. Because the first particle is fixed
 we set its acceleration to zero.
 
 **Julia code:** [Tether_05.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_05.jl)
@@ -406,4 +406,6 @@ The first version calls
 - the model with fixed endpoints and zero reel-out speed
 - the steady-state solver
 - and then the model with the initial positions (POS0) found by the steady-state solver, using the original values of `fix_p1`, `fix_p2` and the original reel-out speed.
+
+![Catenary](docs/images/Tether_08.gif)
 
