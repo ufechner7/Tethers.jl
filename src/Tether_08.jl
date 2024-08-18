@@ -42,7 +42,7 @@ function calc_initial_state(se; p1, p2)
     POS0 = zeros(3, se.segments+1)
     VEL0 = zeros(3, se.segments+1)
     ACC0 = zeros(3, se.segments+1)
-    # start with a linear interpolation between p1 and p2
+    # use a linear interpolation between p1 and p2 for the intermediate points
     for i in 1:se.segments+1
         Δ = (p2-p1) / se.segments
         POS0[:, i] .= p1 + (i-1) * Δ
