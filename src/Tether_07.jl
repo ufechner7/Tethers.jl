@@ -100,13 +100,13 @@ function model(se)
         eqs = []
         if i == se.segments+1
             push!(eqs, total_force[:, i] ~ spring_force[:, i-1] + half_drag_force[:, i-1])
-            push!(eqs, acc[:, i]         ~ se.g_earth + total_force[:, i] / (0.5*m_tether_particle))
+            push!(eqs, acc[:, i]         ~ se.g_earth + total_force[:, i] / (0.5 * m_tether_particle))
         elseif i == 1
             push!(eqs, total_force[:, i] ~ spring_force[:, i] + half_drag_force[:, i])
             push!(eqs, acc[:, i]         ~ zeros(3))
         else
             push!(eqs, total_force[:, i] ~ spring_force[:, i-1] - spring_force[:, i] 
-                                           + half_drag_force[:,i-1] + half_drag_force[:,i])
+                                           + half_drag_force[:, i-1] + half_drag_force[:, i])
             push!(eqs, acc[:, i]         ~ se.g_earth + total_force[:, i] / m_tether_particle)
         end
         eqs2 = vcat(eqs2, reduce(vcat, eqs))
@@ -129,8 +129,8 @@ function simulate(se, simple_sys)
     tspan = (0.0, se.duration)
     ts    = 0:dt:se.duration
     prob = ODEProblem(simple_sys, nothing, tspan)
-    elapsed_time = @elapsed sol = solve(prob, KenCarp4(autodiff=false), dt=dt, abstol=tol, reltol=tol, saveat=ts)
-    elapsed_time = @elapsed sol = solve(prob, KenCarp4(autodiff=false), dt=dt, abstol=tol, reltol=tol, saveat=ts)
+    elapsed_time = @elapsed sol = solve(prob, KenCarp4(autodiff=false); dt, abstol=tol, reltol=tol, saveat=ts)
+    elapsed_time = @elapsed sol = solve(prob, KenCarp4(autodiff=false); dt, abstol=tol, reltol=tol, saveat=ts)
     sol, elapsed_time
 end
 
