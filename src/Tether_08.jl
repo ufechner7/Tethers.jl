@@ -73,7 +73,7 @@ function model(se; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
     tspan = (0.0, se.duration)
     prob = ODEProblem(simple_sys, nothing, tspan)
     prob1 = SteadyStateProblem(prob)
-    @time sol1 = solve(prob1, DynamicSS(KenCarp4(autodiff=false)))
+    sol1 = solve(prob1, DynamicSS(KenCarp4(autodiff=false)))
     POS0 = sol1[pos]
     # create the real model
     se.v_ro = v_ro
