@@ -31,9 +31,9 @@ def res1(t, y, yd):
     
     for i in range(SEGMENTS-2, -1, -1):    # count down from segments-2 to zero
         # 1. calculate the force of the lowest spring (the spring next to the kite)   
-        res_3 =  y1[2*i+4]  - yd1[2*i+3]  # the derivative of the position of mass1 must be equal to its velocity
-        rel_vel1 = yd1[2*i+3] - yd1[2*i+1] # calcultate the relative velocity of mass2 with respect to mass 1 
-        segment1 = y1[2*i+3] - y1[2*i+1]  # calculate the vector from mass1 to mass0
+        res_3 =  y1[2*i+4]  - yd1[2*i+3]   # the derivative of the position of mass1 must be equal to its velocity
+        rel_vel1 = yd1[2*i+3] - yd1[2*i+1] # calculate the relative velocity of mass2 with respect to mass 1 
+        segment1 = y1[2*i+3] - y1[2*i+1]   # calculate the vector from mass1 to mass0
         force = C_SPRING * (np.linalg.norm(segment1) - L_0) * segment1 / np.linalg.norm(segment1) \
                          + DAMPING * rel_vel1 
                              
@@ -46,9 +46,9 @@ def res1(t, y, yd):
         RESULT[2*i+4] = res_4                       
 
     # 3. calculate the force of the spring above    
-    res_1 = y1[2]  - yd1[1]  # the derivative of the position of mass1 must be equal to its velocity
-    rel_vel = yd1[1] - yd1[0] # calcultate the relative velocity of mass1 with respect to mass 0 
-    segment = y1[1] - y1[0]  # calculate the vector from mass1 to mass0
+    res_1 = y1[2]  - yd1[1]   # the derivative of the position of mass1 must be equal to its velocity
+    rel_vel = yd1[1] - yd1[0] # calculate the relative velocity of mass1 with respect to mass 0 
+    segment = y1[1] - y1[0]   # calculate the vector from mass1 to mass0
     force = C_SPRING * (np.linalg.norm(segment) - L_0) * segment / np.linalg.norm(segment) \
                      + DAMPING * rel_vel    
 
@@ -93,10 +93,10 @@ def run_example():
     model = Implicit_Problem(res1, y0, yd0, t0) # Create an Assimulo problem
     model.name = 'Mass-Spring' # Specifies the name of problem (optional)
 
-    sim = Radau5DAE(model)        # Create the IDA solver
+    sim = Radau5DAE(model)  # Create the Radau solver
         
     tfinal = 10.0           # Specify the final time
-    ncp    = 4000            # Number of communcation points (number of return points)
+    ncp    = 4000           # Number of communcation points (number of return points)
     
     # Use the .simulate method to simulate and provide the final time and ncp (optional)    
     time, y, yd = sim.simulate(tfinal, ncp) 
@@ -105,8 +105,6 @@ def run_example():
     pos_z1 = y[:,5]
     pos_z2 = y[:,5+6]   
     pos_z3 = y[:,5+2*6]  
-
-
 
     plt.ax1 = plt.subplot(111) 
     plt.ax1.set_xlabel('time [s]')
