@@ -410,21 +410,20 @@ The first version calls
 The body of this function is defined as:
 
 ```julia
-    # straight line approximation of the tether
-    POS0, VEL0, ACC0 = calc_initial_state(se; p1, p2)
-    # find steady state
-    v_ro = se.v_ro      # save the reel-out speed
-    se.v_ro = 0         # v_ro must be zero, otherwise finding the steady state is not possible
-    simple_sys, pos, vel, len, c_spr =
-        model(se, p1, p2, true, true, POS0, VEL0, ACC0)
-    tspan = (0.0, se.duration)
-    prob = ODEProblem(simple_sys, nothing, tspan)
-    prob1 = SteadyStateProblem(prob)
-    sol1 = solve(prob1, DynamicSS(KenCarp4(autodiff=false)))
-    POS0 = sol1[pos]
-    # create the real model
-    se.v_ro = v_ro
-    model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0, ACC0)
+# straight line approximation of the tether
+POS0, VEL0, ACC0 = calc_initial_state(se; p1, p2)
+# find steady state
+v_ro = se.v_ro      # save the reel-out speed
+se.v_ro = 0         # v_ro must be zero, otherwise finding the steady state is not possible
+simple_sys, pos, = model(se, p1, p2, true, true, POS0, VEL0, ACC0)
+tspan = (0.0, se.duration)
+prob = ODEProblem(simple_sys, nothing, tspan)
+prob1 = SteadyStateProblem(prob)
+sol1 = solve(prob1, DynamicSS(KenCarp4(autodiff=false)))
+POS0 = sol1[pos]
+# create the real model
+se.v_ro = v_ro
+model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0, ACC0)
 ```
 
 ![Catenary](docs/images/Tether_08.gif)
