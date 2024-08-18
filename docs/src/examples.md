@@ -409,3 +409,5 @@ The first version calls
 
 ![Catenary](docs/images/Tether_08.gif)
 
+In the video, you can at the beginning nicely see the catenary line which is a result of the steady state solver, and then the normal dynamic simulation, which results in a line that is pushed to the right by the wind.
+
