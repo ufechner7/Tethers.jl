@@ -49,7 +49,7 @@ end
 eqs1 = vcat(D.(pos) .~ vel,
             D.(vel) .~ acc)
 eqs2 = vcat(eqs1...)
-# loop over all segments to calculate the spring and drag forces
+# loop over all segments to calculate the spring forces
 for i in segments:-1:1
     global eqs2; local eqs
     eqs = [segment[:, i]      ~ pos[:, i+1] - pos[:, i],
