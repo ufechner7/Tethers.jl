@@ -46,6 +46,7 @@ cb = ContinuousCallback(condition, affect!)
 
 prob = ODEProblem(simple_sys, nothing, tspan)
 sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts, callback = cb)
+@time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts, callback = cb)
 
 # plotting the result
 X = sol.t
