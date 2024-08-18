@@ -11,7 +11,7 @@ a full segmented tether model with real-out and aerodynamic drag attached.
 | Tether_05  | [Segmented tether with correct force distribution](@ref)  | Learn how to distribute the spring force over two masses   |
 | Tether_06  | [Multi-segment tether reeling out](@ref)  | Learn to model a tether with changing unstretched length |
 | Tether_07  | [Segmented tether with aerodynamic drag](@ref) | Learn how to model tether drag |
-| Tether_08  | [Tether with any endpoints](@ref) | Learn how to use a steady state solver |
+| Tether_08  | [Tether with arbitrary endpoints](@ref) | Learn how to use a steady state solver |
 
 **Nomenclature:**
 - ODE: Ordinary differential equations
@@ -383,10 +383,10 @@ In the following for loop the spring and drag forces are applied to the particle
 If you run the example you can see that the aerodynamic drag adds a lot of damping, the oscillations nearly die out in
 about 30s.
 
-## Tether with any endpoints
+## Tether with arbitrary endpoints
 This example is the same as the last one, but you can freely choose:
 - both end-points
-- if the end-points are fixed or not
+- if the end-points are fixed or if they just define the initial position
 
 A steady-state solver is used to solve the initial tether shape, based on the endpoints.
 If both endpoints are fixed you get a catenary line, deformed by the wind.
