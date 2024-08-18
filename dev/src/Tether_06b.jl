@@ -58,11 +58,13 @@ function model(se)
     @variables spring_force(t)[1:3, 1:se.segments] = zeros(3, se.segments)
     @variables total_force(t)[1:3, 1:se.segments+1] = zeros(3, se.segments+1)
 
+    # basic differential equations
     eqs1 = vcat(D.(pos) .~ vel,
                 D.(vel) .~ acc)
     eqs2 = vcat(eqs1...)
 
-    for i in se.segments:-1:1
+    # loop over all segments to calculate the spring forces
+    for i in 1:se.segments
         eqs = [segment[:, i]      ~ pos[:, i+1] - pos[:, i],
                norm1[i]           ~ norm(segment[:, i]),
                unit_vector[:, i]  ~ -segment[:, i]/norm1[i],
@@ -70,22 +72,25 @@ function model(se)
                spring_vel[i]      ~ -unit_vector[:, i] ⋅ rel_vel[:, i],
                c_spr[i]           ~ c_spring/1.01 * (0.01 + (norm1[i] > len/se.segments)),
                spring_force[:, i] ~ (c_spr[i] * (norm1[i] - (len/se.segments)) + damping * spring_vel[i]) * unit_vector[:, i]]
-        if i == se.segments
-            push!(eqs, total_force[:, i+1] ~ spring_force[:, i])
-            push!(eqs, acc[:, i+1]         ~ se.g_earth + total_force[:, i+1] / (0.5*m_tether_particle))
-            push!(eqs, total_force[:, i]   ~ spring_force[:, i-1] - spring_force[:, i])
+        eqs2 = vcat(eqs2, reduce(vcat, eqs))
+    end
+    # loop over all tether particles to apply the forces and calculate the accelerations
+    for i in 1:(se.segments+1)
+        eqs = []
+        if i == se.segments+1
+            push!(eqs, total_force[:, i] ~ spring_force[:, i-1])
+            push!(eqs, acc[:, i]         ~ se.g_earth + total_force[:, i] / (0.5 * m_tether_particle))
         elseif i == 1
-            push!(eqs, total_force[:, i]   ~ spring_force[:, i])
-            push!(eqs, acc[:, i+1]         ~ se.g_earth + total_force[:, i+1] / m_tether_particle)
+            push!(eqs, total_force[:, i] ~ spring_force[:, i])
+            push!(eqs, acc[:, i]         ~ zeros(3))
         else
-            push!(eqs, total_force[:, i] ~ spring_force[:, i-1] - spring_force[:, i])
-            push!(eqs, acc[:, i+1]       ~ se.g_earth + total_force[:, i+1] / m_tether_particle)
+            push!(eqs, total_force[:, i] ~ spring_force[:, i-1] - spring_force[:, i] )
+            push!(eqs, acc[:, i]         ~ se.g_earth + total_force[:, i] / m_tether_particle)
         end
         eqs2 = vcat(eqs2, reduce(vcat, eqs))
     end
-
-    eqs = [acc[:, 1]         .~ zeros(3),
-           len               .~ se.l0 + se.v_ro*t,
+    # scalar equations
+    eqs = [len               .~ se.l0 + se.v_ro*t,
            c_spring          .~ se.c_spring / (len/se.segments),
            m_tether_particle .~ mass_per_meter * (len/se.segments),
            damping           .~ se.damping  / (len/se.segments)]
@@ -102,8 +107,8 @@ function simulate(se, simple_sys)
     tspan = (0.0, se.duration)
     ts    = 0:dt:se.duration
     prob = ODEProblem(simple_sys, nothing, tspan)
-    @time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
-    sol
+    elapsed_time = @elapsed sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
+    sol, elapsed_time
 end
 
 function play(se, sol, pos)
@@ -139,8 +144,10 @@ end
 function main()
     se = Settings()
     simple_sys, pos, vel = model(se)
-    sol = simulate(se, simple_sys)
+    sol, elapsed_time = simulate(se, simple_sys)
     play(se, sol, pos)
+    println("Elapsed time: $(elapsed_time) s, speed: $(round(se.duration/elapsed_time)) times real-time")
+    println("Number of evaluations per step: ", round(sol.stats.nf/(se.duration/0.02), digits=1))
 end
 
 main()
