@@ -275,16 +275,8 @@ m_tether_particle ~ mass_per_meter * (length/segments)
 c_spring          ~ C_SPRING / (length/segments)
 damping           ~ DAMPING  / (length/segments)
 ```
-where `L0` is the unstretched length of the complete tether at $t=0$. In addition, the mass at the end of the tether is corrected to half of the mass of the other tether particles because only on one side of it a tether segment is attached:
-```julia
-    if i == segments
-        eqs2 = vcat(eqs2, total_force[:, i] ~ spring_force[:, i])
-        eqs2 = vcat(eqs2, acc[:, i+1] .~ G_EARTH + total_force[:, i] / 0.5*(m_tether_particle))
-    else
-        eqs2 = vcat(eqs2, total_force[:, i] ~ spring_force[:, i]- spring_force[:, i+1])
-        eqs2 = vcat(eqs2, acc[:, i+1] .~ G_EARTH + total_force[:, i] / m_tether_particle)
-    end
-```
+where `L0` is the unstretched length of the complete tether at $t=0$. 
+
 **Julia code:** [Tether_06.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_06.jl)
 
 The IDA solver, used for Python has a very high numerical damping. Therefore we had to multiply
@@ -360,7 +352,7 @@ In the script [Tether_07.jl](https://github.com/ufechner7/Tethers.jl/blob/main/s
 
 The following lines calculate the tether drag and add half of the drag force to the two particles at the end of each segment:
 ```julia
-eqs2 = vcat(eqs2, v_app_perp[:, i] .~ v_apparent[:, i] - (v_apparent[:, i] ⋅ unit_vector[:, i]) .* unit_vector[:, i])
-eqs2 = vcat(eqs2, norm_v_app[i] ~ norm(v_app_perp[:, i]))
-eqs2 = vcat(eqs2, half_drag_force[:, i] .~ (0.25 * se.rho * se.cd_tether * norm_v_app[i] * (norm1[i]*se.d_tether/1000.0)) .* v_app_perp[:, i])
+    v_app_perp[:, i]   ~ v_apparent[:, i] - (v_apparent[:, i] ⋅ unit_vector[:, i]) .* unit_vector[:, i],
+    norm_v_app[i]      ~ norm(v_app_perp[:, i]),
+    half_drag_force[:, i] .~ 0.25 * se.rho * se.cd_tether * norm_v_app[i] * (norm1[i]*se.d_tether/1000.0)
 ```
