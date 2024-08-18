@@ -170,8 +170,8 @@ function main()
     simple_sys, pos, vel, len, c_spr = model(se)
     sol, elapsed_time = simulate(se, simple_sys)
     play(se, sol, pos)
-    println("Elapsed time: ", elapsed_time)
-    println("Number of evaluations per step: ", round(sol.stats.nf/(se.duration/0.02)))
+    println("Elapsed time: $(elapsed_time) s, speed: $(round(se.duration/elapsed_time)) times real-time")
+    println("Number of evaluations per step: ", round(sol.stats.nf/(se.duration/0.02), digits=1))
     sol, pos, vel, simple_sys
 end
 
