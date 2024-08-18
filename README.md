@@ -18,7 +18,9 @@ a winch are even more challenging to model than constant-length tethers.
 
 A series of examples, from a simple falling mass towards a tether model, consisting of point masses connected by spring damper elements with the support of reel-out and reel-in and aerodynamic drag attached shall be presented.
 
--- WORK IN PROGRESS --
+#### Status
+- the Julia examples are in reasonable good quality and well documented and tested
+- the Python examples need some more work
 
 ## Installation
 
