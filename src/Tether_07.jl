@@ -155,7 +155,7 @@ function play(se, sol, pos)
             ControlPlots.plt.savefig("video/"*"img-"*lpad(j,4,"0"))
         end
         j += 1
-        wait_until(start + 0.5*time*1e9)
+        wait_until(start + 0.5 * time * 1e9)
     end
     if se.save
         include("export_gif.jl")
