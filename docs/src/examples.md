@@ -11,6 +11,7 @@ a full segmented tether model with real-out and aerodynamic drag attached.
 | Tether_05  | [Segmented tether with correct force distribution](@ref)  | Learn how to distribute the spring force over two masses   |
 | Tether_06  | [Multi-segment tether reeling out](@ref)  | Learn to model a tether with changing unstretched length |
 | Tether_07  | [Segmented tether with aerodynamic drag](@ref) | Learn how to model tether drag |
+| Tether_08  | [Tether with any endpoints](@ref) | Learn how to use a steady state solver |
 
 **Nomenclature:**
 - ODE: Ordinary differential equations
@@ -381,3 +382,28 @@ In the following for loop the spring and drag forces are applied to the particle
 ```
 If you run the example you can see that the aerodynamic drag adds a lot of damping, the oscillations nearly die out in
 about 30s.
+
+## Tether with any endpoints
+This example is the same as the last one, but you can freely choose:
+- both end-points
+- if the end-points are fixed or not
+
+A steady-state solver is used to solve the initial tether shape, based on the endpoints.
+If both endpoints are fixed you get a catenary line, deformed by the wind.
+This is useful for model verification.
+
+See: [Tether_08.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_08.jl)
+
+Two versions of the model are implemented, with the signatures:
+```
+function model(se; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
+```
+and
+```
+function model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0, ACC0)
+```
+The first version calls
+- the model with fixed endpoints and zero reel-out speed
+- the steady-state solver
+- and then the model with the initial positions (POS0) found by the steady-state solver, using the original values of fix_p1, fix_p2 and the original reel-out speed.
+
