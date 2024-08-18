@@ -2,6 +2,7 @@
 # for l < l_0), n tether segments, tether drag and reel-in and reel-out. 
 # New feature: A steady state solver shall be used to allow different initial conditions.
 using ModelingToolkit, OrdinaryDiffEq, SteadyStateDiffEq, LinearAlgebra, Timers, Parameters
+tic()
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using ControlPlots
 
@@ -66,20 +67,16 @@ function model(se; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
     POS0, VEL0, ACC0, SEGMENTS0, UNIT_VECTORS0 = calc_initial_state(se; p1, p2)
     # find steady state
     v_ro = se.v_ro      # save the reel-out speed
-    fix_p2_old, fix_p2_old = fix_p2, fix_p1 # save the old value of fix_p2 and fix_p1
-    fix_p2 = true, fix_p1 = true            # fix both points
     se.v_ro = 0
     simple_sys, pos, vel, len, c_spr =
-        model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0, ACC0, SEGMENTS0, UNIT_VECTORS0)
+        model(se, p1, p2, true, true, POS0, VEL0, ACC0, SEGMENTS0, UNIT_VECTORS0)
     tspan = (0.0, se.duration)
     prob = ODEProblem(simple_sys, nothing, tspan)
     prob1 = SteadyStateProblem(prob)
-    @time sol1 = solve(prob1, DynamicSS(KenCarp4(autodiff=false)))
+    sol1 = solve(prob1, DynamicSS(KenCarp4(autodiff=false)))
     POS0 = sol1[pos]
     # create the real model
     se.v_ro = v_ro
-    fix_p2 = fix_p2_old
-    fix_p1 = fix_p1_old
     model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0, ACC0, SEGMENTS0, UNIT_VECTORS0)
 end
 function model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0, ACC0, SEGMENTS0, UNIT_VECTORS0)
@@ -170,6 +167,7 @@ function simulate(se, simple_sys)
     tspan = (0.0, se.duration)
     ts    = 0:dt:se.duration
     prob = ODEProblem(simple_sys, nothing, tspan)
+    toc()
     elapsed_time = @elapsed sol = solve(prob, KenCarp4(autodiff=false); dt, abstol=tol, reltol=tol, saveat=ts)
     elapsed_time = @elapsed sol = solve(prob, KenCarp4(autodiff=false); dt, abstol=tol, reltol=tol, saveat=ts)
     sol, elapsed_time
