@@ -355,9 +355,29 @@ end
 ## Segmented tether with aerodynamic drag
 In the script [Tether_07.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_07.jl), the tether drag has been added.
 
-The following lines calculate the tether drag and add half of the drag force to the two particles at the end of each segment:
+The following lines calculate the tether drag force:
 ```julia
 v_app_perp[:, i]   ~ v_apparent[:, i] - (v_apparent[:, i] ⋅ unit_vector[:, i]) .* unit_vector[:, i],
 norm_v_app[i]      ~ norm(v_app_perp[:, i]),
-half_drag_force[:, i] .~ 0.25 * se.rho * se.cd_tether * norm_v_app[i] * (norm1[i]*se.d_tether/1000.0)
+half_drag_force[:, i] ~ 0.25 * se.rho * se.cd_tether * norm_v_app[i] * (norm1[i]*se.d_tether/1000.0)
 ```
+In the following for loop the spring and drag forces are applied to the particles:
+```julia
+    for i in 1:(se.segments+1)
+        eqs = []
+        if i == se.segments+1
+            push!(eqs, total_force[:, i] ~ spring_force[:, i-1] + half_drag_force[:, i-1])
+            push!(eqs, acc[:, i]         ~ se.g_earth + total_force[:, i] / (0.5 * m_tether_particle))
+        elseif i == 1
+            push!(eqs, total_force[:, i] ~ spring_force[:, i] + half_drag_force[:, i])
+            push!(eqs, acc[:, i]         ~ zeros(3))
+        else
+            push!(eqs, total_force[:, i] ~ spring_force[:, i-1] - spring_force[:, i] 
+                                           + half_drag_force[:, i-1] + half_drag_force[:, i])
+            push!(eqs, acc[:, i]         ~ se.g_earth + total_force[:, i] / m_tether_particle)
+        end
+        eqs2 = vcat(eqs2, reduce(vcat, eqs))
+    end
+```
+If you run the example you can see that the aerodynamic drag adds a lot of damping, the oscillations nearly die out in
+about 30s.
