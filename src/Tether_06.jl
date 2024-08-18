@@ -56,7 +56,7 @@ end
 eqs1 = vcat(D.(pos) .~ vel,
             D.(vel) .~ acc)
 eqs2 = vcat(eqs1...)
-
+# loop over all segments to calculate the spring forces
 for i in SEGMENTS:-1:1
     global eqs2; local eqs
     eqs = [segment[:, i]      ~ pos[:, i+1] - pos[:, i],
@@ -66,22 +66,26 @@ for i in SEGMENTS:-1:1
            spring_vel[i]      ~ -unit_vector[:, i] ⋅ rel_vel[:, i],
            c_spr[i]           ~ c_spring/1.01 * (0.01 + (norm1[i] > len/SEGMENTS)),
            spring_force[:, i] ~ (c_spr[i] * (norm1[i] - (len/SEGMENTS)) + damping * spring_vel[i]) * unit_vector[:, i]]
-    if i == SEGMENTS
-        push!(eqs, total_force[:, i+1] ~ spring_force[:, i])
-        push!(eqs, acc[:, i+1]         ~ G_EARTH + total_force[:, i+1] / (0.5*m_tether_particle))
-        push!(eqs, total_force[:, i]   ~ spring_force[:, i-1] - spring_force[:, i])
+    eqs2 = vcat(eqs2, reduce(vcat, eqs))
+end
+# loop over all tether particles to apply the forces and calculate the accelerations
+for i in 1:(SEGMENTS+1)
+    global eqs2; local eqs
+    eqs = []
+    if i == SEGMENTS+1
+        push!(eqs, total_force[:, i] ~ spring_force[:, i-1])
+        push!(eqs, acc[:, i]         ~ G_EARTH + total_force[:, i] / (0.5 * m_tether_particle))
     elseif i == 1
-        push!(eqs, total_force[:, i]   ~ spring_force[:, i])
-        push!(eqs, acc[:, i+1]         ~ G_EARTH + total_force[:, i+1] / m_tether_particle)
+        push!(eqs, total_force[:, i] ~ spring_force[:, i])
+        push!(eqs, acc[:, i]         ~ zeros(3))
     else
         push!(eqs, total_force[:, i] ~ spring_force[:, i-1] - spring_force[:, i])
-        push!(eqs, acc[:, i+1]       ~ G_EARTH + total_force[:, i+1] / m_tether_particle)
+        push!(eqs, acc[:, i]         ~ G_EARTH + total_force[:, i] / m_tether_particle)
     end
     eqs2 = vcat(eqs2, reduce(vcat, eqs))
 end
 
-eqs = [acc[:, 1]         .~ zeros(3),
-       len               .~ L0 + V_RO*t,
+eqs = [len               .~ L0 + V_RO*t,
        c_spring          .~ C_SPRING / (len/SEGMENTS),
        m_tether_particle .~ mass_per_meter * (len/SEGMENTS),
        damping           .~ DAMPING  / (len/SEGMENTS)]
