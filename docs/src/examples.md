@@ -321,7 +321,6 @@ Then we split the code into the functions:
 function calc_initial_state(se)                          # determine the initial state
 function model(se)                                       # create the model
 function simulate(se, simple_sys)                        # run the simulation
-function plot2d(se, sol, pos, reltime, line, sc, txt, j) # plot the state for one point in time
 function play(se, sol, pos)                              # play the simulation result, the solution
 function main()                                          # the main program, calling all the other functions
 ```
