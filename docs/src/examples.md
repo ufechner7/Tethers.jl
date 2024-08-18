@@ -237,21 +237,26 @@ The first example of such a model is the script [Tether_04.jl](https://github.co
 
 In the script [Tether_05.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_05.jl#L61), the spring force is distributed correctly on the two masses attached to the spring as shown here:
 ```julia
-    if i == segments
-        push!(eqs, total_force[:, i+1] ~ spring_force[:, i])
-        push!(eqs, acc[:, i+1]         ~ G_EARTH + total_force[:, i+1] / (0.5 * mass))
-        push!(eqs, total_force[:, i]   ~ spring_force[:, i-1] - spring_force[:, i])
+# loop over all tether particles to apply the forces and calculate the accelerations
+for i in 1:(segments+1)
+    global eqs2; local eqs
+    eqs = []
+    if i == segments+1
+        push!(eqs, total_force[:, i] ~ spring_force[:, i-1])
+        push!(eqs, acc[:, i]         ~ G_EARTH + total_force[:, i] / (0.5 * mass))
     elseif i == 1
-        push!(eqs, total_force[:, i]   ~ spring_force[:, i])
-        push!(eqs, acc[:, i+1]         ~ G_EARTH + total_force[:, i+1] / mass)
+        push!(eqs, total_force[:, i] ~ spring_force[:, i])
+        push!(eqs, acc[:, i]         ~ zeros(3))
     else
         push!(eqs, total_force[:, i] ~ spring_force[:, i-1] - spring_force[:, i])
-        push!(eqs, acc[:, i+1]       ~ G_EARTH + total_force[:, i+1] / mass)
+        push!(eqs, acc[:, i]         ~ G_EARTH + total_force[:, i] / mass)
     end
+    eqs2 = vcat(eqs2, reduce(vcat, eqs))
+end
 ```
-We loop backward over the segments. For the last segment we calculate the force at both of its particles, 
-starting with the last particle, because on the last particle, only one force is acting. 
-On particle $n-1$ two spring forces are acting in the opposite direction.
+We loop over the particles. The first and the last particle only one spring force is acting. 
+On the other particles two spring forces are acting in the opposite direction. Because the first particle is fixed
+we set its acceleration to zero.
 
 **Julia code:** [Tether_05.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_05.jl)
  
