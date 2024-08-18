@@ -136,7 +136,7 @@ end
 
 function play(se, sol, pos)
     dt = 0.151
-    ylim = (-1.2*(se.l0+se.v_ro*se.duration), 0.5)
+    ylim = (-1.2 * (se.l0 + se.v_ro*se.duration), 0.5)
     xlim = (-se.l0/2, se.l0/2)
     mkpath("video")
     z_max = 0.0
@@ -152,7 +152,7 @@ function play(se, sol, pos)
         end
         plot2d(sol[pos][i], time; segments=se.segments, xlim, ylim, xy)
         if se.save
-            ControlPlots.plt.savefig("video/"*"img-"*lpad(j,4,"0"))
+            ControlPlots.plt.savefig("video/"*"img-"*lpad(j, 4, "0"))
         end
         j += 1
         wait_until(start + 0.5 * time * 1e9)
