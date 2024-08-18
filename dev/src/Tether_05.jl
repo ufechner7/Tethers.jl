@@ -45,9 +45,11 @@ end
 @variables spring_force(t)[1:3, 1:segments] = zeros(3, segments)
 @variables total_force(t)[1:3, 1:segments+1] = zeros(3, segments+1)
 
+# basic differential equations
 eqs1 = vcat(D.(pos) .~ vel,
             D.(vel) .~ acc)
 eqs2 = vcat(eqs1...)
+# loop over all segments to calculate the spring and drag forces
 for i in segments:-1:1
     global eqs2; local eqs
     eqs = [segment[:, i]      ~ pos[:, i+1] - pos[:, i],
@@ -57,20 +59,24 @@ for i in segments:-1:1
            spring_vel[i]      ~ -unit_vector[:, i] ⋅ rel_vel[:, i],
            c_spring[i]           ~ c_spring0 * (norm1[i] > l_seg),
            spring_force[:, i] ~ (c_spring[i] * (norm1[i] - l_seg) + damping * spring_vel[i]) * unit_vector[:, i]]
-    if i == segments
-        push!(eqs, total_force[:, i+1] ~ spring_force[:, i])
-        push!(eqs, acc[:, i+1]         ~ G_EARTH + total_force[:, i+1] / (0.5 * mass))
-        push!(eqs, total_force[:, i]   ~ spring_force[:, i-1] - spring_force[:, i])
+    eqs2 = vcat(eqs2, reduce(vcat, eqs))
+end
+# loop over all tether particles to apply the forces and calculate the accelerations
+for i in 1:(segments+1)
+    global eqs2; local eqs
+    eqs = []
+    if i == segments+1
+        push!(eqs, total_force[:, i] ~ spring_force[:, i-1])
+        push!(eqs, acc[:, i]         ~ G_EARTH + total_force[:, i] / (0.5 * mass))
     elseif i == 1
-        push!(eqs, total_force[:, i]   ~ spring_force[:, i])
-        push!(eqs, acc[:, i+1]         ~ G_EARTH + total_force[:, i+1] / mass)
+        push!(eqs, total_force[:, i] ~ spring_force[:, i])
+        push!(eqs, acc[:, i]         ~ zeros(3))
     else
         push!(eqs, total_force[:, i] ~ spring_force[:, i-1] - spring_force[:, i])
-        push!(eqs, acc[:, i+1]       ~ G_EARTH + total_force[:, i+1] / mass)
+        push!(eqs, acc[:, i]         ~ G_EARTH + total_force[:, i] / mass)
     end
     eqs2 = vcat(eqs2, reduce(vcat, eqs))
 end
-eqs2 = vcat(eqs2, acc[:, 1] .~ zeros(3))
      
 @named sys = ODESystem(Symbolics.scalarize.(reduce(vcat, Symbolics.scalarize.(eqs2))), t)
 simple_sys = structural_simplify(sys)
