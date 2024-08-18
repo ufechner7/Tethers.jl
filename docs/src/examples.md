@@ -357,7 +357,7 @@ In the script [Tether_07.jl](https://github.com/ufechner7/Tethers.jl/blob/main/s
 
 The following lines calculate the tether drag and add half of the drag force to the two particles at the end of each segment:
 ```julia
-    v_app_perp[:, i]   ~ v_apparent[:, i] - (v_apparent[:, i] ⋅ unit_vector[:, i]) .* unit_vector[:, i],
-    norm_v_app[i]      ~ norm(v_app_perp[:, i]),
-    half_drag_force[:, i] .~ 0.25 * se.rho * se.cd_tether * norm_v_app[i] * (norm1[i]*se.d_tether/1000.0)
+v_app_perp[:, i]   ~ v_apparent[:, i] - (v_apparent[:, i] ⋅ unit_vector[:, i]) .* unit_vector[:, i],
+norm_v_app[i]      ~ norm(v_app_perp[:, i]),
+half_drag_force[:, i] .~ 0.25 * se.rho * se.cd_tether * norm_v_app[i] * (norm1[i]*se.d_tether/1000.0)
 ```
