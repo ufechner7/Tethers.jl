@@ -405,5 +405,5 @@ function model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0, ACC0)
 The first version calls
 - the model with fixed endpoints and zero reel-out speed
 - the steady-state solver
-- and then the model with the initial positions (POS0) found by the steady-state solver, using the original values of fix_p1, fix_p2 and the original reel-out speed.
+- and then the model with the initial positions (POS0) found by the steady-state solver, using the original values of `fix_p1`, `fix_p2` and the original reel-out speed.
 
