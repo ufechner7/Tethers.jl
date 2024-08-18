@@ -53,6 +53,7 @@ end
 @variables spring_force(t)[1:3, 1:SEGMENTS] = zeros(3, SEGMENTS)
 @variables total_force(t)[1:3, 1:SEGMENTS+1] = zeros(3, SEGMENTS+1)
 
+# basic differential equations
 eqs1 = vcat(D.(pos) .~ vel,
             D.(vel) .~ acc)
 eqs2 = vcat(eqs1...)
