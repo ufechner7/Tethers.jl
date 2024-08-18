@@ -1,7 +1,7 @@
 # Tutorial example simulating a 3D mass-spring system with a nonlinear spring (1% stiffnes
 # for l < l_0), n tether segments, tether drag and reel-in and reel-out. 
 # New feature: A steady state solver shall be used to allow different initial conditions.
-using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, Parameters
+using ModelingToolkit, OrdinaryDiffEq, SteadyStateDiffEq, LinearAlgebra, Timers, Parameters
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using ControlPlots
 
@@ -11,7 +11,7 @@ using ControlPlots
     rho = 1.225
     cd_tether = 0.958
     l0 = 50                                      # initial tether length             [m]
-    v_ro = 0                                     # reel-out speed                  [m/s]
+    v_ro = 0.1                                   # reel-out speed                  [m/s]
     d_tether = 4                                 # tether diameter                  [mm]
     rho_tether = 724                             # density of Dyneema            [kg/m³]
     c_spring = 614600                            # unit spring constant              [N]
@@ -36,9 +36,6 @@ function calc_initial_state(se; p1, p2)
         y  = sin(se.α0) * se.l0
         p2 = [p1[1], p1[2] - y, p1[3] - z]
         println("p2: ", p2)
-    else
-        # se.l0 = norm(p2 - p1)
-        println("l0: ", se.l0)
     end
     POS0 = zeros(3, se.segments+1)
     VEL0 = zeros(3, se.segments+1)
@@ -67,6 +64,22 @@ function model(se; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
         @assert (length(p2) == 3)       || error("p2 must have length 3")
     end
     POS0, VEL0, ACC0, SEGMENTS0, UNIT_VECTORS0 = calc_initial_state(se; p1, p2)
+    v_ro = se.v_ro
+    se.v_ro = 0
+    simple_sys, pos, vel, len, c_spr =
+        model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0, ACC0, SEGMENTS0, UNIT_VECTORS0)
+    
+    # find steady state
+    tspan = (0.0, se.duration)
+    prob = ODEProblem(simple_sys, nothing, tspan)
+    prob1 = SteadyStateProblem(prob)
+    @time sol1 = solve(prob1, DynamicSS(KenCarp4(autodiff=false)))
+    POS0 = sol1[pos]
+    # create the real model
+    se.v_ro = v_ro
+    model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0, ACC0, SEGMENTS0, UNIT_VECTORS0)
+end
+function model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0, ACC0, SEGMENTS0, UNIT_VECTORS0)
     mass_per_meter = se.rho_tether * π * (se.d_tether/2000.0)^2
     @parameters c_spring0=se.c_spring/(se.l0/se.segments) l_seg=se.l0/se.segments
     @parameters rel_compression_stiffness = se.rel_compression_stiffness
