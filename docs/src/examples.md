@@ -395,11 +395,11 @@ This is useful for model verification.
 See: [Tether_08.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_08.jl)
 
 Two versions of the model are implemented, with the signatures:
-```
+```julia
 function model(se; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
 ```
 and
-```
+```julia
 function model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0, ACC0)
 ```
 The first version calls
