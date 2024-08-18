@@ -11,7 +11,7 @@ using ControlPlots
     rho = 1.225
     cd_tether = 0.958
     l0 = 50                                      # initial tether length             [m]
-    v_ro = 2                                     # reel-out speed                  [m/s]
+    v_ro = 0                                     # reel-out speed                  [m/s]
     d_tether = 4                                 # tether diameter                  [mm]
     rho_tether = 724                             # density of Dyneema            [kg/m³]
     c_spring = 614600                            # unit spring constant              [N]
@@ -19,7 +19,7 @@ using ControlPlots
     damping = 473                                # unit damping constant            [Ns]
     segments::Int64 = 5                          # number of tether segments         [-]
     α0 = π/10                                    # initial tether angle            [rad]
-    duration = 10                                # duration of the simulation        [s]
+    duration = 30                                # duration of the simulation        [s]
     save::Bool = false                           # save png files in folder video
 end
 
@@ -36,6 +36,9 @@ function calc_initial_state(se; p1, p2)
         y  = sin(se.α0) * se.l0
         p2 = [p1[1], p1[2] - y, p1[3] - z]
         println("p2: ", p2)
+    else
+        # se.l0 = norm(p2 - p1)
+        println("l0: ", se.l0)
     end
     POS0 = zeros(3, se.segments+1)
     VEL0 = zeros(3, se.segments+1)
@@ -197,8 +200,7 @@ function main(; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
     sol, pos, vel, simple_sys
 end
 
-# if (! @isdefined __BENCH__) || __BENCH__ == false
-#     sol, pos, vel, simple_sys = main()
-# end
-# __BENCH__ = false
 nothing
+
+# test
+# main(p2=[-15,0,-47], fix_p2=true);
