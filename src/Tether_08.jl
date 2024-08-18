@@ -64,12 +64,11 @@ function model(se; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
         @assert (length(p2) == 3)       || error("p2 must have length 3")
     end
     POS0, VEL0, ACC0, SEGMENTS0, UNIT_VECTORS0 = calc_initial_state(se; p1, p2)
+    # find steady state
     v_ro = se.v_ro
     se.v_ro = 0
     simple_sys, pos, vel, len, c_spr =
         model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0, ACC0, SEGMENTS0, UNIT_VECTORS0)
-    
-    # find steady state
     tspan = (0.0, se.duration)
     prob = ODEProblem(simple_sys, nothing, tspan)
     prob1 = SteadyStateProblem(prob)
