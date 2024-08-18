@@ -32,7 +32,7 @@ function set_tether_diameter!(se, d; c_spring_4mm = 614600, damping_4mm = 473)
 end
                               
 function calc_initial_state(se; p1, p2)
-    # start with a linear interpolation between p1 and p2
+    # calculate p2 based on se.α0 and se.l0 if not given
     if isnothing(p2)
         z  = cos(se.α0) * se.l0
         y  = sin(se.α0) * se.l0
@@ -42,18 +42,15 @@ function calc_initial_state(se; p1, p2)
     POS0 = zeros(3, se.segments+1)
     VEL0 = zeros(3, se.segments+1)
     ACC0 = zeros(3, se.segments+1)
-    SEGMENTS0 = zeros(3, se.segments) 
-    UNIT_VECTORS0 = zeros(3, se.segments)
+    # use a linear interpolation between p1 and p2 for the intermediate points
     for i in 1:se.segments+1
         Δ = (p2-p1) / se.segments
         POS0[:, i] .= p1 + (i-1) * Δ
     end
     for i in 1:se.segments
         ACC0[:, i+1] .= se.g_earth
-        UNIT_VECTORS0[:, i] .= [0, 0, 1.0]
-        SEGMENTS0[:, i] .= POS0[:, i+1] - POS0[:, i]
     end
-    POS0, VEL0, ACC0, SEGMENTS0, UNIT_VECTORS0
+    POS0, VEL0, ACC0
 end
 
 function model(se; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
@@ -65,12 +62,12 @@ function model(se; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
         @assert isa(p2, AbstractVector) || error("p2 must be a vector")
         @assert (length(p2) == 3)       || error("p2 must have length 3")
     end
-    POS0, VEL0, ACC0, SEGMENTS0, UNIT_VECTORS0 = calc_initial_state(se; p1, p2)
+    POS0, VEL0, ACC0 = calc_initial_state(se; p1, p2)
     # find steady state
     v_ro = se.v_ro      # save the reel-out speed
     se.v_ro = 0
     simple_sys, pos, vel, len, c_spr =
-        model(se, p1, p2, true, true, POS0, VEL0, ACC0, SEGMENTS0, UNIT_VECTORS0)
+        model(se, p1, p2, true, true, POS0, VEL0, ACC0)
     tspan = (0.0, se.duration)
     prob = ODEProblem(simple_sys, nothing, tspan)
     prob1 = SteadyStateProblem(prob)
@@ -78,9 +75,13 @@ function model(se; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
     POS0 = sol1[pos]
     # create the real model
     se.v_ro = v_ro
-    model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0, ACC0, SEGMENTS0, UNIT_VECTORS0)
+    model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0, ACC0)
 end
-function model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0, ACC0, SEGMENTS0, UNIT_VECTORS0)
+function model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0, ACC0)
+    SEGMENTS0 = zeros(3, se.segments)
+    for i in 1:se.segments
+        SEGMENTS0[:, i] .= POS0[:, i+1] - POS0[:, i]
+    end
     mass_per_meter = se.rho_tether * π * (se.d_tether/2000.0)^2
     @parameters c_spring0=se.c_spring/(se.l0/se.segments) l_seg=se.l0/se.segments
     @parameters rel_compression_stiffness = se.rel_compression_stiffness
@@ -88,7 +89,7 @@ function model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0, ACC0, SEGMENTS0, UNIT_VEC
     @variables vel(t)[1:3, 1:se.segments+1]  = VEL0
     @variables acc(t)[1:3, 1:se.segments+1]  = ACC0
     @variables segment(t)[1:3, 1:se.segments]  = SEGMENTS0
-    @variables unit_vector(t)[1:3, 1:se.segments]  = UNIT_VECTORS0
+    @variables unit_vector(t)[1:3, 1:se.segments]  = zeros(3, se.segments).+[0,0,1]
     @variables len(t) = se.l0
     @variables c_spring(t) = c_spring0
     @variables damping(t) = se.damping  / l_seg
