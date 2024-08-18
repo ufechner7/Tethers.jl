@@ -107,7 +107,6 @@ the stiffness is zero at the beginning, and has the nominal value at the end. **
 
 Thanks to the package [ModelingToolkit.jl](https://docs.sciml.ai/ModelingToolkit/stable/) the system description is very compact and readable:
 ```Julia
-D = Differential(t)
 eqs = vcat(D.(pos)      ~ vel,
            D.(vel)      ~ acc,
            norm1        ~ norm(pos),
@@ -238,13 +237,21 @@ The first example of such a model is the script [Tether_04.jl](https://github.co
 
 In the script [Tether_05.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_05.jl#L61), the spring force is distributed correctly on the two masses attached to the spring as shown here:
 ```julia
-if i == segments
-    eqs2 = vcat(eqs2, total_force[:, i] ~ spring_force[:, i])
-else
-    eqs2 = vcat(eqs2, total_force[:, i] ~ spring_force[:, i]- spring_force[:, i+1])
-end
+    if i == segments
+        push!(eqs, total_force[:, i+1] ~ spring_force[:, i])
+        push!(eqs, acc[:, i+1]         ~ G_EARTH + total_force[:, i+1] / (0.5 * mass))
+        push!(eqs, total_force[:, i]   ~ spring_force[:, i-1] - spring_force[:, i])
+    elseif i == 1
+        push!(eqs, total_force[:, i]   ~ spring_force[:, i])
+        push!(eqs, acc[:, i+1]         ~ G_EARTH + total_force[:, i+1] / mass)
+    else
+        push!(eqs, total_force[:, i] ~ spring_force[:, i-1] - spring_force[:, i])
+        push!(eqs, acc[:, i+1]       ~ G_EARTH + total_force[:, i+1] / mass)
+    end
 ```
-We loop backward over the particles, starting with the last particle, because on the last particle, only one force is acting. On particle $n-1$ two spring forces are acting in the opposite direction.
+We loop backward over the segments. For the last segment we calculate the force at both of its particles, 
+starting with the last particle, because on the last particle, only one force is acting. 
+On particle $n-1$ two spring forces are acting in the opposite direction.
 
 **Julia code:** [Tether_05.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_05.jl)
  
