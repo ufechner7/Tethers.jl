@@ -29,7 +29,7 @@ function set_tether_diameter!(se, d; c_spring_4mm = 614600, damping_4mm = 473)
     se.damping = damping_4mm * (d/4.0)^2
 end
                               
-function calc_initial_state(se)
+function calc_initial_state(se; p1)
     POS0 = zeros(3, se.segments+1)
     VEL0 = zeros(3, se.segments+1)
     ACC0 = zeros(3, se.segments+1)
@@ -38,7 +38,7 @@ function calc_initial_state(se)
     for i in 1:se.segments+1
         l0 = -(i-1)*se.l0/se.segments
         v0 = -(i-1)*se.v_ro/se.segments
-        POS0[:, i] .= [sin(se.α0) * l0, 0, cos(se.α0) * l0]
+        POS0[:, i] .= [sin(se.α0) * l0, 0, cos(se.α0) * l0] + p1
         VEL0[:, i] .= [sin(se.α0) * v0, 0, cos(se.α0) * v0]
     end
     for i in 1:se.segments
@@ -58,7 +58,7 @@ function model(se; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
         @assert isa(p2, AbstractVector) || error("p2 must be a vector")
         @assert (length(p2) == 3)       || error("p2 must have length 3")
     end
-    POS0, VEL0, ACC0, SEGMENTS0, UNIT_VECTORS0 = calc_initial_state(se)
+    POS0, VEL0, ACC0, SEGMENTS0, UNIT_VECTORS0 = calc_initial_state(se; p1)
     mass_per_meter = se.rho_tether * π * (se.d_tether/2000.0)^2
     @parameters c_spring0=se.c_spring/(se.l0/se.segments) l_seg=se.l0/se.segments
     @parameters rel_compression_stiffness = se.rel_compression_stiffness
@@ -109,13 +109,17 @@ function model(se; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
         eqs = []
         if i == se.segments+1
             push!(eqs, total_force[:, i] ~ spring_force[:, i-1] + half_drag_force[:, i-1])
-            push!(eqs, acc[:, i]         ~ se.g_earth + total_force[:, i] / (0.5 * m_tether_particle))
+            if isnothing(p2)
+                push!(eqs, acc[:, i]         ~ se.g_earth + total_force[:, i] / (0.5 * m_tether_particle))
+            else
+                push!(eqs, acc[:, i]         ~ zeros(3))
+            end
         elseif i == 1
             push!(eqs, total_force[:, i] ~ spring_force[:, i] + half_drag_force[:, i])
             if isnothing(p1)
                 push!(eqs, acc[:, i]     ~ se.g_earth + total_force[:, i] / (0.5 * m_tether_particle))
             else
-                push!(eqs, acc[:, i]     ~ p1)
+                push!(eqs, acc[:, i]     ~ zeros(3))
             end
         else
             push!(eqs, total_force[:, i] ~ spring_force[:, i-1] - spring_force[:, i] 
@@ -176,11 +180,11 @@ function play(se, sol, pos)
     nothing
 end
 
-function main()
+function main(; p1=[0,0,0], p2=nothing)
     global sol, pos, vel, len, c_spr
     se = Settings3()
     set_tether_diameter!(se, se.d_tether) # adapt spring and damping constants to tether diameter
-    simple_sys, pos, vel, len, c_spr = model(se)
+    simple_sys, pos, vel, len, c_spr = model(se; p1, p2)
     sol, elapsed_time = simulate(se, simple_sys)
     play(se, sol, pos)
     println("Elapsed time: $(elapsed_time) s, speed: $(round(se.duration/elapsed_time)) times real-time")
