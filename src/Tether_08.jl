@@ -32,7 +32,7 @@ function set_tether_diameter!(se, d; c_spring_4mm = 614600, damping_4mm = 473)
 end
                               
 function calc_initial_state(se; p1, p2)
-    # start with a linear interpolation between p1 and p2
+    # calculate p2 based on se.α0 and se.l0 if not given
     if isnothing(p2)
         z  = cos(se.α0) * se.l0
         y  = sin(se.α0) * se.l0
@@ -42,6 +42,7 @@ function calc_initial_state(se; p1, p2)
     POS0 = zeros(3, se.segments+1)
     VEL0 = zeros(3, se.segments+1)
     ACC0 = zeros(3, se.segments+1)
+    # start with a linear interpolation between p1 and p2
     for i in 1:se.segments+1
         Δ = (p2-p1) / se.segments
         POS0[:, i] .= p1 + (i-1) * Δ
