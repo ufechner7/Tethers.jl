@@ -107,8 +107,8 @@ function simulate(se, simple_sys)
     tspan = (0.0, se.duration)
     ts    = 0:dt:se.duration
     prob = ODEProblem(simple_sys, nothing, tspan)
-    @time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
-    sol
+    elapsed_time = @elapsed sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
+    sol, elapsed_time
 end
 
 function play(se, sol, pos)
@@ -144,8 +144,10 @@ end
 function main()
     se = Settings()
     simple_sys, pos, vel = model(se)
-    sol = simulate(se, simple_sys)
+    sol, elapsed_time = simulate(se, simple_sys)
     play(se, sol, pos)
+    println("Elapsed time: $(elapsed_time) s, speed: $(round(se.duration/elapsed_time)) times real-time")
+    println("Number of evaluations per step: ", round(sol.stats.nf/(se.duration/0.02), digits=1))
 end
 
 main()
