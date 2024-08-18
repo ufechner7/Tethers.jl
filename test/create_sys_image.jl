@@ -1,12 +1,12 @@
 @info "Loading packages ..."
-using ModelingToolkit, OrdinaryDiffEq, PackageCompiler, ControlPlots, Timers, REPL.TerminalMenus
+using ModelingToolkit, OrdinaryDiffEq, SteadyStateDiffEq, PackageCompiler, ControlPlots, Timers, REPL.TerminalMenus
 
 FAST=true
 
 @info "Creating sysimage ..."
 push!(LOAD_PATH,joinpath(pwd(),"src"))
 
-pkgs=[:ModelingToolkit, :OrdinaryDiffEq, :Timers]
+pkgs=[:ModelingToolkit, :OrdinaryDiffEq, :SteadyStateDiffEq, :Timers]
 if FAST
     push!(pkgs, :ControlPlots)
 end 

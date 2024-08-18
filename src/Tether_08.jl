@@ -208,6 +208,9 @@ function main(; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
     set_tether_diameter!(se, se.d_tether) # adapt spring and damping constants to tether diameter
     simple_sys, pos, vel, len, c_spr = model(se; p1, p2, fix_p1, fix_p2)
     sol, elapsed_time = simulate(se, simple_sys)
+    if @isdefined __PC
+        return sol, pos, vel, simple_sys
+    end
     play(se, sol, pos)
     println("Elapsed time: $(elapsed_time) s, speed: $(round(se.duration/elapsed_time)) times real-time")
     println("Number of evaluations per step: ", round(sol.stats.nf/(se.duration/0.02), digits=1))
