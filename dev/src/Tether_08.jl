@@ -62,12 +62,12 @@ function model(se; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
         @assert isa(p2, AbstractVector) || error("p2 must be a vector")
         @assert (length(p2) == 3)       || error("p2 must have length 3")
     end
+    # straight line approximation for the tether
     POS0, VEL0, ACC0 = calc_initial_state(se; p1, p2)
     # find steady state
     v_ro = se.v_ro      # save the reel-out speed
-    se.v_ro = 0
-    simple_sys, pos, vel, len, c_spr =
-        model(se, p1, p2, true, true, POS0, VEL0, ACC0)
+    se.v_ro = 0         # v_ro must be zero, otherwise finding the steady state is not possible
+    simple_sys, pos, =  model(se, p1, p2, true, true, POS0, VEL0, ACC0)
     tspan = (0.0, se.duration)
     prob = ODEProblem(simple_sys, nothing, tspan)
     prob1 = SteadyStateProblem(prob)
