@@ -5,7 +5,7 @@ folder = "video"
 
 A = Array{Array{RGB{Normed{UInt8,8}},2},1}()
 
-for j in 0:66
+for j in 0:(66*2)
     global A
     local img
     img_path = folder*"/"*"img-"*lpad(j,4,"0")*".png"
