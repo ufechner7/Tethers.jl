@@ -18,7 +18,7 @@ using ControlPlots
     damping = 473                                # unit damping constant            [Ns]
     segments::Int64 = 5                          # number of tether segments         [-]
     α0 = π/10                                    # initial tether angle            [rad]
-    duration = 30                                # duration of the simulation        [s]
+    duration = 10                                # duration of the simulation        [s]
     save::Bool = false                           # save png files in folder video
 end
 
@@ -100,13 +100,13 @@ function model(se)
         eqs = []
         if i == se.segments+1
             push!(eqs, total_force[:, i] ~ spring_force[:, i-1] + half_drag_force[:, i-1])
-            push!(eqs, acc[:, i]         ~ se.g_earth + total_force[:, i] / (0.5*m_tether_particle))
+            push!(eqs, acc[:, i]         ~ se.g_earth + total_force[:, i] / (0.5 * m_tether_particle))
         elseif i == 1
             push!(eqs, total_force[:, i] ~ spring_force[:, i] + half_drag_force[:, i])
             push!(eqs, acc[:, i]         ~ zeros(3))
         else
             push!(eqs, total_force[:, i] ~ spring_force[:, i-1] - spring_force[:, i] 
-                                           + half_drag_force[:,i-1] + half_drag_force[:,i])
+                                           + half_drag_force[:, i-1] + half_drag_force[:, i])
             push!(eqs, acc[:, i]         ~ se.g_earth + total_force[:, i] / m_tether_particle)
         end
         eqs2 = vcat(eqs2, reduce(vcat, eqs))
@@ -129,14 +129,14 @@ function simulate(se, simple_sys)
     tspan = (0.0, se.duration)
     ts    = 0:dt:se.duration
     prob = ODEProblem(simple_sys, nothing, tspan)
-    elapsed_time = @elapsed sol = solve(prob, KenCarp4(autodiff=false), dt=dt, abstol=tol, reltol=tol, saveat=ts)
-    elapsed_time = @elapsed sol = solve(prob, KenCarp4(autodiff=false), dt=dt, abstol=tol, reltol=tol, saveat=ts)
+    elapsed_time = @elapsed sol = solve(prob, KenCarp4(autodiff=false); dt, abstol=tol, reltol=tol, saveat=ts)
+    elapsed_time = @elapsed sol = solve(prob, KenCarp4(autodiff=false); dt, abstol=tol, reltol=tol, saveat=ts)
     sol, elapsed_time
 end
 
 function play(se, sol, pos)
     dt = 0.151
-    ylim = (-1.2*(se.l0+se.v_ro*se.duration), 0.5)
+    ylim = (-1.2 * (se.l0 + se.v_ro*se.duration), 0.5)
     xlim = (-se.l0/2, se.l0/2)
     mkpath("video")
     z_max = 0.0
@@ -152,10 +152,10 @@ function play(se, sol, pos)
         end
         plot2d(sol[pos][i], time; segments=se.segments, xlim, ylim, xy)
         if se.save
-            ControlPlots.plt.savefig("video/"*"img-"*lpad(j,4,"0"))
+            ControlPlots.plt.savefig("video/"*"img-"*lpad(j, 4, "0"))
         end
         j += 1
-        wait_until(start + 0.5*time*1e9)
+        wait_until(start + 0.5 * time * 1e9)
     end
     if se.save
         include("export_gif.jl")
@@ -170,6 +170,8 @@ function main()
     simple_sys, pos, vel, len, c_spr = model(se)
     sol, elapsed_time = simulate(se, simple_sys)
     play(se, sol, pos)
+    println("Elapsed time: ", elapsed_time)
+    println("Number of evaluations per step: ", round(sol.stats.nf/(se.duration/0.02)))
     sol, pos, vel, simple_sys
 end
 
