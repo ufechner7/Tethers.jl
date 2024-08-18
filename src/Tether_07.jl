@@ -18,7 +18,7 @@ using ControlPlots
     damping = 473                                # unit damping constant            [Ns]
     segments::Int64 = 5                          # number of tether segments         [-]
     α0 = π/10                                    # initial tether angle            [rad]
-    duration = 30                                # duration of the simulation        [s]
+    duration = 10                                # duration of the simulation        [s]
     save::Bool = false                           # save png files in folder video
 end
 
@@ -170,6 +170,8 @@ function main()
     simple_sys, pos, vel, len, c_spr = model(se)
     sol, elapsed_time = simulate(se, simple_sys)
     play(se, sol, pos)
+    println("Elapsed time: ", elapsed_time)
+    println("Number of evaluations per step: ", round(sol.stats.nf/(se.duration/0.02)))
     sol, pos, vel, simple_sys
 end
 
