@@ -1,6 +1,7 @@
 # Tutorial example simulating a 3D mass-spring system with a nonlinear spring (1% stiffnes
 # for l < l_0), n tether segments, tether drag and reel-in and reel-out. 
-# New feature: A steady state solver shall be used to allow different initial conditions.
+# New feature: A steady state solver is used to find the initial tether shape for any
+# given pair of endpoints, which is then used as the initial condition for the simulation.
 using ModelingToolkit, OrdinaryDiffEq, SteadyStateDiffEq, LinearAlgebra, Timers, Parameters
 tic()
 using ModelingToolkit: t_nounits as t, D_nounits as D
