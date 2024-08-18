@@ -73,10 +73,11 @@ function model(se)
     @variables half_drag_force(t)[1:3, 1:se.segments] = zeros(3, se.segments)
     @variables total_force(t)[1:3, 1:se.segments+1] = zeros(3, se.segments+1)
 
+    # basic differential equations
     eqs1 = vcat(D.(pos) .~ vel,
                 D.(vel) .~ acc)
     eqs2 = vcat(eqs1...)
-    # loop over all segments
+    # loop over all segments to calculate the spring and drag forces
     for i in 1:se.segments
         eqs = [segment[:, i]      ~ pos[:, i+1] - pos[:, i],
                norm1[i]           ~ norm(segment[:, i]),
@@ -94,7 +95,7 @@ function model(se)
                                         * v_app_perp[:, i]]
         eqs2 = vcat(eqs2, reduce(vcat, eqs))
     end
-    # loop over all tether particles
+    # loop over all tether particles to apply the forces and calculate the accelerations
     for i in 1:(se.segments+1)
         eqs = []
         if i == se.segments+1
@@ -110,6 +111,7 @@ function model(se)
         end
         eqs2 = vcat(eqs2, reduce(vcat, eqs))
     end
+    # scalar equations
     eqs = [length            ~ se.l0 + se.v_ro*t,
            c_spring          ~ se.c_spring / (length/se.segments),
            m_tether_particle ~ mass_per_meter * (length/se.segments),
