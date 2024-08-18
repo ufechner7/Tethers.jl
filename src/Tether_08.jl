@@ -10,14 +10,14 @@ using ControlPlots
     v_wind_tether::Vector{Float64} = [2, 0.0, 0.0]
     rho = 1.225
     cd_tether = 0.958
-    l0 = 50                                      # initial tether length             [m]
-    v_ro = 0.1                                   # reel-out speed                  [m/s]
+    l0 = 70                                      # initial tether length             [m]
+    v_ro = 0.3                                   # reel-out speed                  [m/s]
     d_tether = 4                                 # tether diameter                  [mm]
     rho_tether = 724                             # density of Dyneema            [kg/m³]
     c_spring = 614600                            # unit spring constant              [N]
     rel_compression_stiffness = 0.01             # relative compression stiffness    [-]
     damping = 473                                # unit damping constant            [Ns]
-    segments::Int64 = 5                          # number of tether segments         [-]
+    segments::Int64 = 10                         # number of tether segments         [-]
     α0 = π/10                                    # initial tether angle            [rad]
     duration = 30                                # duration of the simulation        [s]
     save::Bool = false                           # save png files in folder video
@@ -174,7 +174,7 @@ end
 function play(se, sol, pos)
     dt = 0.151
     ylim = (-1.2 * (se.l0 + se.v_ro*se.duration), 0.5)
-    xlim = (-se.l0/2, se.l0/2)
+    xlim = (-se.l0, se.l0)
     mkpath("video")
     z_max = 0.0
     # text position
@@ -212,7 +212,7 @@ function main(; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
     sol, pos, vel, simple_sys
 end
 
+main(p2=[-40,0,-47], fix_p2=true);
+
 nothing
 
-# test
-# main(p2=[-15,0,-47], fix_p2=true);
