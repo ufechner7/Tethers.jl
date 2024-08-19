@@ -9,26 +9,24 @@ We assume that one end of the tether is either fixed or attached to a winch, and
 
 ### Inputs
 - Either or
-  - pos1: [x1,y1,z1] vector [m] and vel1: speed vector of point one [m/s]
+  - p1: [x1,y1,z1] vector [m] and vel1: speed vector of point one [m/s]
   - force1: vector of force applied to point one
 - Either or
-  - pos2: [x2,y2,z2] vector [m] and vel2: speed vector of point two [m/s]
+  - p2: [x2,y2,z2] vector [m] and vel2: speed vector of point two [m/s]
   - force2: [fx2, fy2, fz2] vector of the force applied to point two [N]
 - v_ro: reel-out speed at point one, scalar [m/s]
 - v_wind: vector of the wind speed at reference height [m/s]
 
 ### Outputs
-- If `fixed_point_one`:
+- If `fix_p1`:
   - force1: [fx1, fy1, fz1] force vector, felt at point one [N]
-- if `fixed_point_two`:
+- if `fix_p2`:
   - force2: [fx1, fy1, fz1] force vector, felt at point one [N]
 - pos: vector of the position vectors of the tether particles [m]
 - vel: vector of the velocity vectors of the tether particles [m/s]
 - forces: vector of the scalar forces per tether segment [N]
 
 ### Configuration
-- `fixed_point_one`: boolean 
-- `fixed_point_two`: boolean 
 - segments: number of tether segments [-]
 - d_tether: tether diameter [mm]
 - rho_tether: tether density [kg/m³]
@@ -36,8 +34,8 @@ We assume that one end of the tether is either fixed or attached to a winch, and
 - damping: unit damping constant [Ns]
 - l0: initial unstretched tether length [m]
 - v_ro0: initial reel-out speed [m/s]
-- pos1_0: initial position of point one [m/s]
-- pos2_0: initial position of point two [m/s]
+- p1_0: initial position of point one [m]
+- p2_0: initial position of point two [m]
 - vel1_0: initial speed vector of point one [m/s]
 - vel2_0: initial speed vector of point two [m/s]
 - rho: density of the fluid at position zero and 15 °C (water, air) [kg/m³]
