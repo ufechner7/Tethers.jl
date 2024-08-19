@@ -1,0 +1,12 @@
+#!/bin/bash -eu
+rm -rf /tmp/testdepot
+mkdir /tmp/testdepot
+rm -rf /tmp/test
+mkdir /tmp/test
+cd /tmp/test
+export JULIA_DEPOT_PATH=/tmp/testdepot
+git clone https://github.com/ufechner7/Tethers.jl
+cd Tethers.jl
+cd bin
+./create_sys_image
+cd ..
