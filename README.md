@@ -16,10 +16,10 @@ A few examples where tether models can be useful:
 Modeling of tethers and cables is difficult for several reasons. One of them is the high stiffness of the equation systems that need to be solved. I tried to implement these models with Simulink and Modelica and failed. It is possible to implement these models with Julia or Python. How to do this is explained in this tutorial. Tethers that are reeled in and out from
 a winch are even more challenging to model than constant-length tethers.
 
-A series of examples, from a simple falling mass towards a tether model, consisting of point masses connected by spring damper elements with the support of reel-out and reel-in and aerodynamic drag attached shall be presented.
+A series of examples, from a simple falling mass towards a tether model, consisting of point masses connected by spring damper elements with the support of reel-out and reel-in and aerodynamic drag attached is presented.
 
 #### Status
-- the Julia examples are in reasonable good quality and well documented and tested
+- the Julia examples are of good quality and well-documented and tested
 - the Python examples need some more work
 
 ## Installation
@@ -98,7 +98,7 @@ Relative and absolute tolerance: $1.0^{-6}$. CPU: Ryzen 9 7950X.
 **Tradeoff Julia vs Python:** In Julia, the code is compiled before it is executed, which can cause about one to 10 seconds delay when running a simulation the first time, but speeds up the execution a lot afterward. In addition, Julia can run fully multithreaded, Python cannot make use of multiple CPU cores with multithreading because of the global interpreter lock. 
 
 Furthermore, the IDA solver is hardly capable of handling a simulation with the very stiff
-Dyneema tether. It achieves only 0.044% of the performance of the Julia solvers.
+Dyneema tether. The Julia solvers achieve more than 2000 times the performance.
 
 See also: [Why Julia?](https://ufechner7.github.io/2022/08/13/why-julia.html) and read the [documentation](https://ufechner7.github.io/Tethers.jl/dev/) or go straight to the [examples](https://ufechner7.github.io/Tethers.jl/dev/examples/).
 
