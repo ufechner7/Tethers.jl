@@ -76,7 +76,8 @@ This will install Python, Matplotlib and Assimulo and execute the script `Tether
 
 If you compare the Python and the Julia scripts you can see that:
 - the Julia script is shorter and easier to read
-- Julia is about 16 times faster when running the simulation
+- Julia is about 16 times faster when running the simulation  
+For a stiff, segmented tether (example 6 and 7) the Julia solvers are more than 2000 times faster than Python.
 
 Have a look at the [Examples](https://ufechner7.github.io/Tethers.jl/dev/examples/) that teach you how to construct a full tether model step by step.
 
@@ -84,15 +85,15 @@ Have a look at the [Examples](https://ufechner7.github.io/Tethers.jl/dev/example
 Execution time for a simulation of 10s duration with logging the state every 20ms.
 Relative and absolute tolerance: $1.0^{-6}$. CPU: Ryzen 9 7950X.
 
-| Test-case             | Lines of code (LOC) Julia | LOC Python | Time Julia [ms] | Time Python [ms] |
-|:----------------------------|:-------------------:|:----------:|:---------------:|:---:|
-|Falling mass (1)             |     35              | 56         | 0.17            | 2.6 |
-|Non-linear Spring damper (3) |     49              | 83         | 0.64            | 20  |
-|dito with callbacks (3b, 3c) |     57              | 103        | 0.8             | 31  |
-|swinging tether, 5 segments  |    109              | 150        | 2.9             | 47  |
-|Dyneema tether, reeling out  |    125              | 160        | 4.3             | 9300 |
-|dito with callbacks          |    156              |            | 4.3             |      |
-|Dyneema, reeling out with drag |  175              |            | 3.3             |      |  
+| Test-case                   | Lines of code (LOC) Julia | LOC Python | Time Julia [ms] | Time Python [ms] |
+|:----------------------------------|:-------------------:|:----------:|:---------------:|:---:|
+|Falling mass (1)                   |     35              | 56         | 0.17            | 2.6 |
+|Non-linear Spring damper (3)       |     49              | 83         | 0.64            | 20  |
+|dito with callbacks (3b, 3c)       |     57              | 103        | 0.8             | 31  |
+|swinging tether, 5 segments (5)    |    109              | 150        | 2.9             | 47  |
+|Dyneema tether, reeling out (6)    |    125              | 160        | 4.3             | 9300 |
+|dito with callbacks       (6c)     |    156              |            | 4.3             |      |
+|Dyneema, reeling out with drag (7) |    175              |            | 3.3             |      |  
 
 **Tradeoff Julia vs Python:** In Julia, the code is compiled before it is executed, which can cause about one to 10 seconds delay when running a simulation the first time, but speeds up the execution a lot afterward. In addition, Julia can run fully multithreaded, Python cannot make use of multiple CPU cores with multithreading because of the global interpreter lock. 
 
