@@ -17,10 +17,10 @@ V0::Float64 = 4                                 # initial velocity           [m/
 @variables spring_force(t)[1:3] = [0.0, 0.0, 0.0]
 @variables force(t) = 0.0 norm1(t) = abs(l0) spring_vel(t) = 0.0
 
-eqs = vcat(D.(pos)      ~ vel,
-           D.(vel)      ~ acc,
+eqs = vcat(D(pos)       ~ vel,
+           D(vel)       ~ acc,
            norm1        ~ norm(pos),
-           unit_vector  ~ -pos/norm1,         # direction from point mass to origin
+           unit_vector  ~ -pos / norm1,         # direction from point mass to origin
            spring_vel   ~ -unit_vector ⋅ vel,
            c_spring     ~ c_spring0 * (norm1 > abs(l0)),
            spring_force ~ (c_spring * (norm1 - abs(l0)) + damping * spring_vel) * unit_vector,
@@ -31,10 +31,10 @@ simple_sys = structural_simplify(sys)
 
 # running the simulation
 duration = 10.0
-dt = 0.02
-tol = 1e-6
-tspan = (0.0, duration)
-ts    = 0:dt:duration
+dt       = 0.02
+tol      = 1e-6
+tspan    = (0.0, duration)
+ts       = 0:dt:duration
 
 prob = ODEProblem(simple_sys, nothing, tspan)
 @time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
