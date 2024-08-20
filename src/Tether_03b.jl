@@ -17,14 +17,14 @@ V0::Float64 = 4                                 # initial velocity           [m/
 @variables spring_force(t)[1:3] = [0.0, 0.0, 0.0]
 @variables force(t) = 0.0 norm1(t) = abs(l0) spring_vel(t) = 0.0
 
-eqs = vcat(D.(pos)      .~ vel,
-           D.(vel)      .~ acc,
-           norm1        .~ norm(pos),
-           unit_vector  .~ -pos/norm1,         # direction from point mass to origin
-           spring_vel   .~ -unit_vector ⋅ vel,
-           c_spring     .~ c_spring0 * (norm1 > abs(l0)),
-           spring_force .~ (c_spring * (norm1 - abs(l0)) + damping * spring_vel) * unit_vector,
-           acc          .~ G_EARTH + spring_force/mass)
+eqs = vcat(D.(pos)      ~ vel,
+           D.(vel)      ~ acc,
+           norm1        ~ norm(pos),
+           unit_vector  ~ -pos/norm1,         # direction from point mass to origin
+           spring_vel   ~ -unit_vector ⋅ vel,
+           c_spring     ~ c_spring0 * (norm1 > abs(l0)),
+           spring_force ~ (c_spring * (norm1 - abs(l0)) + damping * spring_vel) * unit_vector,
+           acc          ~ G_EARTH + spring_force/mass)
 
 @named sys = ODESystem(Symbolics.scalarize.(reduce(vcat, Symbolics.scalarize.(eqs))), t)
 simple_sys = structural_simplify(sys)
