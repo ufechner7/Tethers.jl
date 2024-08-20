@@ -14,13 +14,13 @@ L0::Float64 = -10.0                             # initial spring length      [m]
 @variables spring_force(t)[1:3] = [0.0, 0.0, 0.0]
 @variables norm1(t) = abs(l0) spring_vel(t) = 0.0
 
-eqs = vcat(D.(pos)      .~ vel,
-           D.(vel)      .~ acc,
+eqs = vcat(D.(pos)      ~ vel,
+           D.(vel)      ~ acc,
            norm1        ~ norm(pos),
-           unit_vector  .~ -pos/norm1,         # direction from point mass to origin
-           spring_vel   .~ -unit_vector ⋅ vel,
-           spring_force .~ (c_spring * (norm1 - abs(l0)) + damping * spring_vel) * unit_vector,
-           acc          .~ G_EARTH + spring_force/mass)
+           unit_vector  ~ -pos/norm1,         # direction from point mass to origin
+           spring_vel   ~ -unit_vector ⋅ vel,
+           spring_force ~ (c_spring * (norm1 - abs(l0)) + damping * spring_vel) * unit_vector,
+           acc          ~ G_EARTH + spring_force/mass)
 
 @named sys = ODESystem(Symbolics.scalarize.(reduce(vcat, Symbolics.scalarize.(eqs))), t)
 simple_sys = structural_simplify(sys)

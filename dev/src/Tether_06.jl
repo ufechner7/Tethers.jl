@@ -86,10 +86,11 @@ for i in 1:(SEGMENTS+1)
     eqs2 = vcat(eqs2, reduce(vcat, eqs))
 end
 
-eqs = [len               .~ L0 + V_RO*t,
-       c_spring          .~ C_SPRING / (len/SEGMENTS),
-       m_tether_particle .~ mass_per_meter * (len/SEGMENTS),
-       damping           .~ DAMPING  / (len/SEGMENTS)]
+# scalar equations
+eqs = [len               ~ L0 + V_RO*t,
+       c_spring          ~ C_SPRING / (len/SEGMENTS),
+       m_tether_particle ~ mass_per_meter * (len/SEGMENTS),
+       damping           ~ DAMPING  / (len/SEGMENTS)]
 eqs2 = vcat(eqs2, reduce(vcat, eqs))  
      
 @named sys = ODESystem(Symbolics.scalarize.(reduce(vcat, Symbolics.scalarize.(eqs2))), t)
