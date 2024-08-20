@@ -42,9 +42,11 @@ end
 @variables c_spring(t)[1:segments] = c_spring0 * ones(segments)
 @variables spring_force(t)[1:3, 1:segments] = zeros(3, segments)
 
+# basic differential equations
 eqs1 = vcat(D.(pos) .~ vel,
             D.(vel) .~ acc)
 eqs2 = vcat(eqs1...)
+# loop over all segments to calculate the spring forces
 for i in 1:segments
     global eqs2; local eqs
     eqs = [segment[:, i]      ~ pos[:, i+1] - pos[:, i],
@@ -58,6 +60,7 @@ for i in 1:segments
            acc[:, i+1]        ~ G_EARTH + spring_force[:, i] / mass]
     eqs2 = vcat(eqs2, reduce(vcat, eqs))
 end
+# fix the first pointmass
 push!(eqs2, acc[:, 1] ~ zeros(3))
      
 @named sys = ODESystem(Symbolics.scalarize.(reduce(vcat, Symbolics.scalarize.(eqs2))), t)
