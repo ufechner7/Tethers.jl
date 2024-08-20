@@ -65,26 +65,26 @@ simple_sys = structural_simplify(sys)
 
 # running the simulation
 duration = 10.0
-dt = 0.02
-tol = 1e-6
-tspan = (0.0, duration)
-ts    = 0:dt:duration
+dt       = 0.02
+tol      = 1e-6
+tspan    = (0.0, duration)
+ts       = 0:dt:duration
 
-prob = ODEProblem(simple_sys, nothing, tspan)
+prob      = ODEProblem(simple_sys, nothing, tspan)
 @time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
 
 function plt(sol, particle)
-    X = sol.t
-    POS_Z = stack(sol[pos], dims=1)[:,3,particle]
-    VEL_Z = stack(sol[vel], dims=1)[:,3,particle]
+    X        = sol.t
+    POS_Z    = stack(sol[pos], dims=1)[:,3,particle]
+    VEL_Z    = stack(sol[vel], dims=1)[:,3,particle]
     C_SPRING = stack(sol[c_spring], dims=1)[:, particle-1]
 
     p = plot(X, [POS_Z, -L0.+0.005 .* C_SPRING], VEL_Z; xlabel="time [s]", ylabels=["pos_z [m]", "vel_z [m/s]"], 
-    labels=["pos_z [m]", "c_spring", "vel_z [m/s]"], fig="segmented tether")
+             labels=["pos_z [m]", "c_spring", "vel_z [m/s]"], fig="segmented tether")
     display(p)
     nothing
 end
-# plt(sol, 2)
+
 plt(sol, 3)
 nothing
 
