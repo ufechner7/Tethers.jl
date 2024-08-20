@@ -36,7 +36,7 @@ This example shows a mass that is thrown upwards, slows down and then falls.
 **Julia code:** [Tether_01.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_01.jl)
 
 These differential equations define the model:
-```Julia
+```julia
 D = Differential(t)
 
 eqs = vcat(D.(pos) ~ vel,
@@ -319,11 +319,11 @@ for a boolean value.
 
 Then we split the code into the functions:
 ```julia
-function calc_initial_state(se)                          # determine the initial state
-function model(se)                                       # create the model
-function simulate(se, simple_sys)                        # run the simulation
-function play(se, sol, pos)                              # play the simulation result, the solution
-function main()                                          # the main program, calling all the other functions
+function calc_initial_state(se)           # determine the initial state
+function model(se)                        # create the model
+function simulate(se, simple_sys)         # run the simulation
+function play(se, sol, pos)               # play the simulation result, the solution
+function main()                           # the main program, calling all the other functions
 ```
 The `main()` function looks like this:
 ```julia
