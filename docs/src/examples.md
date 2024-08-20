@@ -90,8 +90,9 @@ include("src/Tether_02.jl")
 ```
 ![Spring damper](docs/images/SpringDamper.png)
 
-Mass, attached to a spring-damper element. One end of the spring is attached at the origin, the second end is attached to the mass. Mass initially below the origin, spring un-stretched. Z-axis pointing
-upwards.
+Mass, attached to a spring-damper element. One end of the spring is attached at the origin, the second end is attached to the mass. Mass initially below the origin, spring un-stretched. Z-axis pointing upwards.
+
+After running it, type `sys` and `simple_sys` in the REPL to see the representation of the system and the simplified system. You can see that the original system has 17 equations, which have been automatically simplified to 6 equations in simple_sys.
 
 **Julia code:** [Tether_02.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_02.jl)
 
