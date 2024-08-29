@@ -26,7 +26,7 @@ eqs = vcat(D(pos)       ~ vel,
            spring_force ~ (c_spring * (norm1 - abs(l0)) + damping * spring_vel) * unit_vector,
            acc          ~ G_EARTH + spring_force/mass)
 
-@named sys = ODESystem(Symbolics.scalarize.(reduce(vcat, Symbolics.scalarize.(eqs))), t)
+@named sys = ODESystem((reduce(vcat, Symbolics.scalarize.(eqs))), t)
 simple_sys = structural_simplify(sys)
 
 # running the simulation
