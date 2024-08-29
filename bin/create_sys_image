@@ -12,6 +12,7 @@ fi
 juliaup add 1.10
 juliaup up 1.10
 juliaup default 1.10
+echo "Installing package TestEnv in the global environment!"
 julia --startup-file=no -e "using Pkg; Pkg.add(\"TestEnv\")"
 
 export KMP_DUPLICATE_LIB_OK=TRUE
