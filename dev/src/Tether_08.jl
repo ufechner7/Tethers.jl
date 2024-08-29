@@ -163,7 +163,7 @@ function model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0, ACC0)
            damping           ~ se.damping  / (len/se.segments)]
     eqs2 = vcat(eqs2, reduce(vcat, eqs))  
         
-    @named sys = ODESystem(Symbolics.scalarize.(reduce(vcat, Symbolics.scalarize.(eqs2))), t)
+    @named sys = ODESystem(reduce(vcat, Symbolics.scalarize.(eqs2)), t)
     simple_sys = structural_simplify(sys)
     simple_sys, pos, vel, len, c_spr
 end

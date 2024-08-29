@@ -78,7 +78,7 @@ for i in 1:(segments+1)
     eqs2 = vcat(eqs2, reduce(vcat, eqs))
 end
      
-@named sys = ODESystem(Symbolics.scalarize.(reduce(vcat, Symbolics.scalarize.(eqs2))), t)
+@named sys = ODESystem(reduce(vcat, Symbolics.scalarize.(eqs2)), t)
 simple_sys = structural_simplify(sys)
 
 # running the simulation
