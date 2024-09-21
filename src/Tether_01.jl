@@ -1,5 +1,5 @@
 # Example one: Falling mass.
-using ModelingToolkit, OrdinaryDiffEq
+using ModelingToolkit, OrdinaryDiffEq, ControlPlots
 using ModelingToolkit: t_nounits as t, D_nounits as D
 
 G_EARTH::Vector{Float64} = [0.0, 0.0, -9.81]    # gravitational acceleration     [m/s²]
