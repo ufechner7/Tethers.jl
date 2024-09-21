@@ -2,7 +2,7 @@
 # for l < l_0), n tether segments, tether drag and reel-in and reel-out. 
 # New feature: A steady state solver is used to find the initial tether shape for any
 # given pair of endpoints, which is then used as the initial condition for the simulation.
-using ModelingToolkit, OrdinaryDiffEq, SteadyStateDiffEq, LinearAlgebra, Timers, Parameters
+using ModelingToolkit, OrdinaryDiffEq, SteadyStateDiffEq, LinearAlgebra, Timers, Parameters, ControlPlots
 tic()
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using ControlPlots
@@ -41,16 +41,12 @@ function calc_initial_state(se; p1, p2)
     end
     POS0 = zeros(3, se.segments+1)
     VEL0 = zeros(3, se.segments+1)
-    ACC0 = zeros(3, se.segments+1)
     # use a linear interpolation between p1 and p2 for the intermediate points
     for i in 1:se.segments+1
         Δ = (p2-p1) / se.segments
         POS0[:, i] .= p1 + (i-1) * Δ
     end
-    for i in 1:se.segments
-        ACC0[:, i+1] .= se.g_earth
-    end
-    POS0, VEL0, ACC0
+    POS0, VEL0
 end
 
 function model(se; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
@@ -68,11 +64,11 @@ function model(se; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
         @assert ! fix_p2                || error("if p2 undefined it cannot be fixed")
     end
     # straight line approximation for the tether
-    POS0, VEL0, ACC0 = calc_initial_state(se; p1, p2)
+    POS0, VEL0 = calc_initial_state(se; p1, p2)
     # find steady state
     v_ro = se.v_ro      # save the reel-out speed
     se.v_ro = 0         # v_ro must be zero, otherwise finding the steady state is not possible
-    simple_sys, pos, =  model(se, p1, p2, true, true, POS0, VEL0, ACC0)
+    simple_sys, pos, =  model(se, p1, p2, true, true, POS0, VEL0)
     tspan = (0.0, se.duration)
     prob = ODEProblem(simple_sys, nothing, tspan)
     prob1 = SteadyStateProblem(prob)
@@ -80,35 +76,31 @@ function model(se; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
     POS0 = sol1[pos]
     # create the real model
     se.v_ro = v_ro
-    model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0, ACC0)
+    model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0)
 end
-function model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0, ACC0)
-    SEGMENTS0 = zeros(3, se.segments)
-    for i in 1:se.segments
-        SEGMENTS0[:, i] .= POS0[:, i+1] - POS0[:, i]
-    end
+function model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0)
     mass_per_meter = se.rho_tether * π * (se.d_tether/2000.0)^2
     @parameters c_spring0=se.c_spring/(se.l0/se.segments) l_seg=se.l0/se.segments
     @parameters rel_compression_stiffness = se.rel_compression_stiffness
     @variables pos(t)[1:3, 1:se.segments+1]  = POS0
     @variables vel(t)[1:3, 1:se.segments+1]  = VEL0
-    @variables acc(t)[1:3, 1:se.segments+1]  = ACC0
-    @variables segment(t)[1:3, 1:se.segments]  = SEGMENTS0
-    @variables unit_vector(t)[1:3, 1:se.segments]  = zeros(3, se.segments).+[0,0,1]
-    @variables len(t) = se.l0
-    @variables c_spring(t) = c_spring0
-    @variables damping(t) = se.damping  / l_seg
-    @variables m_tether_particle(t) = mass_per_meter * l_seg
-    @variables norm1(t)[1:se.segments] = l_seg * ones(se.segments)
-    @variables rel_vel(t)[1:3, 1:se.segments]  = zeros(3, se.segments)
-    @variables spring_vel(t)[1:se.segments] = zeros(se.segments)
-    @variables c_spr(t)[1:se.segments] = c_spring0 * ones(se.segments)
-    @variables spring_force(t)[1:3, 1:se.segments] = zeros(3, se.segments)
-    @variables v_apparent(t)[1:3, 1:se.segments] = zeros(3, se.segments)
-    @variables v_app_perp(t)[1:3, 1:se.segments] = zeros(3, se.segments)
-    @variables norm_v_app(t)[1:se.segments] = ones(se.segments)
-    @variables half_drag_force(t)[1:3, 1:se.segments] = zeros(3, se.segments)
-    @variables total_force(t)[1:3, 1:se.segments+1] = zeros(3, se.segments+1)
+    @variables acc(t)[1:3, 1:se.segments+1]
+    @variables segment(t)[1:3, 1:se.segments]
+    @variables unit_vector(t)[1:3, 1:se.segments]
+    @variables len(t)
+    @variables c_spring(t)
+    @variables damping(t)
+    @variables m_tether_particle(t)
+    @variables norm1(t)[1:se.segments]
+    @variables rel_vel(t)[1:3, 1:se.segments]
+    @variables spring_vel(t)[1:se.segments]
+    @variables c_spr(t)[1:se.segments]
+    @variables spring_force(t)[1:3, 1:se.segments]
+    @variables v_apparent(t)[1:3, 1:se.segments]
+    @variables v_app_perp(t)[1:3, 1:se.segments]
+    @variables norm_v_app(t)[1:se.segments]
+    @variables half_drag_force(t)[1:3, 1:se.segments]
+    @variables total_force(t)[1:3, 1:se.segments+1]
 
     # basic differential equations
     eqs1 = vcat(D.(pos) .~ vel,
