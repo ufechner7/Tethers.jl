@@ -7,7 +7,7 @@ G_EARTH::Vector{Float64} = [0.0, 0.0, -9.81]    # gravitational acceleration    
 # definiting the model
 @variables   pos(t)[1:3] = [0.0, 0.0,  0.0]
 @variables   vel(t)[1:3] = [0.0, 0.0, 50.0] 
-@variables   acc(t)[1:3] = [0.0, 0.0, -9.81] 
+@variables   acc(t)[1:3]
 
 eqs = vcat(D(pos) ~ vel,
            D(vel) ~ acc,
