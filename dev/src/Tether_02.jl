@@ -1,5 +1,5 @@
 # Example two: Falling mass, attached to linear spring
-using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra
+using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, ControlPlots
 using ModelingToolkit: t_nounits as t, D_nounits as D
 
 G_EARTH::Vector{Float64} = [0.0, 0.0, -9.81]    # gravitational acceleration     [m/s²]
@@ -9,10 +9,10 @@ L0::Float64 = -10.0                             # initial spring length      [m]
 @parameters mass=1.0 c_spring=50.0 damping=0.5 l0=L0
 @variables   pos(t)[1:3] = [0.0, 0.0,  L0]
 @variables   vel(t)[1:3] = [0.0, 0.0,  0.0] 
-@variables   acc(t)[1:3] = G_EARTH
-@variables unit_vector(t)[1:3]  = [0.0, 0.0, -sign(L0)]
-@variables spring_force(t)[1:3] = [0.0, 0.0, 0.0]
-@variables norm1(t) = abs(l0) spring_vel(t) = 0.0
+@variables   acc(t)[1:3]
+@variables unit_vector(t)[1:3]
+@variables spring_force(t)[1:3]
+@variables norm1(t) spring_vel(t)
 
 eqs = vcat(D(pos)       ~ vel,
            D(vel)       ~ acc,

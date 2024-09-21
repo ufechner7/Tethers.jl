@@ -1,6 +1,6 @@
 # Tutorial example simulating a 3D mass-spring system with a nonlinear spring (no spring forces
 # for l < l_0) and n tether segments. 
-using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers
+using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, ControlPlots
 using ModelingToolkit: t_nounits as t, D_nounits as D
 
 G_EARTH::Vector{Float64} = [0.0, 0.0, -9.81]    # gravitational acceleration     [m/s²]
@@ -13,9 +13,6 @@ segments::Int64 = 5                             # number of tether segments     
 duration = 10.0                                 # duration of the simulation        [s]
 POS0 = zeros(3, segments+1)
 VEL0 = zeros(3, segments+1)
-ACC0 = zeros(3, segments+1)
-SEGMENTS0 = zeros(3, segments) 
-UNIT_VECTORS0 = zeros(3, segments)
 for i in 1:segments+1
     local l0
     l0 = -(i-1) * L0
@@ -23,27 +20,20 @@ for i in 1:segments+1
     POS0[:, i] .= [sin(α0) * l0, 0, cos(α0) * l0]
     VEL0[:, i] .= [sin(α0) * v0, 0, cos(α0) * v0]
 end
-for i in 2:segments+1
-    ACC0[:, i] .= G_EARTH
-end
-for i in 1:segments
-    UNIT_VECTORS0[:, i] .= [0, 0, 1.0]
-    SEGMENTS0[:, i] .= POS0[:, i+1] - POS0[:, i]
-end
 
 # defining the model, Z component upwards
 @parameters mass=M0 c_spring0=C_SPRING damping=0.5 l_seg=L0
 @variables pos(t)[1:3, 1:segments+1]  = POS0
 @variables vel(t)[1:3, 1:segments+1]  = VEL0
-@variables acc(t)[1:3, 1:segments+1]  = ACC0
-@variables segment(t)[1:3, 1:segments]  = SEGMENTS0
-@variables unit_vector(t)[1:3, 1:segments]  = UNIT_VECTORS0
-@variables norm1(t)[1:segments] = l_seg * ones(segments)
-@variables rel_vel(t)[1:3, 1:segments]  = zeros(3, segments)
-@variables spring_vel(t)[1:segments] = zeros(segments)
-@variables c_spring(t)[1:segments] = c_spring0 * ones(segments)
-@variables spring_force(t)[1:3, 1:segments] = zeros(3, segments)
-@variables total_force(t)[1:3, 1:segments+1] = zeros(3, segments+1)
+@variables acc(t)[1:3, 1:segments+1]
+@variables segment(t)[1:3, 1:segments]
+@variables unit_vector(t)[1:3, 1:segments]
+@variables norm1(t)[1:segments]
+@variables rel_vel(t)[1:3, 1:segments]
+@variables spring_vel(t)[1:segments]
+@variables c_spring(t)[1:segments]
+@variables spring_force(t)[1:3, 1:segments]
+@variables total_force(t)[1:3, 1:segments+1]
 
 # basic differential equations
 eqs1 = vcat(D.(pos) .~ vel,

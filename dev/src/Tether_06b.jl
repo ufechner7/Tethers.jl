@@ -1,7 +1,7 @@
 # Tutorial example simulating a 3D mass-spring system with a nonlinear spring (no spring forces
 # for l < l_0), n tether segments and reel-in and reel-out. Can create a video of the simulation.
 # For creating the video, set save=true in the Settings struct.
-using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, Parameters
+using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, Parameters, ControlPlots
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using ControlPlots
 
@@ -22,41 +22,33 @@ end
 function calc_initial_state(se)
     POS0 = zeros(3, se.segments+1)
     VEL0 = zeros(3, se.segments+1)
-    ACC0 = zeros(3, se.segments+1)
-    SEGMENTS0 = zeros(3, se.segments) 
-    UNIT_VECTORS0 = zeros(3, se.segments)
     for i in 1:se.segments+1
         l0 = -(i-1)*se.l0/se.segments
         POS0[:, i] .= [sin(se.α0) * l0, 0, cos(se.α0) * l0]
         VEL0[:, i] .= [0, 0, 0]
     end
-    for i in 1:se.segments
-        ACC0[:, i+1] .= se.g_earth
-        UNIT_VECTORS0[:, i] .= [0, 0, 1.0]
-        SEGMENTS0[:, i] .= POS0[:, i+1] - POS0[:, i]
-    end
-    POS0, VEL0, ACC0, SEGMENTS0, UNIT_VECTORS0
+    POS0, VEL0
 end
 
 function model(se)
-    POS0, VEL0, ACC0, SEGMENTS0, UNIT_VECTORS0 = calc_initial_state(se)
+    POS0, VEL0 = calc_initial_state(se)
     mass_per_meter = se.rho_tether * π * (se.d_tether/2000.0)^2
     @parameters c_spring0=se.c_spring/(se.l0/se.segments) l_seg=se.l0/se.segments
     @variables pos(t)[1:3, 1:se.segments+1]  = POS0
     @variables vel(t)[1:3, 1:se.segments+1]  = VEL0
-    @variables acc(t)[1:3, 1:se.segments+1]  = ACC0
-    @variables segment(t)[1:3, 1:se.segments]  = SEGMENTS0
-    @variables unit_vector(t)[1:3, 1:se.segments]  = UNIT_VECTORS0
-    @variables len(t) = se.l0
-    @variables c_spring(t) = c_spring0
-    @variables damping(t) = se.damping  / l_seg
-    @variables m_tether_particle(t) = mass_per_meter * l_seg
-    @variables norm1(t)[1:se.segments] = l_seg * ones(se.segments)
-    @variables rel_vel(t)[1:3, 1:se.segments]  = zeros(3, se.segments)
-    @variables spring_vel(t)[1:se.segments] = zeros(se.segments)
-    @variables c_spr(t)[1:se.segments] = c_spring0 * ones(se.segments)
-    @variables spring_force(t)[1:3, 1:se.segments] = zeros(3, se.segments)
-    @variables total_force(t)[1:3, 1:se.segments+1] = zeros(3, se.segments+1)
+    @variables acc(t)[1:3, 1:se.segments+1]
+    @variables segment(t)[1:3, 1:se.segments]
+    @variables unit_vector(t)[1:3, 1:se.segments]
+    @variables len(t)
+    @variables c_spring(t)
+    @variables damping(t)
+    @variables m_tether_particle(t)
+    @variables norm1(t)[1:se.segments]
+    @variables rel_vel(t)[1:3, 1:se.segments]
+    @variables spring_vel(t)[1:se.segments]
+    @variables c_spr(t)[1:se.segments]
+    @variables spring_force(t)[1:3, 1:se.segments]
+    @variables total_force(t)[1:3, 1:se.segments+1]
 
     # basic differential equations
     eqs1 = vcat(D.(pos) .~ vel,
