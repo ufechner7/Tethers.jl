@@ -218,19 +218,9 @@ V0::Float64 = 4                                 # initial velocity of lowest mas
 segments::Int64 = 2                             # number of tether segments         [-]
 POS0 = zeros(3, segments+1)
 VEL0 = zeros(3, segments+1)
-ACC0 = zeros(3, segments+1)
-SEGMENTS0 = zeros(3, segments) 
-UNIT_VECTORS0 = zeros(3, segments)
 for i in 1:segments+1
     POS0[:, i] .= [0.0, 0, -(i-1)*L0]
     VEL0[:, i] .= [0.0, 0, (i-1)*V0/segments]
-end
-for i in 2:segments+1
-    ACC0[:, i] .= G_EARTH
-end
-for i in 1:segments
-    UNIT_VECTORS0[:, i] .= [0, 0, 1.0]
-    SEGMENTS0[:, i] .= POS0[:, i+1] - POS0[:, i]
 end
 ```
 The first example of such a model is the script [Tether_04.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_04.jl) which is derived from the last example.
@@ -411,11 +401,11 @@ The body of this function is defined as:
 
 ```julia
 # straight line approximation of the tether
-POS0, VEL0, ACC0 = calc_initial_state(se; p1, p2)
+POS0, VEL0 = calc_initial_state(se; p1, p2)
 # find steady state
 v_ro = se.v_ro      # save the reel-out speed
 se.v_ro = 0         # v_ro must be zero, otherwise finding the steady state is not possible
-simple_sys, pos, = model(se, p1, p2, true, true, POS0, VEL0, ACC0)
+simple_sys, pos, = model(se, p1, p2, true, true, POS0, VEL0)
 tspan = (0.0, se.duration)
 prob = ODEProblem(simple_sys, nothing, tspan)
 prob1 = SteadyStateProblem(prob)
@@ -423,7 +413,7 @@ sol1 = solve(prob1, DynamicSS(KenCarp4(autodiff=false)))
 POS0 = sol1[pos]
 # create the real model
 se.v_ro = v_ro
-model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0, ACC0)
+model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0)
 ```
 
 ![Catenary](docs/images/Tether_08.gif)
