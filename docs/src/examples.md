@@ -208,7 +208,7 @@ Using 2D arrays of variables allows to simulate a multi-segment tether:
 ```julia
 @variables pos(t)[1:3, 1:segments+1]  = POS0
 @variables vel(t)[1:3, 1:segments+1]  = VEL0
-@variables acc(t)[1:3, 1:segments+1]  = ACC0
+@variables acc(t)[1:3, 1:segments+1]
 ```
 In this case, it is important to calculate the initial conditions of each particle such that they are physically feasible:
 ```julia
@@ -390,7 +390,7 @@ function model(se; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
 ```
 and
 ```julia
-function model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0, ACC0)
+function model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0)
 ```
 The first version calls
 - the model with fixed endpoints and zero reel-out speed
