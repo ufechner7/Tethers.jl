@@ -1,7 +1,7 @@
 # Tutorial example simulating a 3D mass-spring system with a nonlinear spring (1% spring forces
 # for l < l_0), n tether segments and reel-in and reel-out. The compression stiffness is hardcoded
 # to 1% of the spring stiffness.
-using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers
+using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, ControlPlots
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using ControlPlots
 
@@ -21,37 +21,29 @@ mass_per_meter::Float64 = RHO_TETHER * π * (D_TETHER/2000.0)^2
 # calculating consistant initial conditions
 POS0 = zeros(3, SEGMENTS+1)
 VEL0 = zeros(3, SEGMENTS+1)
-ACC0 = zeros(3, SEGMENTS+1)
-SEGMENTS0 = zeros(3, SEGMENTS) 
-UNIT_VECTORS0 = zeros(3, SEGMENTS)
 for i in 1:SEGMENTS+1
     l0_ = -(i-1)*L0/SEGMENTS
     POS0[:, i] .= [sin(α0) * l0_, 0, cos(α0) * l0_]
     VEL0[:, i] .= [0.0, 0, 0]
-end
-for i in 1:SEGMENTS
-    ACC0[:, i+1] .= G_EARTH
-    UNIT_VECTORS0[:, i] .= [0, 0, 1.0]
-    SEGMENTS0[:, i] .= POS0[:, i+1] - POS0[:, i]
 end
 
 # defining the model, Z component upwards
 @parameters c_spring0=C_SPRING/(L0/SEGMENTS) l_seg=L0/SEGMENTS
 @variables pos(t)[1:3, 1:SEGMENTS+1]  = POS0
 @variables vel(t)[1:3, 1:SEGMENTS+1]  = VEL0
-@variables acc(t)[1:3, 1:SEGMENTS+1]  = ACC0
-@variables segment(t)[1:3, 1:SEGMENTS]  = SEGMENTS0
-@variables unit_vector(t)[1:3, 1:SEGMENTS]  = UNIT_VECTORS0
-@variables len(t) = L0
-@variables c_spring(t) = c_spring0
-@variables damping(t) = DAMPING  / l_seg
-@variables m_tether_particle(t) = mass_per_meter * l_seg
-@variables norm1(t)[1:SEGMENTS] = l_seg * ones(SEGMENTS)
-@variables rel_vel(t)[1:3, 1:SEGMENTS]  = zeros(3, SEGMENTS)
-@variables spring_vel(t)[1:SEGMENTS] = zeros(SEGMENTS)
-@variables c_spr(t)[1:SEGMENTS] = c_spring0 * ones(SEGMENTS)
-@variables spring_force(t)[1:3, 1:SEGMENTS] = zeros(3, SEGMENTS)
-@variables total_force(t)[1:3, 1:SEGMENTS+1] = zeros(3, SEGMENTS+1)
+@variables acc(t)[1:3, 1:SEGMENTS+1]
+@variables segment(t)[1:3, 1:SEGMENTS]
+@variables unit_vector(t)[1:3, 1:SEGMENTS]
+@variables len(t)
+@variables c_spring(t)
+@variables damping(t)
+@variables m_tether_particle(t)
+@variables norm1(t)[1:SEGMENTS]
+@variables rel_vel(t)[1:3, 1:SEGMENTS]
+@variables spring_vel(t)[1:SEGMENTS]
+@variables c_spr(t)[1:SEGMENTS]
+@variables spring_force(t)[1:3, 1:SEGMENTS]
+@variables total_force(t)[1:3, 1:SEGMENTS+1]
 
 # basic differential equations
 eqs1 = vcat(D.(pos) .~ vel,

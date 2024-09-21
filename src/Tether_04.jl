@@ -5,7 +5,7 @@ for l < l_0) and n tether segments.
 # TODO: Distribute force correctly
 # TODO: Add 2D plot
 
-using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra
+using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, ControlPlots
 using ModelingToolkit: t_nounits as t, D_nounits as D
 
 G_EARTH::Vector{Float64} = [0.0, 0.0, -9.81]    # gravitational acceleration     [m/s²]
@@ -14,19 +14,9 @@ V0::Float64 = 4                                 # initial velocity of lowest mas
 segments::Int64 = 2                             # number of tether segments         [-]
 POS0 = zeros(3, segments+1)
 VEL0 = zeros(3, segments+1)
-ACC0 = zeros(3, segments+1)
-SEGMENTS0 = zeros(3, segments) 
-UNIT_VECTORS0 = zeros(3, segments)
 for i in 1:segments+1
     POS0[:, i] .= [0.0, 0, -(i-1)*L0]
     VEL0[:, i] .= [0.0, 0, (i-1)*V0/segments]
-end
-for i in 2:segments+1
-    ACC0[:, i] .= G_EARTH
-end
-for i in 1:segments
-    UNIT_VECTORS0[:, i] .= [0, 0, 1.0]
-    SEGMENTS0[:, i] .= POS0[:, i+1] - POS0[:, i]
 end
 
 # defining the model, Z component upwards
