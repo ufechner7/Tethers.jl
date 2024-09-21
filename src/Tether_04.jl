@@ -33,14 +33,14 @@ end
 @parameters mass=1.0 c_spring0=50.0 damping=0.5 l_seg=L0
 @variables pos(t)[1:3, 1:segments+1]  = POS0
 @variables vel(t)[1:3, 1:segments+1]  = VEL0
-@variables acc(t)[1:3, 1:segments+1]  = ACC0
-@variables segment(t)[1:3, 1:segments]  = SEGMENTS0
-@variables unit_vector(t)[1:3, 1:segments]  = UNIT_VECTORS0
-@variables norm1(t)[1:segments] = l_seg * ones(segments)
-@variables rel_vel(t)[1:3, 1:segments]  = zeros(3, segments)
-@variables spring_vel(t)[1:segments] = zeros(segments)
-@variables c_spring(t)[1:segments] = c_spring0 * ones(segments)
-@variables spring_force(t)[1:3, 1:segments] = zeros(3, segments)
+@variables acc(t)[1:3, 1:segments+1]
+@variables segment(t)[1:3, 1:segments]
+@variables unit_vector(t)[1:3, 1:segments]
+@variables norm1(t)[1:segments]
+@variables rel_vel(t)[1:3, 1:segments]
+@variables spring_vel(t)[1:segments]
+@variables c_spring(t)[1:segments]
+@variables spring_force(t)[1:3, 1:segments]
 
 # basic differential equations
 eqs1 = vcat(D.(pos) .~ vel,
