@@ -210,7 +210,7 @@ ax.annotate(L"P_5",
             xy=(x[end-4]+O1, z[end-4] + OFFSET), xycoords="data",
             fontsize=14)
 ax.annotate(L"P_6",
-            xy=(x[end-5]+O1, z[end-5] + OFFSET), xycoords="data",
+            xy=(x[end-5]+O1, z[end-5] + 1.2OFFSET), xycoords="data",
             fontsize=14)
 ax.annotate(L"P_n",
             xy=(0+O1, OFFSET), xycoords="data",
@@ -221,7 +221,19 @@ ax.annotate(L"S_1",
 ax.annotate(L"S_2",
             xy=(mean(x[end-2:end-1])+2O1, -6.5OFFSET), xycoords="data",
             fontsize=14)
-# ax.set_axis_off()
+ax.annotate(L"S_3",
+            xy=(mean(x[end-3:end-2])+2O1, -8.1OFFSET), xycoords="data",
+            fontsize=14)
+ax.annotate(L"S_4",
+            xy=(mean(x[end-4:end-3])+1.5O1, -8.1OFFSET), xycoords="data",
+            fontsize=14)
+ax.annotate(L"S_5",
+            xy=(mean(x[end-5:end-4])+1O1, -6.5OFFSET), xycoords="data",
+            fontsize=14)
+ax.annotate(L"S_{n-1}",
+            xy=(mean(x[end-6:end-5])+1O1, -4OFFSET), xycoords="data",
+            fontsize=14)
+ax.set_axis_off()
 plt.show()
 
 nothing
