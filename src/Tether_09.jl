@@ -5,11 +5,11 @@
 using ModelingToolkit, OrdinaryDiffEq, SteadyStateDiffEq, LinearAlgebra, Timers, Parameters, ControlPlots
 tic()
 using ModelingToolkit: t_nounits as t, D_nounits as D
-using ControlPlots
+using ControlPlots, LaTeXStrings, StatsBase
 
 @with_kw mutable struct Settings3 @deftype Float64
     g_earth::Vector{Float64} = [0.0, 0.0, -9.81] # gravitational acceleration     [m/s²]
-    v_wind_tether::Vector{Float64} = [2, 0.0, 0.0]
+    v_wind_tether::Vector{Float64} = [0.1, 0.0, 0.0]
     rho = 1.225
     cd_tether = 0.958
     l0 = 70                                      # initial tether length             [m]
@@ -19,7 +19,7 @@ using ControlPlots
     c_spring = 614600                            # unit spring constant              [N]
     rel_compression_stiffness = 0.01             # relative compression stiffness    [-]
     damping = 473                                # unit damping constant            [Ns]
-    segments::Int64 = 10                         # number of tether segments         [-]
+    segments::Int64 = 6                         # number of tether segments         [-]
     α0 = π/10                                    # initial tether angle            [rad]
     duration = 0                                # duration of the simulation        [s]
     save::Bool = false                           # save png files in folder video
@@ -184,13 +184,44 @@ function main(; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
     sol, pos, vel, simple_sys
 end
 
-sol, pos, vel, simple_sys = main(p2=[-40,0,-47], fix_p2=true);
+sol, pos, vel, simple_sys = main(p2=[-60,0,0], fix_p2=true);
 x=sol[pos][1][1,:]
 z=sol[pos][1][3,:]
 plt.plot(x,z, color="black")
-plt.scatter(x,z)
+plt.scatter(x,z, color="red")
+plt.ylim(-80, 10)
+
 ax = plt.gca()
-ax.set_axis_off()
+OFFSET = 2.5
+O1 = -1
+ax.annotate(L"P_1",
+            xy=(x[end]+O1, OFFSET), xycoords="data",
+            fontsize=14)
+ax.annotate(L"P_2",
+            xy=(x[end-1]+O1, z[end-1] + OFFSET), xycoords="data",
+            fontsize=14)
+ax.annotate(L"P_3",
+            xy=(x[end-2]+O1, z[end-2] + OFFSET), xycoords="data",
+            fontsize=14)
+ax.annotate(L"P_4",
+            xy=(x[end-3]+O1, z[end-3] + OFFSET), xycoords="data",
+            fontsize=14)
+ax.annotate(L"P_5",
+            xy=(x[end-4]+O1, z[end-4] + OFFSET), xycoords="data",
+            fontsize=14)
+ax.annotate(L"P_6",
+            xy=(x[end-5]+O1, z[end-5] + OFFSET), xycoords="data",
+            fontsize=14)
+ax.annotate(L"P_n",
+            xy=(0+O1, OFFSET), xycoords="data",
+            fontsize=14)
+ax.annotate(L"S_1",
+            xy=(mean(x[end-1:end])+2O1, -4OFFSET), xycoords="data",
+            fontsize=14)
+ax.annotate(L"S_2",
+            xy=(mean(x[end-2:end-1])+2O1, -6.5OFFSET), xycoords="data",
+            fontsize=14)
+# ax.set_axis_off()
 plt.show()
 
 nothing
