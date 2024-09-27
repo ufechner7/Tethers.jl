@@ -9,7 +9,8 @@ docs/src/src
 docs/src/docs
 docs/src/docs/src
 docs/src/index.md
-video
+video/*.png
+video/*.gif
 .venv
 kps-image_tmp.so
 src/model.jl
