@@ -51,7 +51,7 @@ function model(se)
         acc(t)[1:3, 1:se.segments+1]
         segment(t)[1:3, 1:se.segments]
         unit_vector(t)[1:3, 1:se.segments]
-        length(t), c_spring(t), damping(t), m_tether_particle(t)
+        l_spring(t), c_spring(t), damping(t), m_tether_particle(t)
         len(t)[1:se.segments]
         rel_vel(t)[1:3, 1:se.segments]
         spring_vel(t)[1:se.segments]
@@ -74,9 +74,9 @@ function model(se)
                unit_vector[:, i]  ~ -segment[:, i]/len[i],
                rel_vel[:, i]      ~ vel[:, i+1] - vel[:, i],
                spring_vel[i]      ~ -unit_vector[:, i] ⋅ rel_vel[:, i],
-               c_spr[i]           ~ c_spring/(1+rel_compression_stiffness) 
-                                     * (rel_compression_stiffness+(len[i] > length/se.segments)),
-               spring_force[:, i] ~ (c_spr[i] * (len[i] - (length/se.segments)) 
+               c_spr[i]           ~ c_spring / (1+rel_compression_stiffness) 
+                                     * (rel_compression_stiffness+(len[i] > l_spring)),
+               spring_force[:, i] ~ (c_spr[i] * (len[i] - l_spring) 
                                      + damping * spring_vel[i]) * unit_vector[:, i],
                v_apparent[:, i]   ~ se.v_wind_tether .- (vel[:, i] + vel[:, i+1])/2,
                v_app_perp[:, i]   ~ v_apparent[:, i] - (v_apparent[:, i] ⋅ unit_vector[:, i]) .* unit_vector[:, i],
@@ -102,15 +102,15 @@ function model(se)
         eqs2 = vcat(eqs2, reduce(vcat, eqs))
     end
     # scalar equations
-    eqs = [length            ~ se.l0 + se.v_ro*t,
-           c_spring          ~ se.c_spring / (length/se.segments),
-           m_tether_particle ~ mass_per_meter * (length/se.segments),
-           damping           ~ se.damping  / (length/se.segments)]
+    eqs = [l_spring            ~ (se.l0 + se.v_ro*t)/se.segments,
+           c_spring          ~ se.c_spring / l_spring,
+           m_tether_particle ~ mass_per_meter * l_spring,
+           damping           ~ se.damping  / l_spring]
     eqs2 = vcat(eqs2, reduce(vcat, eqs))  
         
     @named sys = ODESystem(reduce(vcat, Symbolics.scalarize.(eqs2)), t)
     simple_sys = structural_simplify(sys)
-    simple_sys, pos, vel, length, c_spr
+    simple_sys, pos, vel, l_spring, c_spr
 end
 
 function simulate(se, simple_sys)
