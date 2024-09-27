@@ -102,7 +102,7 @@ function model(se)
         eqs2 = vcat(eqs2, reduce(vcat, eqs))
     end
     # scalar equations
-    eqs = [l_spring            ~ (se.l0 + se.v_ro*t)/se.segments,
+    eqs = [l_spring          ~ (se.l0 + se.v_ro*t) / se.segments,
            c_spring          ~ se.c_spring / l_spring,
            m_tether_particle ~ mass_per_meter * l_spring,
            damping           ~ se.damping  / l_spring]
