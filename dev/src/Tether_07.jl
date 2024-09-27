@@ -52,7 +52,7 @@ function model(se)
         segment(t)[1:3, 1:se.segments]
         unit_vector(t)[1:3, 1:se.segments]
         length(t), c_spring(t), damping(t), m_tether_particle(t)
-        norm1(t)[1:se.segments]
+        len(t)[1:se.segments]
         rel_vel(t)[1:3, 1:se.segments]
         spring_vel(t)[1:se.segments]
         c_spr(t)[1:se.segments]
@@ -70,18 +70,18 @@ function model(se)
     # loop over all segments to calculate the spring and drag forces
     for i in 1:se.segments
         eqs = [segment[:, i]      ~ pos[:, i+1] - pos[:, i],
-               norm1[i]           ~ norm(segment[:, i]),
-               unit_vector[:, i]  ~ -segment[:, i]/norm1[i],
+               len[i]             ~ norm(segment[:, i]),
+               unit_vector[:, i]  ~ -segment[:, i]/len[i],
                rel_vel[:, i]      ~ vel[:, i+1] - vel[:, i],
                spring_vel[i]      ~ -unit_vector[:, i] ⋅ rel_vel[:, i],
                c_spr[i]           ~ c_spring/(1+rel_compression_stiffness) 
-                                     * (rel_compression_stiffness+(norm1[i] > length/se.segments)),
-               spring_force[:, i] ~ (c_spr[i] * (norm1[i] - (length/se.segments)) 
+                                     * (rel_compression_stiffness+(len[i] > length/se.segments)),
+               spring_force[:, i] ~ (c_spr[i] * (len[i] - (length/se.segments)) 
                                      + damping * spring_vel[i]) * unit_vector[:, i],
                v_apparent[:, i]   ~ se.v_wind_tether .- (vel[:, i] + vel[:, i+1])/2,
                v_app_perp[:, i]   ~ v_apparent[:, i] - (v_apparent[:, i] ⋅ unit_vector[:, i]) .* unit_vector[:, i],
                norm_v_app[i]      ~ norm(v_app_perp[:, i]),
-               half_drag_force[:, i] ~ 0.25 * se.rho * se.cd_tether * norm_v_app[i] * (norm1[i]*se.d_tether/1000.0)
+               half_drag_force[:, i] ~ 0.25 * se.rho * se.cd_tether * norm_v_app[i] * (len[i]*se.d_tether/1000.0)
                                         * v_app_perp[:, i]]
         eqs2 = vcat(eqs2, reduce(vcat, eqs))
     end
