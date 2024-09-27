@@ -182,12 +182,12 @@ function play(se, sol, pos)
     start = time_ns()
     i = 1; j = 0
     for time in 0:dt:se.duration
-        # while we run the simulation in steps of 20ms, we update the plot only every 150ms
+        # while we run the simulation in steps of 20ms, we update the plot only every 50ms
         # therefore we have to skip some steps of the result
         while sol.t[i] < time
             i += 1
         end
-        plot2d(sol[pos][i], time; segments=se.segments, xlim, ylim, xy, fig="Tether_08", figsize=(12.8, 9.6))
+        plot2d(sol[pos][i], time; segments=se.segments, xlim, ylim, xy, fig="Tether_08", figsize=(8.533, 6.4), dpi=150)
         if se.save
             ControlPlots.plt.savefig("video/"*"img-"*lpad(j, 4, "0"))
         end
