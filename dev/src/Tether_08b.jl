@@ -2,6 +2,8 @@
 # for l < l_0), n tether segments, tether drag and reel-in and reel-out. 
 # New feature: A steady state solver is used to find the initial tether shape for any
 # given pair of endpoints, which is then used as the initial condition for the simulation.
+# This example differs from Tether_08.jl in that the tether diameter is set to 12 mm
+# and that the size of the plot is twice as large (in pixels) as in Tether_08.jl.
 using ModelingToolkit, OrdinaryDiffEq, SteadyStateDiffEq, LinearAlgebra, Timers, Parameters, ControlPlots
 tic()
 using ModelingToolkit: t_nounits as t, D_nounits as D
