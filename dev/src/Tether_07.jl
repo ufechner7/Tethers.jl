@@ -110,7 +110,7 @@ function model(se)
         
     @named sys = ODESystem(reduce(vcat, Symbolics.scalarize.(eqs2)), t)
     simple_sys = structural_simplify(sys)
-    simple_sys, pos, vel, l_spring, c_spr
+    sys, simple_sys, pos, vel, l_spring, c_spr
 end
 
 function simulate(se, simple_sys)
@@ -157,16 +157,16 @@ function main()
     global sol, pos, vel, len, c_spr
     se = Settings3()
     set_tether_diameter!(se, se.d_tether) # adapt spring and damping constants to tether diameter
-    simple_sys, pos, vel, len, c_spr = model(se)
+    sys, simple_sys, pos, vel, len, c_spr = model(se)
     sol, elapsed_time = simulate(se, simple_sys)
     play(se, sol, pos)
     println("Elapsed time: $(elapsed_time) s, speed: $(round(se.duration/elapsed_time)) times real-time")
     println("Number of evaluations per step: ", round(sol.stats.nf/(se.duration/0.02), digits=1))
-    sol, pos, vel, simple_sys
+    sol, pos, vel, sys, simple_sys
 end
 
 if (! @isdefined __BENCH__) || __BENCH__ == false
-    sol, pos, vel, simple_sys = main()
+    sol, pos, vel, sys, simple_sys = main()
 end
 __BENCH__ = false
 nothing
