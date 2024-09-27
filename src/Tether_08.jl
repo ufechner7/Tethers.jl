@@ -82,25 +82,24 @@ function model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0)
     mass_per_meter = se.rho_tether * π * (se.d_tether/2000.0)^2
     @parameters c_spring0=se.c_spring/(se.l0/se.segments) l_seg=se.l0/se.segments
     @parameters rel_compression_stiffness = se.rel_compression_stiffness
-    @variables pos(t)[1:3, 1:se.segments+1]  = POS0
-    @variables vel(t)[1:3, 1:se.segments+1]  = VEL0
-    @variables acc(t)[1:3, 1:se.segments+1]
-    @variables segment(t)[1:3, 1:se.segments]
-    @variables unit_vector(t)[1:3, 1:se.segments]
-    @variables len(t)
-    @variables c_spring(t)
-    @variables damping(t)
-    @variables m_tether_particle(t)
-    @variables norm1(t)[1:se.segments]
-    @variables rel_vel(t)[1:3, 1:se.segments]
-    @variables spring_vel(t)[1:se.segments]
-    @variables c_spr(t)[1:se.segments]
-    @variables spring_force(t)[1:3, 1:se.segments]
-    @variables v_apparent(t)[1:3, 1:se.segments]
-    @variables v_app_perp(t)[1:3, 1:se.segments]
-    @variables norm_v_app(t)[1:se.segments]
-    @variables half_drag_force(t)[1:3, 1:se.segments]
-    @variables total_force(t)[1:3, 1:se.segments+1]
+    @variables begin 
+        pos(t)[1:3, 1:se.segments+1]  = POS0
+        vel(t)[1:3, 1:se.segments+1]  = VEL0
+        acc(t)[1:3, 1:se.segments+1]
+        segment(t)[1:3, 1:se.segments]
+        unit_vector(t)[1:3, 1:se.segments]
+        l_spring(t), c_spring(t), damping(t), m_tether_particle(t)
+        len(t)[1:se.segments]
+        rel_vel(t)[1:3, 1:se.segments]
+        spring_vel(t)[1:se.segments]
+        c_spr(t)[1:se.segments]
+        spring_force(t)[1:3, 1:se.segments]
+        v_apparent(t)[1:3, 1:se.segments]
+        v_app_perp(t)[1:3, 1:se.segments]
+        norm_v_app(t)[1:se.segments]
+        half_drag_force(t)[1:3, 1:se.segments]
+        total_force(t)[1:3, 1:se.segments+1]
+    end
 
     # basic differential equations
     eqs1 = vcat(D.(pos) .~ vel,
@@ -109,18 +108,18 @@ function model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0)
     # loop over all segments to calculate the spring and drag forces
     for i in 1:se.segments
         eqs = [segment[:, i]      ~ pos[:, i+1] - pos[:, i],
-               norm1[i]           ~ norm(segment[:, i]),
-               unit_vector[:, i]  ~ -segment[:, i]/norm1[i],
+               len[i]             ~ norm(segment[:, i]),
+               unit_vector[:, i]  ~ -segment[:, i]/len[i],
                rel_vel[:, i]      ~ vel[:, i+1] - vel[:, i],
                spring_vel[i]      ~ -unit_vector[:, i] ⋅ rel_vel[:, i],
-               c_spr[i]           ~ c_spring/(1+rel_compression_stiffness) 
-                                     * (rel_compression_stiffness+(norm1[i] > len/se.segments)),
-               spring_force[:, i] ~ (c_spr[i] * (norm1[i] - (len/se.segments)) 
+               c_spr[i]           ~ c_spring / (1+rel_compression_stiffness) 
+                                     * (rel_compression_stiffness+(len[i] > l_spring)),
+               spring_force[:, i] ~ (c_spr[i] * (len[i] - l_spring) 
                                      + damping * spring_vel[i]) * unit_vector[:, i],
                v_apparent[:, i]   ~ se.v_wind_tether .- (vel[:, i] + vel[:, i+1])/2,
                v_app_perp[:, i]   ~ v_apparent[:, i] - (v_apparent[:, i] ⋅ unit_vector[:, i]) .* unit_vector[:, i],
                norm_v_app[i]      ~ norm(v_app_perp[:, i]),
-               half_drag_force[:, i] ~ 0.25 * se.rho * se.cd_tether * norm_v_app[i] * (norm1[i]*se.d_tether/1000.0)
+               half_drag_force[:, i] ~ 0.25 * se.rho * se.cd_tether * norm_v_app[i] * (len[i]*se.d_tether/1000.0)
                                         * v_app_perp[:, i]]
         eqs2 = vcat(eqs2, reduce(vcat, eqs))
     end
@@ -149,10 +148,10 @@ function model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0)
         eqs2 = vcat(eqs2, reduce(vcat, eqs))
     end
     # scalar equations
-    eqs = [len               ~ se.l0 + se.v_ro*t,
-           c_spring          ~ se.c_spring / (len/se.segments),
-           m_tether_particle ~ mass_per_meter * (len/se.segments),
-           damping           ~ se.damping  / (len/se.segments)]
+    eqs = [l_spring          ~ (se.l0 + se.v_ro*t) / se.segments,
+    c_spring          ~ se.c_spring / l_spring,
+    m_tether_particle ~ mass_per_meter * l_spring,
+    damping           ~ se.damping  / l_spring]
     eqs2 = vcat(eqs2, reduce(vcat, eqs))  
         
     @named sys = ODESystem(reduce(vcat, Symbolics.scalarize.(eqs2)), t)
