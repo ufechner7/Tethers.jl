@@ -98,7 +98,7 @@ Relative and absolute tolerance: $1.0^{-6}$. CPU: Ryzen 9 7950X.
 **Tradeoff Julia vs Python:** In Julia, the code is compiled before it is executed, which can cause about one to 10 seconds delay when running a simulation the first time, but speeds up the execution a lot afterward. In addition, Julia can run fully multithreaded, Python cannot make use of multiple CPU cores with multithreading because of the global interpreter lock. 
 
 Furthermore, the IDA solver is hardly capable of handling a simulation with the very stiff
-Dyneema tether. The Julia solvers achieve more than 2000 times the performance.
+Dyneema tether. The Julia solvers achieve more than 5000 times the performance.
 
 See also: [Why Julia?](https://ufechner7.github.io/2022/08/13/why-julia.html) and read the [documentation](https://ufechner7.github.io/Tethers.jl/dev/) or go straight to the [examples](https://ufechner7.github.io/Tethers.jl/dev/examples/).
 
