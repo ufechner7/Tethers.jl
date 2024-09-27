@@ -45,26 +45,24 @@ function model(se)
     mass_per_meter = se.rho_tether * π * (se.d_tether/2000.0)^2
     @parameters c_spring0=se.c_spring/(se.l0/se.segments) l_seg=se.l0/se.segments
     @parameters rel_compression_stiffness = se.rel_compression_stiffness
-    @variables pos(t)[1:3, 1:se.segments+1]  = POS0
-    @variables vel(t)[1:3, 1:se.segments+1]  = VEL0
-    @variables acc(t)[1:3, 1:se.segments+1]
-    @variables segment(t)[1:3, 1:se.segments]
-    @variables unit_vector(t)[1:3, 1:se.segments]
-    @variables length(t)
-    @variables c_spring(t)
-    @variables damping(t)
-    @variables m_tether_particle(t)
-    @variables norm1(t)[1:se.segments]
-    @variables rel_vel(t)[1:3, 1:se.segments]
-    @variables spring_vel(t)[1:se.segments]
-    @variables c_spr(t)[1:se.segments]
-    @variables spring_force(t)[1:3, 1:se.segments]
-    @variables v_apparent(t)[1:3, 1:se.segments]
-    @variables v_app_perp(t)[1:3, 1:se.segments]
-    @variables norm_v_app(t)[1:se.segments]
-    @variables half_drag_force(t)[1:3, 1:se.segments]
-    @variables total_force(t)[1:3, 1:se.segments+1]
-
+    @variables begin 
+        pos(t)[1:3, 1:se.segments+1]  = POS0
+        vel(t)[1:3, 1:se.segments+1]  = VEL0
+        acc(t)[1:3, 1:se.segments+1]
+        segment(t)[1:3, 1:se.segments]
+        unit_vector(t)[1:3, 1:se.segments]
+        length(t), c_spring(t), damping(t), m_tether_particle(t)
+        norm1(t)[1:se.segments]
+        rel_vel(t)[1:3, 1:se.segments]
+        spring_vel(t)[1:se.segments]
+        c_spr(t)[1:se.segments]
+        spring_force(t)[1:3, 1:se.segments]
+        v_apparent(t)[1:3, 1:se.segments]
+        v_app_perp(t)[1:3, 1:se.segments]
+        norm_v_app(t)[1:se.segments]
+        half_drag_force(t)[1:3, 1:se.segments]
+        total_force(t)[1:3, 1:se.segments+1]
+    end
     # basic differential equations
     eqs1 = vcat(D.(pos) .~ vel,
                 D.(vel) .~ acc)
