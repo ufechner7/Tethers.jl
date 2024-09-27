@@ -91,7 +91,7 @@ Relative and absolute tolerance: $1.0^{-6}$. CPU: Ryzen 9 7950X.
 |Non-linear Spring damper (3)       |     49              | 83         | 0.64            | 20  |
 |ditto with callbacks (3b, 3c)      |     58              | 103        | 0.8             | 31  |
 |swinging tether, 5 segments (5)    |    105              | 150        | 2.9             | 47  |
-|Dyneema tether, reeling out (6)    |    121              | 160        | 4.3             | 9300 |
+|Dyneema tether, reeling out (6)    |    121              | 160        | 2.1             | 9300 |
 |ditto with callbacks       (6c)    |    167              |            | 4.3             |      |
 |Dyneema, reeling out with drag (7) |    169              |            | 1.9             |      |  
 

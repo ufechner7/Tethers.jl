@@ -95,7 +95,8 @@ tspan = (0.0, duration)
 ts    = 0:dt:duration
 
 prob = ODEProblem(simple_sys, nothing, tspan)
-@time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
+solve(prob, FBDF(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
+@time sol = solve(prob, FBDF(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
 
 # plotting the result
 function play()
