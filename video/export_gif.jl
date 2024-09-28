@@ -14,6 +14,9 @@ for j in 0:(198)
     else
         A = cat(A, img, dims=3)
     end
+    if j%10 == 0
+        println("Processing image $img_path")
+    end
 end
 
 FileIO.save(folder * "/Tether.gif", A)
