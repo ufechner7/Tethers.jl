@@ -195,7 +195,7 @@ function play(se, sol, pos)
         wait_until(start + 0.5 * time * 1e9)
     end
     if se.save
-        include("export_gif.jl")
+        println("Run the script ./bin/export_gif to create the gif file!")
     end
     nothing
 end
