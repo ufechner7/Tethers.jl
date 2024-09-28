@@ -16,15 +16,15 @@ using ControlPlots
     cd_tether = 0.958
     l0 = 70                                      # initial tether length             [m]
     v_ro = 1.2                                   # reel-out speed                  [m/s]
-    d_tether = 12                                 # tether diameter                  [mm]
+    d_tether = 12                                # tether diameter                  [mm]
     rho_tether = 724                             # density of Dyneema            [kg/m³]
     c_spring = 614600                            # unit spring constant              [N]
     rel_compression_stiffness = 0.01             # relative compression stiffness    [-]
     damping = 473                                # unit damping constant            [Ns]
     segments::Int64 = 10                         # number of tether segments         [-]
     α0 = π/10                                    # initial tether angle            [rad]
-    duration = 30                                # duration of the simulation        [s]
-    save::Bool = false                           # save png files in folder video
+    duration = 20                                # duration of the simulation        [s]
+    save::Bool = true                           # save png files in folder video
 end
 
 function set_tether_diameter!(se, d; c_spring_4mm = 614600, damping_4mm = 473)
@@ -162,7 +162,7 @@ function model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0)
 end
 
 function simulate(se, simple_sys)
-    dt = 0.02
+    dt = 0.05
     tol = 1e-6
     tspan = (0.0, se.duration)
     ts    = 0:dt:se.duration
