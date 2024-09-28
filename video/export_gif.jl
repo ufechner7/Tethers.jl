@@ -3,8 +3,10 @@ using FileIO, ImageIO, Colors, FixedPointNumbers, Images
 folder = "video"
 
 A = Array{Array{RGB{Normed{UInt8,8}},2},1}()
+files = readdir(folder)
+pngfiles = filter(file->(occursin.("png",file)), files )
 
-for j in 0:(198)
+for j in 0:(length(pngfiles)-1)
     global A
     local img
     img_path = folder*"/"*"img-"*lpad(j,4,"0")*".png"
@@ -15,10 +17,9 @@ for j in 0:(198)
         A = cat(A, img, dims=3)
     end
     if j%10 == 0
-        println("Processing image $img_path")
+        println("Processing image $img_path of $(length(pngfiles)-1)")
     end
 end
 
 FileIO.save(folder * "/Tether.gif", A)
-# Pkg.rm("FileIO"); Pkg.rm("ImageIO"); Pkg.rm("Colors"); Pkg.rm("FixedPointNumbers"); Pkg.rm("Images")  
 println("\nGif file $(folder * "/Tether.gif") created!")  
