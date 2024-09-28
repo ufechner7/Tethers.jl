@@ -14,3 +14,4 @@ video/*.gif
 .venv
 kps-image_tmp.so
 src/model.jl
+video/Tether_08b.mp4

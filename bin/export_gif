@@ -5,3 +5,7 @@ fi
 julia --project="./video" -e 'using Pkg; Pkg.update(); include("video/export_gif.jl")'
 cd video
 rm -rf *.png
+rm Tether.mp4
+ffmpeg -i Tether.gif -movflags faststart -pix_fmt yuv420p -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" tmp.mp4
+ffmpeg -i tmp.mp4 -r 20 -filter:v "setpts=0.5*PTS" Tether.mp4
+rm tmp.mp4
