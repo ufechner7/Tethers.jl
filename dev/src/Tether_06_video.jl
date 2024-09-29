@@ -120,6 +120,10 @@ function play()
         j += 1
         wait_until(start + time*1e9)
     end
+    if SAVE
+        plt.close("all")
+        run(`./bin/export_video`)
+    end
     nothing
 end
 play()
