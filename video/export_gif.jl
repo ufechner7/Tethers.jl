@@ -1,3 +1,4 @@
+# create a gif and an mp4 file from the images in the folder "video"
 using Colors, FixedPointNumbers, Images, FFMPEG
 
 folder = "video"
@@ -5,7 +6,6 @@ framerate = 20
 gifname = joinpath(folder, "Tether.gif")
 mp4name = joinpath(folder, "Tether.mp4")
 
-A = Array{Array{RGB{Normed{UInt8,8}},2},1}()
 files = readdir(folder)
 pngfiles = filter(file->(occursin.("png",file)), files )
 rm(gifname, force=true)
