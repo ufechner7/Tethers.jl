@@ -2,6 +2,6 @@
 if [[ $(basename $(pwd)) == "bin" ]]; then
     cd ..
 fi
-julia --project="./video" -e 'using Pkg; Pkg.update(); include("video/export_gif.jl")'
+julia --project="./video" -e 'using Pkg; Pkg.update(); include("video/export_video.jl")'
 cd video
 rm -rf *.png
