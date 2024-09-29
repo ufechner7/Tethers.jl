@@ -107,13 +107,17 @@ function play()
     # text position
     xy = (L0/4.2, z_max-7)
     start = time_ns()
-    i = 1
+    i = 1; j = 0
     for time in 0:dt:duration
         # while we run the simulation in steps of 50ms, we update the plot only every 50ms
         while sol.t[i] < time
             i += 1
         end
-        plot2d(sol[pos][i], time; segments=SEGMENTS, xlim, ylim, xy)
+        plot2d(sol[pos][i], time; segments=SEGMENTS, xlim, ylim, xy, fig="Tether_08", figsize=(8.54, 6.4), dpi=150)
+        if SAVE
+            ControlPlots.plt.savefig("video/"*"img-"*lpad(j, 4, "0"))
+        end
+        j += 1
         wait_until(start + time*1e9)
     end
     nothing
