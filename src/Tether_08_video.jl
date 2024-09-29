@@ -8,6 +8,7 @@ using ModelingToolkit, OrdinaryDiffEq, SteadyStateDiffEq, LinearAlgebra, Timers,
 tic()
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using ControlPlots
+plt.close("all")
 
 @with_kw mutable struct Settings3 @deftype Float64
     g_earth::Vector{Float64} = [0.0, 0.0, -9.81] # gravitational acceleration     [m/s²]
@@ -197,7 +198,8 @@ function play(se, sol, pos)
         wait_until(start + 0.5 * time * 1e9)
     end
     if se.save
-        println("Run the script ./bin/export_gif to create the gif file!")
+        plt.close("all")
+        run(`./bin/export_video`)
     end
     nothing
 end
