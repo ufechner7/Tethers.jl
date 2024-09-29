@@ -6,8 +6,6 @@ framerate = 20
 gifname = joinpath(folder, "Tether.gif")
 mp4name = joinpath(folder, "Tether.mp4")
 
-files = readdir(folder)
-pngfiles = filter(file->(occursin.("png",file)), files )
 rm(gifname, force=true)
 rm(mp4name, force=true)
 
