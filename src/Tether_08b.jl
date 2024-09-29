@@ -189,7 +189,7 @@ function play(se, sol, pos)
         while sol.t[i] < time
             i += 1
         end
-        plot2d(sol[pos][i], time; segments=se.segments, xlim, ylim, xy, fig="Tether_08", figsize=(8.533, 6.4), dpi=150)
+        plot2d(sol[pos][i], time; segments=se.segments, xlim, ylim, xy, fig="Tether_08", figsize=(8.54, 6.4), dpi=150)
         if se.save
             ControlPlots.plt.savefig("video/"*"img-"*lpad(j, 4, "0"))
         end
