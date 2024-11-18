@@ -168,12 +168,12 @@ function simulate(se, simple_sys, p1, p2)
     ts    = 0:dt:se.duration
     p2 = [-40, 0, -47]
     p1 = [0, 0, 0]
-    u0map = vcat(
-        [simple_sys.acc[j, i] => 0 for j in 1:3 for i in 1:se.segments],
-        [simple_sys.vel[j, i] => 0 for j in 1:3 for i in 1:se.segments+1],
-        [simple_sys.pos[j, end] => p2[j] for j in 1:3],
-        [simple_sys.pos[j, 1] => p1[j] for j in 1:3],
-    )
+    u0map = [
+        [simple_sys.acc[j, i] => 0 for j in 1:3 for i in 1:se.segments]
+        [simple_sys.vel[j, i] => 0 for j in 1:3 for i in 1:se.segments+1]
+        [simple_sys.pos[j, end] => p2[j] for j in 1:3]
+        [simple_sys.pos[j, 1] => p1[j] for j in 1:3]
+    ]
     guesses = vcat(
         [simple_sys.segment[j, i] => 1.0 for j in 1:3 for i in 1:se.segments],
         [simple_sys.total_force[j, i] => 1.0 for j in 1:3 for i in 1:se.segments+1],
@@ -182,6 +182,7 @@ function simulate(se, simple_sys, p1, p2)
     prob = ODEProblem(simple_sys, u0map, tspan; guesses, fully_determined=true) # how to remake iprob with new parameters
     integ = init(prob, FBDF(autodiff=true); dt, abstol=tol, reltol=tol, saveat=ts)
 
+    # comment out to make it run
     prob = remake(prob; u0=[simple_sys.pos[1, end] => 40])
     integ = init(prob, FBDF(autodiff=true); dt, abstol=tol, reltol=tol, saveat=ts)
 
