@@ -9,7 +9,7 @@ using ControlPlots
 
 @with_kw mutable struct Settings3 @deftype Float64
     g_earth::Vector{Float64} = [0.0, 0.0, -9.81] # gravitational acceleration     [m/s²]
-    v_wind_tether::Vector{Float64} = [2, 0.0, 0.0]
+    v_wind_tether::Vector{Float64} = [2.0, 0.0, 0.0]
     rho = 1.225
     cd_tether = 0.958
     l0 = 70                                      # initial tether length             [m]
@@ -19,7 +19,7 @@ using ControlPlots
     c_spring = 614600                            # unit spring constant              [N]
     rel_compression_stiffness = 0.01             # relative compression stiffness    [-]
     damping = 473                                # unit damping constant            [Ns]
-    segments::Int64 = 10                         # number of tether segments         [-]
+    segments::Int64 = 6                         # number of tether segments         [-]
     α0 = π/10                                    # initial tether angle            [rad]
     duration = 5                                # duration of the simulation        [s]
     save::Bool = false                           # save png files in folder video
@@ -49,38 +49,7 @@ function calc_initial_state(se; p1, p2)
     POS0, VEL0
 end
 
-function model(se; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
-    if ! isnothing(p1)
-        @assert isa(p1, AbstractVector) || error("p1 must be a vector")
-        @assert (length(p1) == 3)       || error("p1 must have length 3")
-    else
-        @assert ! fix_p1                || error("if p1 undefined it cannot be fixed")
-    end
-
-    if ! isnothing(p2)
-        @assert isa(p2, AbstractVector) || error("p2 must be a vector")
-        @assert (length(p2) == 3)       || error("p2 must have length 3")
-    else
-        @assert ! fix_p2                || error("if p2 undefined it cannot be fixed")
-    end
-    # straight line approximation for the tether
-    POS0, VEL0 = calc_initial_state(se; p1, p2)
-    # find steady state
-    v_ro = se.v_ro      # save the reel-out speed
-    se.v_ro = 0         # v_ro must be zero, otherwise finding the steady state is not possible
-    # simple_sys, pos, =  model(se, p1, p2, true, true, POS0, VEL0)
-    # tspan = (0.0, se.duration)
-    # prob = ODEProblem(simple_sys, nothing, tspan)
-    # prob1 = SteadyStateProblem(prob)
-    # println("time to solve steady prob")
-    # @time sol1 = solve(prob1, DynamicSS(KenCarp4(autodiff=false)))
-    # @time sol1 = solve(prob1, DynamicSS(KenCarp4(autodiff=false)))
-    # POS0 = sol1[pos]
-    # create the real model
-    se.v_ro = v_ro
-    model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0)
-end
-function model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0)
+function model(se, p1, p2, fix_p1, fix_p2)
     mass_per_meter = se.rho_tether * π * (se.d_tether/2000.0)^2
     @parameters c_spring0=se.c_spring/(se.l0/se.segments) l_seg=se.l0/se.segments
     @parameters rel_compression_stiffness = se.rel_compression_stiffness
@@ -150,45 +119,51 @@ function model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0)
         eqs2 = vcat(eqs2, reduce(vcat, eqs))
     end
     # scalar equations
-    eqs = [l_spring   ~ (se.l0 + se.v_ro*t) / se.segments,
+    eqs = [D(l_spring)   ~ se.v_ro / se.segments,
     c_spring          ~ se.c_spring / l_spring,
     m_tether_particle ~ mass_per_meter * l_spring,
     damping           ~ se.damping  / l_spring]
     eqs2 = vcat(eqs2, reduce(vcat, eqs))  
-        
+    eqs2 = reduce(vcat, Symbolics.scalarize.(eqs2))
+
     @mtkbuild sys = ODESystem(reduce(vcat, Symbolics.scalarize.(eqs2)), t)
     sys, pos, vel, len, c_spr
 end
 
-function simulate(se, simple_sys, p1, p2)
-    global prob, u0map
+function simulate(se, simple_sys, p1, p2, POS0, VEL0)
+    global prob, u0map, integ
     dt = 0.05
     tol = 1e-6
     tspan = (0.0, se.duration)
     ts    = 0:dt:se.duration
-    p2 = [-40, 0, -47]
-    p1 = [0, 0, 0]
     u0map = [
-        [simple_sys.acc[j, i] => 0 for j in 1:3 for i in 1:se.segments]
-        [simple_sys.vel[j, i] => 0 for j in 1:3 for i in 1:se.segments+1]
+        [simple_sys.acc[j, i] => [0.0, 0.0, 0.0][j] for j in 1:3 for i in 2:se.segments]
+        [simple_sys.vel[j, i] => [0.0, 0.0, 0.0][j] for j in 1:3 for i in 2:se.segments]
         [simple_sys.pos[j, end] => p2[j] for j in 1:3]
+        [simple_sys.vel[j, end] => 0 for j in 1:3]
         [simple_sys.pos[j, 1] => p1[j] for j in 1:3]
+        [simple_sys.vel[j, 1] => 0 for j in 1:3]
+        [simple_sys.l_spring => norm(p2)/se.segments+1.0]
+
     ]
-    guesses = vcat(
-        [simple_sys.segment[j, i] => 1.0 for j in 1:3 for i in 1:se.segments],
-        [simple_sys.total_force[j, i] => 1.0 for j in 1:3 for i in 1:se.segments+1],
-    )
+    guesses = [
+        [simple_sys.segment[j, i] => 1.0 for j in 1:3 for i in 1:se.segments]
+        [simple_sys.total_force[j, i] => 1.0 for j in 1:3 for i in 1:se.segments+1]
+    ]
 
-    prob = ODEProblem(simple_sys, u0map, tspan; guesses, fully_determined=true) # how to remake iprob with new parameters
-    integ = init(prob, FBDF(autodiff=true); dt, abstol=tol, reltol=tol, saveat=ts)
+    # @time iprob = ModelingToolkit.InitializationProblem(simple_sys, 0.0, u0map, Dict(); guesses)
+    @time prob = ODEProblem(simple_sys, u0map, tspan; guesses, fully_determined=true) # how to remake iprob with new parameters
+    @time integ = init(prob, FBDF(autodiff=true); dt, abstol=tol, reltol=tol, saveat=ts)
 
-    # comment out to make it run
-    prob = remake(prob; u0=[simple_sys.pos[1, end] => 40])
-    integ = init(prob, FBDF(autodiff=true); dt, abstol=tol, reltol=tol, saveat=ts)
+    @show integ[simple_sys.pos]
+    # prob = remake(prob; u0=[simple_sys.pos[1, end] => 40])
+    # integ = init(prob, FBDF(autodiff=true); dt=dt, abstol=tol, reltol=tol, saveat=ts)
 
     toc()
+    @show integ[simple_sys.l_spring]
+    elapsed_time = @elapsed step!(integ, 1e-3, true)
     elapsed_time = @elapsed step!(integ, se.duration, true)
-    # elapsed_time = @elapsed sol = step!(integ, se.duration, true)
+
     integ.sol, elapsed_time
 end
 
@@ -225,8 +200,9 @@ function main(; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
     global sol, pos, vel, len, c_spr
     se = Settings3()
     set_tether_diameter!(se, se.d_tether) # adapt spring and damping constants to tether diameter
-    simple_sys, pos, vel, len, c_spr = model(se; p1, p2, fix_p1, fix_p2)
-    sol, elapsed_time = simulate(se, simple_sys, p1, p2)
+    POS0, VEL0 = calc_initial_state(se; p1, p2)
+    simple_sys, pos, vel, len, c_spr = model(se, p1, p2, fix_p1, fix_p2)
+    sol, elapsed_time = simulate(se, simple_sys, p1, p2, POS0, VEL0)
     if @isdefined __PC
         return sol, pos, vel, simple_sys
     end
@@ -236,7 +212,7 @@ function main(; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
     sol, pos, vel, simple_sys
 end
 
-main(p2=[-40,0,-47], fix_p2=false);
+main(p2=[-40,0,-47], fix_p2=true);
 
 nothing
 
