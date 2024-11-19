@@ -9,7 +9,7 @@ using ControlPlots
 
 @with_kw mutable struct Settings3 @deftype Float64
     g_earth::Vector{Float64} = [0.0, 0.0, -9.81] # gravitational acceleration     [m/s²]
-    v_wind_tether::Vector{Float64} = [2.0, 0.0, 0.0]
+    v_wind_tether::Vector{Float64} = [10.0, 0.0, 0.0]
     rho = 1.225
     cd_tether = 0.958
     l0 = 70                                      # initial tether length             [m]
@@ -21,7 +21,7 @@ using ControlPlots
     damping = 473                                # unit damping constant            [Ns]
     segments::Int64 = 6                         # number of tether segments         [-]
     α0 = π/10                                    # initial tether angle            [rad]
-    duration = 5                                # duration of the simulation        [s]
+    duration = 30                                # duration of the simulation        [s]
     save::Bool = false                           # save png files in folder video
 end
 
@@ -52,7 +52,7 @@ end
 function model(se, p1, p2, fix_p1, fix_p2)
     mass_per_meter = se.rho_tether * π * (se.d_tether/2000.0)^2
     @parameters c_spring0=se.c_spring/(se.l0/se.segments) l_seg=se.l0/se.segments
-    @parameters rel_compression_stiffness = se.rel_compression_stiffness
+    @parameters rel_compression_stiffness = se.rel_compression_stiffness end_mass=1.0
     @variables begin 
         pos(t)[1:3, 1:se.segments+1]  # = POS0
         vel(t)[1:3, 1:se.segments+1]  # = VEL0
@@ -100,7 +100,7 @@ function model(se, p1, p2, fix_p1, fix_p2)
         if i == se.segments+1
             push!(eqs, total_force[:, i] ~ spring_force[:, i-1] + half_drag_force[:, i-1])
             if isnothing(p2) || ! fix_p2
-                push!(eqs, acc[:, i]         ~ se.g_earth + total_force[:, i] / (0.5 * m_tether_particle))
+                push!(eqs, acc[:, i]         ~ se.g_earth + total_force[:, i] / (0.5 * m_tether_particle + end_mass))
             else
                 push!(eqs, acc[:, i]         ~ zeros(3))
             end
@@ -130,6 +130,10 @@ function model(se, p1, p2, fix_p1, fix_p2)
     sys, pos, vel, len, c_spr
 end
 
+function absmax(a, b)
+    abs(a) > abs(b) ? a : b
+end
+
 function simulate(se, simple_sys, p1, p2, POS0, VEL0)
     global prob, u0map, integ
     pos, vel, acc = simple_sys.pos, simple_sys.vel, simple_sys.acc
@@ -137,11 +141,12 @@ function simulate(se, simple_sys, p1, p2, POS0, VEL0)
     tol = 1e-6
     tspan = (0.0, se.duration)
     ts    = 0:dt:se.duration
-    vel2 = [-100, 0, 100]
-    p2 = [-40, 0.1, -47]
+    vel2dir = [0, 1, 0] × normalize(p2 - p1)
+    println(vel2dir)
+    vel2 = vel2dir * 100
     u0map = [
         [acc[j, i] => [0.0, 0.0, 0.0][j] for j in 1:3 for i in 2:se.segments]
-        [vel[j, i] => pos[j, i] / p2[j] * vel[j, end] for j in 1:3 for i in 2:se.segments]
+        [vel[j, i] => (pos[j, i] - p1[j]) / absmax(p2[j] - p1[j], 1e-5) * vel[j, end] for j in 1:3 for i in 2:se.segments]
         [pos[j, end] => p2[j] for j in 1:3]
         [vel[j, end] => vel2[j] for j in 1:3]
         [pos[j, 1] => p1[j] for j in 1:3]
@@ -215,7 +220,7 @@ function main(; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
     sol, pos, vel, simple_sys
 end
 
-main(p2=[-40,0,-47], fix_p2=false);
+main(p2=[1,0,-47], fix_p2=false);
 
 nothing
 
