@@ -132,31 +132,34 @@ end
 
 function simulate(se, simple_sys, p1, p2, POS0, VEL0)
     global prob, u0map, integ
+    pos, vel, acc = simple_sys.pos, simple_sys.vel, simple_sys.acc
     dt = 0.05
     tol = 1e-6
     tspan = (0.0, se.duration)
     ts    = 0:dt:se.duration
+    vel2 = [-100, 0, 100]
+    p2 = [-40, 0.1, -47]
     u0map = [
-        [simple_sys.acc[j, i] => [0.0, 0.0, 0.0][j] for j in 1:3 for i in 2:se.segments]
-        [simple_sys.vel[j, i] => [0.0, 0.0, 0.0][j] for j in 1:3 for i in 2:se.segments]
-        [simple_sys.pos[j, end] => p2[j] for j in 1:3]
-        [simple_sys.vel[j, end] => 0 for j in 1:3]
-        [simple_sys.pos[j, 1] => p1[j] for j in 1:3]
-        [simple_sys.vel[j, 1] => 0 for j in 1:3]
+        [acc[j, i] => [0.0, 0.0, 0.0][j] for j in 1:3 for i in 2:se.segments]
+        [vel[j, i] => pos[j, i] / p2[j] * vel[j, end] for j in 1:3 for i in 2:se.segments]
+        [pos[j, end] => p2[j] for j in 1:3]
+        [vel[j, end] => vel2[j] for j in 1:3]
+        [pos[j, 1] => p1[j] for j in 1:3]
+        [vel[j, 1] => 0 for j in 1:3]
         [simple_sys.l_spring => norm(p2)/se.segments+1.0]
-
     ]
     guesses = [
         [simple_sys.segment[j, i] => 1.0 for j in 1:3 for i in 1:se.segments]
         [simple_sys.total_force[j, i] => 1.0 for j in 1:3 for i in 1:se.segments+1]
+        [pos[j, i] => POS0[j, i] for j in 1:3 for i in 1:se.segments+1]
     ]
 
     # @time iprob = ModelingToolkit.InitializationProblem(simple_sys, 0.0, u0map, Dict(); guesses)
     @time prob = ODEProblem(simple_sys, u0map, tspan; guesses, fully_determined=true) # how to remake iprob with new parameters
     @time integ = init(prob, FBDF(autodiff=true); dt, abstol=tol, reltol=tol, saveat=ts)
 
-    @show integ[simple_sys.pos]
-    # prob = remake(prob; u0=[simple_sys.pos[1, end] => 40])
+    @show integ[pos]
+    # prob = remake(prob; u0=[pos[1, end] => 40])
     # integ = init(prob, FBDF(autodiff=true); dt=dt, abstol=tol, reltol=tol, saveat=ts)
 
     toc()
@@ -212,7 +215,7 @@ function main(; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
     sol, pos, vel, simple_sys
 end
 
-main(p2=[-40,0,-47], fix_p2=true);
+main(p2=[-40,0,-47], fix_p2=false);
 
 nothing
 
