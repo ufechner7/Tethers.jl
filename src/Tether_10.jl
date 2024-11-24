@@ -142,7 +142,6 @@ function simulate(se, simple_sys, p1, p2, POS0, VEL0)
     tspan = (0.0, se.duration)
     ts    = 0:dt:se.duration
     vel2dir = [0, 1, 0] × normalize(p2 - p1)
-    println(vel2dir)
     vel2 = vel2dir * 100
     u0map = [
         [acc[j, i] => [0.0, 0.0, 0.0][j] for j in 1:3 for i in 2:se.segments]
@@ -163,12 +162,10 @@ function simulate(se, simple_sys, p1, p2, POS0, VEL0)
     @time prob = ODEProblem(simple_sys, u0map, tspan; guesses, fully_determined=true) # how to remake iprob with new parameters
     @time integ = init(prob, FBDF(autodiff=true); dt, abstol=tol, reltol=tol, saveat=ts)
 
-    @show integ[pos]
-    # prob = remake(prob; u0=[pos[1, end] => 40])
+    # prob = remake(prob; u0=u0map, guesses=guesses)
     # integ = init(prob, FBDF(autodiff=true); dt=dt, abstol=tol, reltol=tol, saveat=ts)
 
     toc()
-    @show integ[simple_sys.l_spring]
     elapsed_time = @elapsed step!(integ, 1e-3, true)
     elapsed_time = @elapsed step!(integ, se.duration, true)
 
@@ -221,6 +218,10 @@ function main(; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
 end
 
 main(p2=[1,0,-47], fix_p2=false);
+
+"""
+Zero smoothing: 400 times realtime
+"""
 
 nothing
 
