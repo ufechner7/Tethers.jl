@@ -21,7 +21,7 @@ using ControlPlots
     damping = 473                                # unit damping constant            [Ns]
     segments::Int64 = 6                         # number of tether segments         [-]
     α0 = π/10                                    # initial tether angle            [rad]
-    duration = 30                                # duration of the simulation        [s]
+    duration = 5                                # duration of the simulation        [s]
     save::Bool = false                           # save png files in folder video
 end
 
@@ -52,6 +52,7 @@ end
 function model(se, p1, p2, fix_p1, fix_p2)
     mass_per_meter = se.rho_tether * π * (se.d_tether/2000.0)^2
     @parameters c_spring0=se.c_spring/(se.l0/se.segments) l_seg=se.l0/se.segments
+    @parameters v_wind_tether[1:3] = se.v_wind_tether
     @parameters rel_compression_stiffness = se.rel_compression_stiffness end_mass=1.0
     @variables begin 
         pos(t)[1:3, 1:se.segments+1]  # = POS0
@@ -87,7 +88,7 @@ function model(se, p1, p2, fix_p1, fix_p2)
                                      * (rel_compression_stiffness+(len[i] > l_spring)),
                spring_force[:, i] ~ (c_spr[i] * (len[i] - l_spring) 
                                      + damping * spring_vel[i]) * unit_vector[:, i],
-               v_apparent[:, i]   ~ se.v_wind_tether .- (vel[:, i] + vel[:, i+1])/2,
+               v_apparent[:, i]   ~ v_wind_tether .- (vel[:, i] + vel[:, i+1])/2,
                v_app_perp[:, i]   ~ v_apparent[:, i] - (v_apparent[:, i] ⋅ unit_vector[:, i]) .* unit_vector[:, i],
                norm_v_app[i]      ~ norm(v_app_perp[:, i]),
                half_drag_force[:, i] ~ 0.25 * se.rho * se.cd_tether * norm_v_app[i] * (len[i]*se.d_tether/1000.0)
@@ -143,6 +144,8 @@ function simulate(se, simple_sys, p1, p2, POS0, VEL0)
     ts    = 0:dt:se.duration
     vel2dir = [0, 1, 0] × normalize(p2 - p1)
     vel2 = vel2dir * 100
+    init_force = [-0.17, 0.0, -732.33]
+    init_force = 732.325693556467
     u0map = [
         [acc[j, i] => [0.0, 0.0, 0.0][j] for j in 1:3 for i in 2:se.segments]
         [vel[j, i] => (pos[j, i] - p1[j]) / absmax(p2[j] - p1[j], 1e-5) * vel[j, end] for j in 1:3 for i in 2:se.segments]
@@ -157,7 +160,7 @@ function simulate(se, simple_sys, p1, p2, POS0, VEL0)
         [simple_sys.total_force[j, i] => 1.0 for j in 1:3 for i in 1:se.segments+1]
         [pos[j, i] => POS0[j, i] for j in 1:3 for i in 1:se.segments+1]
     ]
-
+    
     # @time iprob = ModelingToolkit.InitializationProblem(simple_sys, 0.0, u0map, Dict(); guesses)
     @time prob = ODEProblem(simple_sys, u0map, tspan; guesses, fully_determined=true) # how to remake iprob with new parameters
     @time integ = init(prob, FBDF(autodiff=true); dt, abstol=tol, reltol=tol, saveat=ts)
@@ -202,7 +205,7 @@ function play(se, sol, pos)
 end
 
 function main(; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
-    global sol, pos, vel, len, c_spr
+    global sol, pos, vel, len, c_spr, simple_sys
     se = Settings3()
     set_tether_diameter!(se, se.d_tether) # adapt spring and damping constants to tether diameter
     POS0, VEL0 = calc_initial_state(se; p1, p2)
