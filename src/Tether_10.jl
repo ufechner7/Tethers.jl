@@ -71,33 +71,40 @@ function model(se, p1, p2, fix_p1, fix_p2)
         norm_v_app(t)[1:se.segments]
         half_drag_force(t)[1:3, 1:se.segments]
         total_force(t)[1:3, 1:se.segments+1]
+        winch_force(t)
+        elevation(t)
+        azimuth(t)
+        distance_vel(t)
     end
 
     # basic differential equations
-    eqs1 = vcat(D.(pos) .~ vel,
-                D.(vel) .~ acc)
-    eqs2 = vcat(eqs1...)
+    eqs = [
+        D.(pos) .~ vel
+        D.(vel) .~ acc
+    ]
+    eqs = reduce(vcat, eqs)
     # loop over all segments to calculate the spring and drag forces
     for i in 1:se.segments
-        eqs = [segment[:, i]      ~ pos[:, i+1] - pos[:, i],
-               len[i]             ~ norm(segment[:, i]),
-               unit_vector[:, i]  ~ -segment[:, i]/len[i],
-               rel_vel[:, i]      ~ vel[:, i+1] - vel[:, i],
-               spring_vel[i]      ~ -unit_vector[:, i] ⋅ rel_vel[:, i],
-               c_spr[i]           ~ c_spring / (1+rel_compression_stiffness) 
-                                     * (rel_compression_stiffness+(len[i] > l_spring)),
-               spring_force[:, i] ~ (c_spr[i] * (len[i] - l_spring) 
-                                     + damping * spring_vel[i]) * unit_vector[:, i],
-               v_apparent[:, i]   ~ v_wind_tether .- (vel[:, i] + vel[:, i+1])/2,
-               v_app_perp[:, i]   ~ v_apparent[:, i] - (v_apparent[:, i] ⋅ unit_vector[:, i]) .* unit_vector[:, i],
-               norm_v_app[i]      ~ norm(v_app_perp[:, i]),
-               half_drag_force[:, i] ~ 0.25 * se.rho * se.cd_tether * norm_v_app[i] * (len[i]*se.d_tether/1000.0)
-                                        * v_app_perp[:, i]]
-        eqs2 = vcat(eqs2, reduce(vcat, eqs))
+        eqs = [
+            eqs
+            segment[:, i]      ~ pos[:, i+1] - pos[:, i]
+            len[i]             ~ norm(segment[:, i])
+            unit_vector[:, i]  ~ -segment[:, i]/len[i]
+            rel_vel[:, i]      ~ vel[:, i+1] - vel[:, i]
+            spring_vel[i]      ~ -unit_vector[:, i] ⋅ rel_vel[:, i]
+            c_spr[i]           ~ c_spring / (1+rel_compression_stiffness) * 
+                                    (rel_compression_stiffness+(len[i] > l_spring))
+            spring_force[:, i] ~ (c_spr[i] * (len[i] - l_spring)  + 
+                                    damping * spring_vel[i]) * unit_vector[:, i]
+            v_apparent[:, i]   ~ v_wind_tether .- (vel[:, i] + vel[:, i+1])/2
+            v_app_perp[:, i]   ~ v_apparent[:, i] - (v_apparent[:, i] ⋅ unit_vector[:, i]) .* unit_vector[:, i]
+            norm_v_app[i]      ~ norm(v_app_perp[:, i])
+            half_drag_force[:, i] ~ 0.25 * se.rho * se.cd_tether * norm_v_app[i] * (len[i]*se.d_tether/1000.0) * 
+                                    v_app_perp[:, i]
+            ]
     end
     # loop over all tether particles to apply the forces and calculate the accelerations
     for i in 1:(se.segments+1)
-        eqs = []
         if i == se.segments+1
             push!(eqs, total_force[:, i] ~ spring_force[:, i-1] + half_drag_force[:, i-1])
             if isnothing(p2) || ! fix_p2
@@ -117,18 +124,25 @@ function model(se, p1, p2, fix_p1, fix_p2)
                                            + half_drag_force[:, i-1] + half_drag_force[:, i])
             push!(eqs, acc[:, i]         ~ se.g_earth + total_force[:, i] / m_tether_particle)
         end
-        eqs2 = vcat(eqs2, reduce(vcat, eqs))
     end
     # scalar equations
-    eqs = [D(l_spring)   ~ se.v_ro / se.segments,
-    c_spring          ~ se.c_spring / l_spring,
-    m_tether_particle ~ mass_per_meter * l_spring,
-    damping           ~ se.damping  / l_spring]
-    eqs2 = vcat(eqs2, reduce(vcat, eqs))  
-    eqs2 = reduce(vcat, Symbolics.scalarize.(eqs2))
-
-    @mtkbuild sys = ODESystem(reduce(vcat, Symbolics.scalarize.(eqs2)), t)
+    eqs = [
+        eqs
+        D(l_spring)   ~ se.v_ro / se.segments
+        c_spring          ~ se.c_spring / l_spring
+        m_tether_particle ~ mass_per_meter * l_spring
+        damping           ~ se.damping  / l_spring
+        winch_force       ~ norm(total_force[:, 1]) * smooth_sign(-pos[3, end])
+        distance_vel      ~ norm(vel[:, end])
+        elevation         ~ atan(pos[3, end] / pos[1, end])
+        azimuth           ~ -atan(pos[2, end] / pos[1, end])
+    ]
+    eqs = reduce(vcat, Symbolics.scalarize.(eqs))
+    @mtkbuild sys = ODESystem(eqs, t)
     sys, pos, vel, len, c_spr
+end
+function smooth_sign(x; ϵ = 1e-3)
+    return x / √(x^2 + ϵ^2)
 end
 
 function absmax(a, b)
@@ -143,17 +157,18 @@ function simulate(se, simple_sys, p1, p2, POS0, VEL0)
     tspan = (0.0, se.duration)
     ts    = 0:dt:se.duration
     vel2dir = [0, 1, 0] × normalize(p2 - p1)
-    vel2 = vel2dir * 100
-    init_force = [-0.17, 0.0, -732.33]
-    init_force = 732.325693556467
+    vel2 = vel2dir * 0
+    vel2 = [0, 0, 0]
     u0map = [
         [acc[j, i] => [0.0, 0.0, 0.0][j] for j in 1:3 for i in 2:se.segments]
-        [vel[j, i] => (pos[j, i] - p1[j]) / absmax(p2[j] - p1[j], 1e-5) * vel[j, end] for j in 1:3 for i in 2:se.segments]
-        [pos[j, end] => p2[j] for j in 1:3]
+        [vel[j, i] => (pos[j, i] - p1[j]) / absmax(p2[j] - p1[j], 1e-5) * vel2[j] for j in 1:3 for i in 2:se.segments]
+        simple_sys.winch_force => 14.6
+        simple_sys.elevation => deg2rad(-89)
+        simple_sys.azimuth => 0
         [vel[j, end] => vel2[j] for j in 1:3]
         [pos[j, 1] => p1[j] for j in 1:3]
         [vel[j, 1] => 0 for j in 1:3]
-        [simple_sys.l_spring => norm(p2)/se.segments+1.0]
+        simple_sys.l_spring => se.l0/se.segments
     ]
     guesses = [
         [simple_sys.segment[j, i] => 1.0 for j in 1:3 for i in 1:se.segments]
@@ -169,15 +184,19 @@ function simulate(se, simple_sys, p1, p2, POS0, VEL0)
     # integ = init(prob, FBDF(autodiff=true); dt=dt, abstol=tol, reltol=tol, saveat=ts)
 
     toc()
-    elapsed_time = @elapsed step!(integ, 1e-3, true)
-    elapsed_time = @elapsed step!(integ, se.duration, true)
+    elapsed_time = @elapsed step!(integ, 1e-4, true)
+    @show integ[simple_sys.winch_force]
+    @show integ[acc]
+    @show rad2deg(integ[simple_sys.elevation])
+    # elapsed_time = @elapsed step!(integ, se.duration, true)
+    @show integ[simple_sys.winch_force]
 
     integ.sol, elapsed_time
 end
 
 function play(se, sol, pos)
     dt = 0.151
-    ylim = (-1.2 * (se.l0 + se.v_ro*se.duration), 0.5)
+    ylim = (-1.2 * (se.l0 + se.v_ro*se.duration), 50)
     xlim = (-se.l0, se.l0)
     mkpath("video")
     z_max = 0.0
