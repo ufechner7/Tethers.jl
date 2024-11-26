@@ -52,7 +52,6 @@ end
 function model(se, p1, p2, fix_p1, fix_p2)
     mass_per_meter = se.rho_tether * π * (se.d_tether/2000.0)^2
     @parameters c_spring0=se.c_spring/(se.l0/se.segments) l_seg=se.l0/se.segments
-    @parameters v_wind_tether[1:3] = se.v_wind_tether
     @parameters rel_compression_stiffness = se.rel_compression_stiffness end_mass=1.0
     @variables begin 
         pos(t)[1:3, 1:se.segments+1]  # = POS0
@@ -72,9 +71,13 @@ function model(se, p1, p2, fix_p1, fix_p2)
         half_drag_force(t)[1:3, 1:se.segments]
         total_force(t)[1:3, 1:se.segments+1]
         winch_force(t)
+        last_force(t)
         elevation(t)
         azimuth(t)
-        distance_vel(t)
+        distance_acc(t)
+        acc_vel(t)
+        wind_strenght(t)
+        v_wind_tether(t)
     end
 
     # basic differential equations
@@ -96,7 +99,7 @@ function model(se, p1, p2, fix_p1, fix_p2)
                                     (rel_compression_stiffness+(len[i] > l_spring))
             spring_force[:, i] ~ (c_spr[i] * (len[i] - l_spring)  + 
                                     damping * spring_vel[i]) * unit_vector[:, i]
-            v_apparent[:, i]   ~ v_wind_tether .- (vel[:, i] + vel[:, i+1])/2
+            v_apparent[:, i]   ~ v_wind_tether * [1.0, 0.0, 0.0] .- (vel[:, i] + vel[:, i+1])/2
             v_app_perp[:, i]   ~ v_apparent[:, i] - (v_apparent[:, i] ⋅ unit_vector[:, i]) .* unit_vector[:, i]
             norm_v_app[i]      ~ norm(v_app_perp[:, i])
             half_drag_force[:, i] ~ 0.25 * se.rho * se.cd_tether * norm_v_app[i] * (len[i]*se.d_tether/1000.0) * 
@@ -133,9 +136,12 @@ function model(se, p1, p2, fix_p1, fix_p2)
         m_tether_particle ~ mass_per_meter * l_spring
         damping           ~ se.damping  / l_spring
         winch_force       ~ norm(total_force[:, 1]) * smooth_sign(-pos[3, end])
-        distance_vel      ~ norm(vel[:, end])
+        last_force        ~ norm(total_force[:, end]) * smooth_sign(-pos[3, end])
+        distance_acc      ~ acc[:, end] ⋅ collect((pos[:, end] - pos[:, 1]) / norm(pos[:, end] - pos[:, 1]))
         elevation         ~ atan(pos[3, end] / pos[1, end])
         azimuth           ~ -atan(pos[2, end] / pos[1, end])
+        acc_vel           ~ norm(acc[:, end])
+        D(v_wind_tether)  ~ 0
     ]
     eqs = reduce(vcat, Symbolics.scalarize.(eqs))
     @mtkbuild sys = ODESystem(eqs, t)
@@ -149,9 +155,9 @@ function absmax(a, b)
     abs(a) > abs(b) ? a : b
 end
 
-function simulate(se, simple_sys, p1, p2, POS0, VEL0)
+function simulate(se, ss, p1, p2, POS0, VEL0)
     global prob, u0map, integ
-    pos, vel, acc = simple_sys.pos, simple_sys.vel, simple_sys.acc
+    pos, vel, acc = ss.pos, ss.vel, ss.acc
     dt = 0.05
     tol = 1e-6
     tspan = (0.0, se.duration)
@@ -159,37 +165,48 @@ function simulate(se, simple_sys, p1, p2, POS0, VEL0)
     vel2dir = [0, 1, 0] × normalize(p2 - p1)
     vel2 = vel2dir * 0
     vel2 = [0, 0, 0]
+
+    # # TODO: calculate p2 using elevation, azimuth, last_tether_length - last_distance and current tether length
     u0map = [
-        [acc[j, i] => [0.0, 0.0, 0.0][j] for j in 1:3 for i in 2:se.segments]
-        [vel[j, i] => (pos[j, i] - p1[j]) / absmax(p2[j] - p1[j], 1e-5) * vel2[j] for j in 1:3 for i in 2:se.segments]
-        simple_sys.winch_force => 14.6
-        simple_sys.elevation => deg2rad(-89)
-        simple_sys.azimuth => 0
-        [vel[j, end] => vel2[j] for j in 1:3]
-        [pos[j, 1] => p1[j] for j in 1:3]
+        [pos[j, end] => p2[j] for j in 1:3]
+        [ss.vel[j, end] => 0 for j in 1:3]
+        [ss.acc[j, end] => [-10, 0, 0][j] for j in 1:3]
+        # ss.acc_vel => 10
+        
+        [acc[j, i] => 0 for j in 1:3 for i in 2:se.segments]
+        [vel[j, i] => 0 for j in 1:3 for i in 2:se.segments]
+        
+        [pos[j, 1] => 0 for j in 1:3]
         [vel[j, 1] => 0 for j in 1:3]
-        simple_sys.l_spring => se.l0/se.segments
+
+        # ss.winch_force => 21.4
+        # ss.v_wind_tether => 10
+        ]
+    params = [
+        # ss.v_wind_tether => missing
     ]
     guesses = [
-        [simple_sys.segment[j, i] => 1.0 for j in 1:3 for i in 1:se.segments]
-        [simple_sys.total_force[j, i] => 1.0 for j in 1:3 for i in 1:se.segments+1]
+        ss.v_wind_tether => -10.0
+        [ss.acc[j, end] => 0 for j in 1:3]
+        [ss.vel[j, end] => 0 for j in 1:3]
         [pos[j, i] => POS0[j, i] for j in 1:3 for i in 1:se.segments+1]
+        ss.l_spring => norm(p2)/se.segments
     ]
     
-    # @time iprob = ModelingToolkit.InitializationProblem(simple_sys, 0.0, u0map, Dict(); guesses)
-    @time prob = ODEProblem(simple_sys, u0map, tspan; guesses, fully_determined=true) # how to remake iprob with new parameters
+    # @time iprob = ModelingToolkit.InitializationProblem(ss, 0.0, u0map, Dict(); guesses)
+    @time prob = ODEProblem(ss, u0map, tspan, params; guesses, fully_determined=false) # how to remake iprob with new parameters
     @time integ = init(prob, FBDF(autodiff=true); dt, abstol=tol, reltol=tol, saveat=ts)
 
     # prob = remake(prob; u0=u0map, guesses=guesses)
-    # integ = init(prob, FBDF(autodiff=true); dt=dt, abstol=tol, reltol=tol, saveat=ts)
+    @time integ = init(prob, FBDF(autodiff=true); dt=dt, abstol=tol, reltol=tol, saveat=ts)
 
     toc()
     elapsed_time = @elapsed step!(integ, 1e-4, true)
-    @show integ[simple_sys.winch_force]
+    @show integ[ss.winch_force]
     @show integ[acc]
-    @show rad2deg(integ[simple_sys.elevation])
-    # elapsed_time = @elapsed step!(integ, se.duration, true)
-    @show integ[simple_sys.winch_force]
+    @show rad2deg(integ[ss.elevation])
+    elapsed_time = @elapsed step!(integ, se.duration, true)
+    @show integ[ss.distance_acc]
 
     integ.sol, elapsed_time
 end
@@ -226,6 +243,7 @@ end
 function main(; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
     global sol, pos, vel, len, c_spr, simple_sys
     se = Settings3()
+    se.l0 = norm(p2-p1)
     set_tether_diameter!(se, se.d_tether) # adapt spring and damping constants to tether diameter
     POS0, VEL0 = calc_initial_state(se; p1, p2)
     simple_sys, pos, vel, len, c_spr = model(se, p1, p2, fix_p1, fix_p2)
@@ -239,7 +257,7 @@ function main(; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
     sol, pos, vel, simple_sys
 end
 
-main(p2=[1,0,-47], fix_p2=false);
+main(p2=[-10,0,-50], fix_p2=false);
 
 """
 Zero smoothing: 400 times realtime
