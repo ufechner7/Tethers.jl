@@ -31,9 +31,18 @@ end
 function get_principal_axes(m, x, y, z)
     I = calculate_full_inertia(m, x, y, z)
     eigenvals, eigenvecs = eigen(I)
-    # Sort by magnitude of moments
+    
+    # Sort by magnitude
     p = sortperm(eigenvals)
-    return eigenvals[p], eigenvecs[:, p]
+    eigenvals = eigenvals[p]
+    eigenvecs = eigenvecs[:, p]
+    
+    # Ensure right-handed coordinate system
+    if det(eigenvecs) < 0
+        eigenvecs[:, 3] *= -1
+    end
+    
+    return eigenvals, eigenvecs
 end
 
 function to_principal(v_B, Q)
@@ -47,9 +56,12 @@ end
 # Example values
 n = 5  # Number of squares
 m_values = [1.0, 1.0, 1.0, 1.0, 1.0]  # Example masses
-x_values = [1.0, 1.0, 1.0, 1.0, 1.0]  # Example x-coordinates
-y_values = [-1.0, 0.0, 1.0, 2.0, 3.0]  # Example y-coordinates
+x_values = [0.0, 1.0, 1.0, 1.0, 0.0]  # Example x-coordinates
+y_values = [1.0, 0.0, -1.0, -2.0, -3.0]  # Example y-coordinates
 z_values = [1.0, 0.0, 0.0, 0.0, 1.0]   # Example z-coordinates
+
+# Calculate total mass
+total_mass = sum(m_values)
 
 # Calculate center of mass
 com_x = sum(m_values .* x_values) / total_mass
@@ -62,18 +74,11 @@ x_values .-= com_x  # Center x coordinates
 y_values .-= com_y  # Center y coordinates
 z_values .-= com_z   # Center z coordinates
 
-# Calculate total mass
-total_mass = sum(m_values)
-
 # Calculate and apply transformation
 principal_moments, Q = get_principal_axes(m_values, x_values, y_values, z_values)
 
-# # Pre-calculate inertia
-# I_values = calculate_inertia(m_values, x_values, y_values, z_values)
-# @show I_values
-# @show calculate_full_inertia(m_values, x_values, y_values, z_values)
-
-@variables x(t)[1:3] v(t)[1:3] q(t)[1:4] ω(t)[1:3] τ(t)[1:3] z(t)[1:3]
+# q in body frame, ω in principal frame
+@variables x(t)[1:3] v(t)[1:3] q(t)[1:4] ω(t)[1:3] τ(t)[1:3] z(t)[1:3] ω_body(t)[1:3]
 @parameters m F[1:3,1:n] r[1:3,1:n] I[1:3] c_t c_r
 
 # Function to rotate vector by quaternion
@@ -103,7 +108,7 @@ function normalize_quaternion(q)
     return [q[i]/norm for i in 1:4]
 end
 
-error_constant = 0.1
+error_constant = 10
 qnorm_error = 1 - sum(q[i]^2 for i in 1:4)
 eqs_q = [D(q[i]) ~ 0.5 * sum(Ω[i, j] * q[j] for j in 1:4) + 0.5*qnorm_error*q[i]/error_constant for i in 1:4]
 
@@ -114,6 +119,7 @@ eqs_ω = [
     D(ω[2]) ~ (τ[2] + (I[3] - I[1]) * ω[3] * ω[1]) / I[2] - c_r*ω[2]
     D(ω[3]) ~ (τ[3] + (I[1] - I[2]) * ω[1] * ω[2]) / I[3] - c_r*ω[3]
     z ~ rotate_by_quaternion([0, 0, 1], q)
+    ω_body ~ to_body(ω, Q)
 ]
 
 # Combine all equations
@@ -136,23 +142,26 @@ r_principal = hcat(r_principal...)
 
 
 F_values = zeros(3, n)
-F_values[3, :] .= -9.81  # Gravity on each point
-F_values[3, end] -= 1
+# F_values[3, :] .= -9.81  # Gravity on each point
+F_values[3, end] += 1
 F_principal = [to_principal(F_values[:,i], Q) for i in 1:n]
 F_principal = hcat(F_principal...)
+
+c_critical = 2.0 * sqrt(principal_moments[1])  # Using largest moment
+println("Critical damping coefficient: ", c_critical)
 
 p = [m => sum(m_values), 
      F => F_principal, 
      r => r_principal,  # transformed coordinates
      I => principal_moments,  # diagonal moments only
      c_t => 0.0,
-     c_r => 0.0]
+     c_r => c_critical]
 
 
 # Create and solve the ODE problem
 dt = 0.02
-tol = 1e-6
-tspan = (0.0, 100.0)
+tol = 1e-8
+tspan = (0.0, 10.0)
 ts    = 0:dt:tspan[2]
 prob = ODEProblem(sys, u0, tspan, p)
 
@@ -172,3 +181,7 @@ p = plotx(sol.t,
     ylabels=string.(unknowns(sys))[7:13]
     )
 display(p)
+
+@show sol[ω_body][50]
+@show principal_moments Q
+nothing
