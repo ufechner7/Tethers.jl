@@ -39,7 +39,7 @@ end
 """
 use z axis
 """
-function map_2d_3d!(points, azimuth, elevation)
+function rotate!(points, azimuth, elevation)
     for i in eachindex(points[1, :])
         points[:, i] .= rotate_in_xz(points[:, i], elevation)
         points[:, i] .= rotate_in_yx(points[:, i], azimuth)
@@ -68,7 +68,7 @@ function tether_from_distance_length!(points, distance, tether_length, segments,
         return cost[]
     end
     find_zero(f_zero!, (0, 2π))
-    map_2d_3d!(points, azimuth, elevation)
+    rotate!(points, azimuth, elevation)
     return nothing
 end
 
