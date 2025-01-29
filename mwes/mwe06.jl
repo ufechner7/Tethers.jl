@@ -1,4 +1,4 @@
-using ModelingToolkit, ControlPlots, OrdinaryDiffEq, LinearAlgebra
+using ModelingToolkit, ControlPlots, OrdinaryDiffEq, LinearAlgebra, DiffEqCallbacks
 using ModelingToolkit: t_nounits as t, D_nounits as D
 
 # Pre-calculate moments of inertia
@@ -78,7 +78,7 @@ z_values .-= com_z   # Center z coordinates
 principal_moments, Q = get_principal_axes(m_values, x_values, y_values, z_values)
 
 # q in body frame, ω in principal frame
-@variables x(t)[1:3] v(t)[1:3] q(t)[1:4] ω(t)[1:3] τ(t)[1:3] z(t)[1:3] ω_body(t)[1:3] r_world(t)[1:3,1:n] v_world(t)[1:3,1:n] λ(t)
+@variables x(t)[1:3] v(t)[1:3] q(t)[1:4] ω(t)[1:3] τ(t)[1:3] z(t)[1:3] ω_body(t)[1:3] r_world(t)[1:3,1:n] v_world(t)[1:3,1:n]
 @parameters m F_b[1:3,1:n] F_p[1:3,1:n] r_p[1:3,1:n] I[1:3] c_t c_r
 
 # Function to rotate vector by quaternion
@@ -109,9 +109,7 @@ eqs_v = [D(v[i]) ~ F_total[i]/m - c_t*v[i] for i in 1:3]
 
 # error_constant = 1e3
 # qnorm_error = 1 - sum(q[i]^2 for i in 1:4)
-# eqs_q = [D(q[i]) ~ 0.5 * sum(Ω[i, j] * q[j] for j in 1:4) for i in 1:4]
-eqs_q = [D(q[i]) ~ 0.5 * sum(Ω[i, j] * q[j] for j in 1:4) + λ * q[i] for i in 1:4]
-
+eqs_q = [D(q[i]) ~ 0.5 * sum(Ω[i, j] * q[j] for j in 1:4) for i in 1:4]
 # eqs_q = [D(q[i]) ~ 0.5 * sum(Ω[i, j] * q[j] for j in 1:4) + 0.5*qnorm_error*q[i]/error_constant for i in 1:4]
 
 # Rotational dynamics (Euler's equations)
@@ -129,22 +127,18 @@ v_eqs = [
     [r_world[:,i] ~ x + rotate_by_quaternion(r_p[:,i], q) for i in 1:n]
     [v_world[:,i] ~ v + rotate_by_quaternion(cross(ω, r_p[:,i]), q) for i in 1:n]]
 
-normalization_constraint = sum(q[i]^2 for i in 1:4) ~ 1
-
 # Combine all equations
-eqs = [v_eqs; eqs_x; eqs_v; eqs_q; eqs_ω; normalization_constraint]
-eqs = reduce(vcat, Symbolics.scalarize.(eqs))
-@named sys = ODESystem(eqs, t)
-sys = structural_simplify(sys)
+eqs = [v_eqs; eqs_x; eqs_v; eqs_q; eqs_ω]
+
+@mtkbuild sys = ODESystem(reduce(vcat, Symbolics.scalarize.(eqs)), t)
 
 # Initial conditions
 x0 = zeros(3)
 v0 = zeros(3)
-q0 = [0.9, 0.0, 0.0, 0.0]  # Initial quaternion (identity rotation)
+q0 = [1.0, 0.0, 0.0, 0.0]  # Initial quaternion (identity rotation)
 ω0 = [0.0, 0.0, 0.0]       # Initial angular velocity
-λ0 = [0.0]
 # z0 = zeros(3)
-u0 = [x0; v0; q0; ω0; λ0]
+u0 = [x0; v0; q0; ω0]
 
 # Parameters: pre-calculated moments of inertia and applied torques
 r_body = [x_values y_values z_values]'
@@ -172,21 +166,34 @@ p = [m => sum(m_values),
 
 # Create and solve the ODE problem
 dt = 0.02
-tol = 1e-8
+tol = 1e-6
 tspan = (0.0, 10)
 ts    = 0:dt:tspan[2]
 prob = ODEProblem(sys, u0, tspan, p)
 
-sol = solve(prob, QBDF(autodiff=false),
+idxs = ModelingToolkit.variable_index(prob, sys.q)
+function norm_quat(resid, u, _, _)
+    q = @views u[idxs]
+    resid[1] = norm(q) - 1.0
+    return nothing
+end
+ad = ModelingToolkit.AutoForwardDiff()
+cb = ManifoldProjection(norm_quat; autodiff = ad, resid_prototype = zeros(1))
+
+sol = solve(prob, QBDF(),
     dt=dt, 
     abstol=tol, 
     reltol=tol,
-    saveat=ts)
-@time sol = solve(prob, QBDF(autodiff=false), 
-    dt=dt, 
-    abstol=tol, 
-    reltol=tol,
-    saveat=ts)
+    saveat=ts,
+    callback=cb,
+    save_everystep=false)
+# @time sol = solve(prob, QBDF(autodiff=false), 
+#     dt=dt, 
+#     abstol=tol, 
+#     reltol=tol,
+#     saveat=ts,
+#     callback=cb,
+#     save_everystep=false)
     
 p = plotx(sol.t, 
     [sol[i, :] for i in 7:13]...;
