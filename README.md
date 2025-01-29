@@ -2,6 +2,9 @@
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://ufechner7.github.io/Tethers.jl/dev)
 [![Build Status](https://github.com/ufechner7/Tethers.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/ufechner7/Tethers.jl/actions/workflows/CI.yml?query=branch%3Amain)
 
+## friso kite 3 pointmodel 
+
+
 ## Introduction
 
 A few examples where tether models can be useful:
