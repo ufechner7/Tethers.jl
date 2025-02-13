@@ -122,3 +122,4 @@ end
 
 # # 🔹 Save animation
 Plots.gif(anim, "video/symbolic_mass_spring_simulation.gif", fps=30)
+nothing
