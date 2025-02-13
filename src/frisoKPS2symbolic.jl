@@ -118,6 +118,7 @@ anim = Plots.@animate for i in eachindex(x2_sol)
     Plots.plot!([0, x2_sol[i]], [0, y2_sol[i]], linewidth=2, color=:blue, label="")  # P1-P2
     Plots.plot!([x2_sol[i], x3_sol[i]], [y2_sol[i], y3_sol[i]], linewidth=2, color=:red, label="")  # P2-P3
     Plots.plot!([x3_sol[i], 0], [y3_sol[i], 0], linewidth=2, color=:green, label="")  # P3-P1
+    println("Frame: $i")
 end
 
 # # 🔹 Save animation
