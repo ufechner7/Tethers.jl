@@ -1,0 +1,2 @@
+[ Info: Saved animation to C:\Users\ufechner\repos\Tethers.jl\video\symbolic_mass_spring_simulation.gif
+538.429607 seconds (10.23 M allocations: 706.479 MiB, 0.10% gc time, 1.47% compilation time: 2% of which was recompilation)
