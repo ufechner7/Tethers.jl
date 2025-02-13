@@ -17,3 +17,4 @@ src/model.jl
 video/Tether_08b.mp4
 video/Tether.mp4
 mass_spring_simulation.gif
+symbolic_mass_spring_simulation.gif
