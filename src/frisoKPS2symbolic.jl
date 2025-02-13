@@ -121,4 +121,4 @@ anim = Plots.@animate for i in eachindex(x2_sol)
 end
 
 # # 🔹 Save animation
-# gif(anim, "symbolic_mass_spring_simulation.gif", fps=30)
+Plots.gif(anim, "video/symbolic_mass_spring_simulation.gif", fps=30)
