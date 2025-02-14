@@ -3,10 +3,6 @@ function plot_kite(X, Y, xlim_, ylim_, lines = nothing; fig="")
     if fig != ""
         plt.figure(fig, figsize, dpi)
     end
-    x1 = X[1:2]
-    x2 = X[2:3]
-    y1 = Y[1:2]
-    y2 = Y[2:3]
     if isnothing(lines)
         lines=[]
         for i in 1:length(X)-1
@@ -21,13 +17,10 @@ function plot_kite(X, Y, xlim_, ylim_, lines = nothing; fig="")
         i=1
         for line in lines
             println(i)
-            if i == 1
-                line.set_xdata(x1)
-                line.set_ydata(y1)
-            else
-                line.set_xdata(x2)
-                line.set_ydata(y2)
-            end
+            x1=X[i:i+1]
+            y1=Y[i:i+1]
+            line.set_xdata(x1)
+            line.set_ydata(y1)
             i+=1
         end
     end
