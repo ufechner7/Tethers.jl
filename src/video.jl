@@ -1,4 +1,4 @@
-function plot_kite(X, Y, xlim_, ylim_, lines = nothing; fig="")
+function plot_kite(X, Y, xlim_, ylim_, lines,sc; fig="")
 
     if fig != ""
         plt.figure(fig, figsize, dpi)
@@ -12,9 +12,10 @@ function plot_kite(X, Y, xlim_, ylim_, lines = nothing; fig="")
             push!(lines, line)
         end
 
-        #sc  = plt.scatter(x, y; s=25, color="red")
+        sc  = plt.scatter(X, Y; s=25, color="red")
     else
         i=1
+        sc.set_offsets(hcat(X,Y))
         for line in lines
             println(i)
             x1=X[i:i+1]
@@ -24,9 +25,10 @@ function plot_kite(X, Y, xlim_, ylim_, lines = nothing; fig="")
             i+=1
         end
     end
+
     plt.ylim(ylim_)
     plt.xlim(xlim_)
-    return lines
+    return lines, sc
 end
 
 
