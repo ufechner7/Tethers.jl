@@ -4,6 +4,7 @@ using ModelingToolkit, OrdinaryDiffEq, Parameters
 
 import Plots
 toc()
+include("video.jl")
 
 # 🔹 Define struct for simulation settings
 @with_kw mutable struct SimulationSettings @deftype Float64
@@ -106,21 +107,29 @@ x2_sol = sol[x2, :]
 y2_sol = sol[y2, :]
 x3_sol = sol[x3, :]
 y3_sol = sol[y3, :]
- 
-# 🔹 Create animation
-anim = Plots.@animate for i in eachindex(x2_sol)
-    Plots.plot(xlim=(-1.5, 1.5), ylim=(-0.5, 6.0), legend=false, framestyle=:box, grid=false, size=(600, 600))
-
-    # Scatter plot for mass points
-    Plots.scatter!([0, x2_sol[i], x3_sol[i]], [0, y2_sol[i], y3_sol[i]], markersize=5, label="")
-
-    # Spring connections
-    Plots.plot!([0, x2_sol[i]], [0, y2_sol[i]], linewidth=2, color=:blue, label="")  # P1-P2
-    Plots.plot!([x2_sol[i], x3_sol[i]], [y2_sol[i], y3_sol[i]], linewidth=2, color=:red, label="")  # P2-P3
-    Plots.plot!([x3_sol[i], 0], [y3_sol[i], 0], linewidth=2, color=:green, label="")  # P3-P1
-    println("Frame: $i")
+X=[]
+Y=[]
+for i in 1:length(x2_sol)
+    x = [0,x2_sol[i], x3_sol[i]] 
+    y = [0,y2_sol[i], y3_sol[i]] 
+    push!(X,x) 
+    push!(Y,y)
 end
 
-# # 🔹 Save animation
-Plots.gif(anim, "video/symbolic_mass_spring_simulation.gif", fps=30)
+ 
+lines,sc = nothing, nothing
+xlim=(-5,5)
+ylim=(0,6)
+for i in 1:length(X)
+    x=X[i]
+    y=Y[i]
+    global lines, sc
+    println(x)
+    println(y)
+    lines,sc = plot_kite(x,y,xlim,ylim,lines,sc)
+    #plt.tight_layout()
+    plt.pause(0.01)
+    plt.show(block=false)
+    sleep(0.05)
+ end
 nothing

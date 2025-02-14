@@ -5,21 +5,30 @@ function plot_kite(X, Y, xlim_, ylim_, lines,sc; fig="")
     end
     if isnothing(lines)
         lines=[]
-        for i in 1:length(X)-1
-            x1=X[i:i+1]
-            y1=Y[i:i+1]
+        for i in 1:length(X)
+            if i == length(X)
+                x1=[X[end],X[1]]
+                y1=[Y[end],Y[1]]
+            else
+                x1=X[i:i+1]
+                y1=Y[i:i+1]  
+            end
             line, = plt.plot(x1,y1; linewidth="1")
             push!(lines, line)
         end
-
         sc  = plt.scatter(X, Y; s=25, color="red")
     else
         i=1
         sc.set_offsets(hcat(X,Y))
         for line in lines
-            println(i)
-            x1=X[i:i+1]
-            y1=Y[i:i+1]
+            if i == length(lines)
+                x1=[X[end],X[1]]
+                y1=[Y[end],Y[1]] 
+            else
+                println(i)
+                x1=X[i:i+1]
+                y1=Y[i:i+1]
+            end
             line.set_xdata(x1)
             line.set_ydata(y1)
             i+=1
@@ -28,6 +37,7 @@ function plot_kite(X, Y, xlim_, ylim_, lines,sc; fig="")
 
     plt.ylim(ylim_)
     plt.xlim(xlim_)
+    plt.grid(true)
     return lines, sc
 end
 
