@@ -37,9 +37,7 @@ eqs1 = vcat(D.(pos) .~ vel,
             D.(vel) .~ acc,
             )
 eqs2 = vcat(eqs1...)
-eqs2 = vcat(eqs2, pos[:,1] .~ [0.0,0.0])
-# # 🔹 Define differential operator
-# D = Differential(t)    
+eqs2 = vcat(eqs2, pos[:,1] .~ [0.0,0.0])  
 
 # Define which points are connected by each segment
 conn = [(1,2), (2,3), (3,1)]  # (P1-P2), (P2-P3), (P3-P1)
@@ -54,16 +52,15 @@ for i in 1:segments  # Loop through each segment
         norm1[i]           ~ norm(segment[:, i]),  # Compute segment length
         unit_vector[:, i]  ~ -segment[:, i] / norm1[i],  # Normalize segment vector
         rel_vel[:, i]      ~ vel[:, conn[i][2]] - vel[:, conn[i][1]],  # Compute relative velocity
-        spring_vel[i]      ~ -unit_vector[:, i] ⋅ rel_vel[:, i],  # Project velocity onto spring direction
-        
+        spring_vel[i]      ~ -unit_vector[:, i] ⋅ rel_vel[:, i],  # Project velocity onto spring direction    
         # Apply Hooke's Law without preventing compression
         c_spring[i]        ~ k,  
         spring_force[:, i] ~ (c_spring[i] * (norm1[i] - rest_lengths[i]) + damping * spring_vel[i]) * unit_vector[:, i]
     ]
     eqs2 = vcat(eqs2, reduce(vcat, eqs))
 end
- # Loop over only P2 (i=2) and P3 (i=3), since P1 (i=1) is fixed
 
+ # Loop over only P2 (i=2) and P3 (i=3), since P1 (i=1) is fixed
  for i in 2:3 
     global eqs2
     local eqs = []  # Initialize local equations list for this iteration
@@ -76,34 +73,28 @@ end
     outgoing_force = sum(
         spring_force[:, j] for j in 1:segments if conn[j][1] == i  # Forces where this point is the start
     )
-
     # Apply Newton's Second Law: F = ma, ensuring correct force addition
     if i == 2
         push!(eqs, total_force[:, i] ~ incoming_force - outgoing_force + F2)  # Apply F2 as vector addition
     elseif i == 3
         push!(eqs, total_force[:, i] ~ incoming_force - outgoing_force + F3)  # Apply F3 as vector addition
     end
-    
     push!(eqs, acc[:, i] ~ G_EARTH + total_force[:, i] / m)  # Compute acceleration with gravity
-
     # Append the equations for this particle to the global system
     eqs2 = vcat(eqs2, reduce(vcat, eqs))
 end
 
 @named sys = ODESystem(reduce(vcat, Symbolics.scalarize.(eqs2)), t)
 simple_sys = structural_simplify(sys)
-
 # running the simulation
 dt = 0.02
 tol = 1e-6
 tspan = (0.0, duration)
 ts    = 0:dt:duration
-
 prob = ODEProblem(simple_sys, nothing, tspan)
 elapsed_time = @elapsed sol = solve(prob, KenCarp4(autodiff=false); dt, abstol=tol, reltol=tol, saveat=ts)
-#elapsed_time = @elapsed sol = solve(prob, KenCarp4(autodiff=false); dt, abstol=tol, reltol=tol, saveat=ts)
 println("Elapsed time: $(elapsed_time) s, speed: $(round(duration/elapsed_time)) times real-time")
-
+#plotting
 pos_sol = sol[pos, :]
 X=[]
 Y=[]
@@ -117,7 +108,6 @@ for i in 1:length(pos_sol)
     push!(X,x) 
     push!(Y,y)
 end
- 
 lines,sc = nothing, nothing
 xlim=(-5,5)
 ylim=(0,10)
