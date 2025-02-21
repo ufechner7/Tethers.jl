@@ -17,7 +17,7 @@ POS0 = [
      0.000   -1   1   
      0.000    2   2 
 ]
-VEL0 = zeros(2, segments)
+ VEL0 = zeros(2, segments)
 # defining the model, Z component upwards
 @parameters k=1.0 m=1.0 l1=sqrt(5) l2=2.0 l3= sqrt(5) damping=0.5
 @variables pos(t)[1:2, 1:segments]  = POS0
@@ -38,7 +38,6 @@ eqs1 = vcat(D.(pos) .~ vel,
             )
 eqs2 = vcat(eqs1...)
 eqs2 = vcat(eqs2, pos[:,1] .~ [0.0,0.0])  
-
 # Define which points are connected by each segment
 conn = [(1,2), (2,3), (3,1)]  # (P1-P2), (P2-P3), (P3-P1)
 # Define rest lengths for each segment
@@ -67,17 +66,16 @@ end
 
     # Compute total force acting on point i (either P2 or P3)
     # Total force is the sum of all forces acting ON this point from connected springs
-    incoming_force = sum(
+    force = sum(
         spring_force[:, j] for j in 1:segments if conn[j][2] == i  # Forces where this point is the end
-    )
-    outgoing_force = sum(
+    ) - sum(
         spring_force[:, j] for j in 1:segments if conn[j][1] == i  # Forces where this point is the start
     )
     # Apply Newton's Second Law: F = ma, ensuring correct force addition
     if i == 2
-        push!(eqs, total_force[:, i] ~ incoming_force - outgoing_force + F2)  # Apply F2 as vector addition
+        push!(eqs, total_force[:, i] ~ force + F2)  # Apply F2 as vector addition
     elseif i == 3
-        push!(eqs, total_force[:, i] ~ incoming_force - outgoing_force + F3)  # Apply F3 as vector addition
+        push!(eqs, total_force[:, i] ~ force + F3)  # Apply F3 as vector addition
     end
     push!(eqs, acc[:, i] ~ G_EARTH + total_force[:, i] / m)  # Compute acceleration with gravity
     # Append the equations for this particle to the global system
