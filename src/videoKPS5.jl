@@ -1,37 +1,24 @@
-function plot_kite(X, Y, xlim_, ylim_, lines,sc; fig="")
-
+function plot_kite(X, Y, xlim_, ylim_, lines, sc, conn; fig="")
     if fig != ""
         plt.figure(fig, figsize, dpi)
     end
+    
     if isnothing(lines)
-        lines=[]
-        for i in 1:length(X)
-            if i == length(X)
-                x1=[X[end],X[1]]
-                y1=[Y[end],Y[1]]
-            else
-                x1=X[i:i+1]
-                y1=Y[i:i+1]  
-            end
-            line, = plt.plot(x1,y1; linewidth="1")
+        lines = []
+        for (p1, p2) in conn
+            x1 = [X[p1], X[p2]]
+            y1 = [Y[p1], Y[p2]]
+            line, = plt.plot(x1, y1; linewidth=1, color="blue")
             push!(lines, line)
         end
         sc  = plt.scatter(X, Y; s=25, color="red")
     else
-        i=1
-        sc.set_offsets(hcat(X,Y))
-        for line in lines
-            if i == length(lines)
-                x1=[X[end],X[1]]
-                y1=[Y[end],Y[1]] 
-            else
-                println(i)
-                x1=X[i:i+1]
-                y1=Y[i:i+1]
-            end
-            line.set_xdata(x1)
-            line.set_ydata(y1)
-            i+=1
+        sc.set_offsets(hcat(X, Y))
+        for (idx, (p1, p2)) in enumerate(conn)
+            x1 = [X[p1], X[p2]]
+            y1 = [Y[p1], Y[p2]]
+            lines[idx].set_xdata(x1)
+            lines[idx].set_ydata(y1)
         end
     end
 
@@ -40,8 +27,6 @@ function plot_kite(X, Y, xlim_, ylim_, lines,sc; fig="")
     plt.grid(true)
     return lines, sc
 end
-
-
 
 # """
 #     plot2d_(pos, reltime; zoom=true, front=false, segments=6, fig="", figsize=(6.4, 4.8), dz_zoom=1.5, dz=-5.0, 
