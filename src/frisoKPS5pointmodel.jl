@@ -105,28 +105,17 @@ elapsed_time = @elapsed sol = solve(prob, KenCarp4(autodiff=false); dt, abstol=t
 println("Elapsed time: $(elapsed_time) s, speed: $(round(duration/elapsed_time)) times real-time")
 #plotting
 pos_sol = sol[pos, :]
-X=[]
-Y=[]
-Z=[]
+X, Y, Z = [], [], []
 for i in 1:length(pos_sol)
-    x2 = pos_sol[i][4]
-    x3 = pos_sol[i][7]
-    x4 = pos_sol[i][10]
-    x5 = pos_sol[i][13]
-    y2 = pos_sol[i][5]
-    y3 = pos_sol[i][8]
-    y4 = pos_sol[i][11]
-    y5 = pos_sol[i][14]
-    z2 = pos_sol[i][6]
-    z3 = pos_sol[i][9]
-    z4 = pos_sol[i][12]
-    z5 = pos_sol[i][15]
-    x = [0,x2, x3, x4, x5] 
-    y = [0,y2, y3, y4, y5] 
-    z = [0,z2, z3, z4, z5]
-    push!(X,x) 
-    push!(Y,y)
-    push!(Z,z)
+    x, y, z = [0.0], [0.0], [0.0]
+    for j in 2:points
+        push!(x, pos_sol[i][3*(j-1) + 1])
+        push!(y, pos_sol[i][3*(j-1) + 2])
+        push!(z, pos_sol[i][3*(j-1) + 3])
+    end
+    push!(X, x)
+    push!(Y, y)
+    push!(Z, z)
 end
 lines,sc = nothing, nothing
 ylim=(-5,5)
