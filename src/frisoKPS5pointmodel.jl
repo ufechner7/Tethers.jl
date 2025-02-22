@@ -5,7 +5,7 @@ using LinearAlgebra, ModelingToolkit, OrdinaryDiffEq, ControlPlots
 using ModelingToolkit: t_nounits as t, D_nounits as D
 import Plots
 toc()
-include("video.jl")
+include("videoKPS5.jl")
 # 🔹 Define struct for simulation settings 
 # 3D: [x,y,z] , x is the heading , z is up and y perpendicular to both
 G_EARTH::Vector{Float64} = [0.0, 0.0, -9.81] 
