@@ -12,7 +12,7 @@ F1::Vector{Float64} = [0.0, 0.0,  5]
 F2::Vector{Float64} = [0.0, 0.0,  16]
 F3::Vector{Float64} = [0.0, 0.0, 18]
 F4::Vector{Float64} = [0.0, -1,  10]
-F5::Vector{Float64} = [0.0,  1, 10]
+F5::Vector{Float64} = [0.0,  0, 10]
 C_SPRING::Float64 = 1000.0
 segments::Int64 = 10   
 points::Int64 = 6  
@@ -20,13 +20,13 @@ duration::Float64 = 10.0  # Simulation time [s]
 save::Bool = false  # Whether to save animation frames
 #original positions
 POS0 = [
-    0.000   1   -1   0.000   0.000   0.000
-    0.000   0.000   0.000   2   -2   0.000
-    10.000    13   13   12   12   0.000
+    0.000   1    -1  0    0   0.000
+    0.000   0    0   2   -2   0.000
+    10.000  13  13   12   12  0.000
  ]
  VEL0 = zeros(3, points)
-# defining the model, Z component upwards
-@parameters K=100 m=1.0 l1=sqrt(10) l2=2.0 l3= sqrt(10) l4= sqrt(8) l5= sqrt(6) l6= sqrt(6) l7= sqrt(8) l8= sqrt(6) l9= sqrt(6) l10=10 damping=0.9
+# defining the model, Z component upwards	
+@parameters K1=4000 K2=500 K3=20000 m=1.0 l1=sqrt(10) l2=2.0 l3= sqrt(10) l4= sqrt(8) l5= sqrt(6) l6= sqrt(6) l7= sqrt(8) l8= sqrt(6) l9= sqrt(6) l10=10 damping=0.9
 @variables pos(t)[1:3, 1:points]  = POS0
 @variables vel(t)[1:3, 1:points]  = VEL0
 @variables acc(t)[1:3, 1:points]
@@ -49,6 +49,8 @@ eqs2 = vcat(eqs2, pos[:,6] .~ [0.0, 0.0, 0.0])
 # Define which points are connected by each segment
 conn = [(1,2), (2,3), (3,1), (1,4), (2,4), (3,4), (1,5), (2,5), (3,5), (1,6)]
 rest_lengths = [l1, l2, l3, l4, l5, l6, l7, l8, l9, l10]  
+#K1 is the tether, K2 are the bridle lines and K3 is the kite
+k_segmentss = [K2, K3, K2, K2, K3, K3, K2, K3, K3, K1]
 
 for i in 1:segments  
     global eqs2
@@ -59,7 +61,7 @@ for i in 1:segments
        unit_vector[:, i]  ~ -segment[:, i] / norm1[i], 
        rel_vel[:, i]      ~ vel[:, conn[i][2]] - vel[:, conn[i][1]], 
        spring_vel[i]      ~ -unit_vector[:, i] ⋅ rel_vel[:, i],  
-       c_spring[i]        ~ K/(rest_lengths[i]),                             #using unit spring constant K, 
+       c_spring[i]        ~ k_segmentss[i]/(rest_lengths[i]),                             #using unit spring constant K, 
        spring_force[:, i] ~ (c_spring[i] * (norm1[i] - rest_lengths[i]) + damping * spring_vel[i]) * unit_vector[:, i]
     ]
     eqs2 = vcat(eqs2, reduce(vcat, eqs))
