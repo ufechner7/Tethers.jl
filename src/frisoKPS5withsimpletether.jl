@@ -11,8 +11,8 @@ G_EARTH::Vector{Float64} = [0.0, 0.0, -9.81]
 F1::Vector{Float64} = [0.0, 0.0,  5]
 F2::Vector{Float64} = [0.0, 0.0,  16]
 F3::Vector{Float64} = [0.0, 0.0, 18]
-F4::Vector{Float64} = [0.0, -1,  10]
-F5::Vector{Float64} = [0.0,  0, 10]
+F4::Vector{Float64} = [0.0, 0,  10]
+F5::Vector{Float64} = [0.0,  -1, 10]
 C_SPRING::Float64 = 1000.0
 segments::Int64 = 10   
 points::Int64 = 6  
@@ -26,7 +26,7 @@ POS0 = [
  ]
  VEL0 = zeros(3, points)
 # defining the model, Z component upwards	
-@parameters K1=4000 K2=500 K3=20000 m=1.0 l1=sqrt(10) l2=2.0 l3= sqrt(10) l4= sqrt(8) l5= sqrt(6) l6= sqrt(6) l7= sqrt(8) l8= sqrt(6) l9= sqrt(6) l10=10 damping=0.9
+@parameters K1=400 K2=50 K3=200 m=1.0 l1=sqrt(10) l2=2.0 l3= sqrt(10) l4= sqrt(8) l5= sqrt(6) l6= sqrt(6) l7= sqrt(8) l8= sqrt(6) l9= sqrt(6) l10=10 damping=0.9
 @variables pos(t)[1:3, 1:points]  = POS0
 @variables vel(t)[1:3, 1:points]  = VEL0
 @variables acc(t)[1:3, 1:points]
@@ -61,7 +61,7 @@ for i in 1:segments
        unit_vector[:, i]  ~ -segment[:, i] / norm1[i], 
        rel_vel[:, i]      ~ vel[:, conn[i][2]] - vel[:, conn[i][1]], 
        spring_vel[i]      ~ -unit_vector[:, i] ⋅ rel_vel[:, i],  
-       c_spring[i]        ~ k_segmentss[i]/(rest_lengths[i]),                             #using unit spring constant K, 
+       c_spring[i]        ~ (k_segmentss[i]/(rest_lengths[i])) * (0.25 + 0.75*(norm1[i] > rest_lengths[i])),   #using unit spring constant K, 
        spring_force[:, i] ~ (c_spring[i] * (norm1[i] - rest_lengths[i]) + damping * spring_vel[i]) * unit_vector[:, i]
     ]
     eqs2 = vcat(eqs2, reduce(vcat, eqs))
