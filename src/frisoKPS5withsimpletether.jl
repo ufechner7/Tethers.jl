@@ -46,10 +46,9 @@ eqs2 = vcat(eqs1...)
 # Fix P6 at (0,0,-10)
 eqs2 = vcat(eqs2, pos[:,6] .~ [0.0, 0.0, 0.0])  
 
-# Define which points are connected by each segment
+# Define which points connect by each segment, their rest lengths and K1 is the tether, K2 are the bridle lines and K3 is the kite
 conn = [(1,2), (2,3), (3,1), (1,4), (2,4), (3,4), (1,5), (2,5), (3,5), (1,6)]
 rest_lengths = [l1, l2, l3, l4, l5, l6, l7, l8, l9, l10]  
-#K1 is the tether, K2 are the bridle lines and K3 is the kite
 k_segmentss = [K2, K3, K2, K2, K3, K3, K2, K3, K3, K1]
 
 for i in 1:segments  
@@ -97,6 +96,7 @@ ts    = 0:dt:duration
 prob = ODEProblem(simple_sys, nothing, tspan)
 elapsed_time = @elapsed sol = solve(prob, Rodas5(); dt, abstol=tol, reltol=tol, saveat=ts) 
 println("Elapsed time: $(elapsed_time) s, speed: $(round(duration/elapsed_time)) times real-time")
+
 #plotting
 # Extract solution positions
 pos_sol = sol[pos, :]
@@ -120,12 +120,10 @@ for i in 1:length(pos_sol)
     push!(Y, y)
     push!(Z, z)
 end
-
 # Animation Setup
 lines, sc = nothing, nothing
-ylim=(-5, 5)
-zlim=(-5, 25)
-
+ylim=(minimum(vcat(Y...))-2, maximum(vcat(Y...))+2)
+zlim=(minimum(vcat(Z...))-2, maximum(vcat(Z...))+2)
 # Iterate through frames and update the plot dynamically
 for i in 1:length(Z)
     z = Z[i]
