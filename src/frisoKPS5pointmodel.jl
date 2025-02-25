@@ -3,16 +3,15 @@ using Timers
 tic()
 using LinearAlgebra, ModelingToolkit, OrdinaryDiffEq, ControlPlots 
 using ModelingToolkit: t_nounits as t, D_nounits as D
-import Plots
 toc()
 include("videoKPS5.jl")
 # 🔹 Define struct for simulation settings 
 # 3D: [x,y,z] , x is the heading , z is up and y perpendicular to both
 G_EARTH::Vector{Float64} = [0.0, 0.0, -9.81] 
-F2::Vector{Float64} = [0.0, 0.0,  12]
-F3::Vector{Float64} = [0.0, 0.0,13]
-F4::Vector{Float64} = [0.0, 1,  10]
-F5::Vector{Float64} = [0.0, -1, 10]
+F2::Vector{Float64} = [0.0, 0.0,  24]
+F3::Vector{Float64} = [0.0, 0.0, 26]
+F4::Vector{Float64} = [0.0, -1,  22]
+F5::Vector{Float64} = [0.0, 1, 22]
 segments::Int64 = 9   
 points::Int64 = 5  
 duration::Float64 = 10.0  # Simulation time [s]
