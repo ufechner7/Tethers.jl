@@ -76,16 +76,9 @@ for i in 1:points
     force = sum([spring_force[:, j] for j in 1:segments if conn[j][2] == i]; init=zeros(3)) -
             sum([spring_force[:, j] for j in 1:segments if conn[j][1] == i]; init=zeros(3))
 
-    if i == 1
-        push!(eqs, total_force[:, i] ~ force + F1)  
-    elseif i == 2
-        push!(eqs, total_force[:, i] ~ force + F2)  
-    elseif i == 3
-        push!(eqs, total_force[:, i] ~ force + F3)  
-    elseif i == 4
-        push!(eqs, total_force[:, i] ~ force + F4)  
-    elseif i == 5
-        push!(eqs, total_force[:, i] ~ force + F5)  
+    ExternalForces = [F1, F2, F3, F4, F5]
+    if i <= length(ExternalForces)
+        push!(eqs, total_force[:, i] ~ force + ExternalForces[i])
     end
     push!(eqs, acc[:, i] ~ G_EARTH + total_force[:, i] / m)  
 
