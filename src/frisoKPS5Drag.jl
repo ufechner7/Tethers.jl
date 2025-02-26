@@ -72,7 +72,11 @@ for i in 1:segments
        v_apparent[:, i]   ~ v_wind_tether .- (vel[:, conn[i][1]] + vel[:, conn[i][2]]) / 2,
        v_app_perp[:, i]   ~ v_apparent[:, i] - (v_apparent[:, i] ⋅ unit_vector[:, i]) .* unit_vector[:, i],
        norm_v_app[i]      ~ norm(v_app_perp[:, i]),
-       half_drag_force[:, i] ~ 0.25 * rho * cd_tether * norm_v_app[i] * (rest_lengths[i] * d_tether / 1000.0) * v_app_perp[:, i]
+        if !(i in [2, 5, 6, 8, 9])             # Drag only for tether and bridle
+            half_drag_force[:, i] ~ 0.25 * rho * cd_tether * norm_v_app[i] * (rest_lengths[i] * d_tether / 1000.0) * v_app_perp[:, i]
+        else
+            half_drag_force[:, i] ~ zeros(3)
+    end
     ]
     eqs2 = vcat(eqs2, reduce(vcat, eqs))
 end
@@ -85,11 +89,14 @@ for i in 1:points
     # Compute total force acting on each point
     force = sum([spring_force[:, j] for j in 1:segments if conn[j][2] == i]; init=zeros(3)) -
             sum([spring_force[:, j] for j in 1:segments if conn[j][1] == i]; init=zeros(3)) + 
-            sum([half_drag_force[:, j] for j in 1:segments if conn[j][1] == i]; init=zeros(3))
+            sum([half_drag_force[:, j] for j in 1:segments if conn[j][1] == i]; init=zeros(3))+
+            sum([half_drag_force[:, j] for j in 1:segments if conn[j][2] == i]; init=zeros(3))
 
     ExternalForces = [F1, F2, F3, F4, F5]
     if i <= length(ExternalForces)
         push!(eqs, total_force[:, i] ~ force + ExternalForces[i])
+    #else        #not sure if this is needed
+        #push!(eqs, total_force[:, i] ~ force)
     end
     push!(eqs, acc[:, i] ~ G_EARTH + total_force[:, i] / m)  
 
