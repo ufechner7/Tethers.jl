@@ -8,13 +8,13 @@ include("videoKPS5.jl")
 # 🔹 Define struct for simulation settings 
 # 3D: [x,y,z] , x is the heading , z is up and y perpendicular to both
 G_EARTH::Vector{Float64} = [0.0, 0.0, -9.81]
-v_wind_tether::Vector{Float64} = [0.0, 50, 0.0]
+v_wind_tether::Vector{Float64} = [0.0, 20.0 , 0.0]
 F1::Vector{Float64} = [0.0, 0.0,  20]
 F2::Vector{Float64} = [0.0, 0.0,  25]
 F3::Vector{Float64} = [0.0, 0.0, 27]
 F4::Vector{Float64} = [0.0, 0,  20]
 F5::Vector{Float64} = [0.0,  0, 20]
-tethersegments::Int64 = 6
+tethersegments::Int64 = 2
 segments::Int64 = 9 + tethersegments    
 points::Int64 = 5 + tethersegments  
 duration::Float64 = 10.0  # Simulation time [s]
@@ -30,9 +30,12 @@ if tethersegments > 1
 end     
 VEL0 = zeros(3, points)
 
+#add diferent masses for kite, total = 6.2 (KCU 8.4) at bridle
+#tether weight is 
+
 # defining the model, Z component upwards	
 @parameters K1=4000 K2=500 K3=2000 m=1.0 l1=sqrt(10) l2=2.0 l3=sqrt(10) l4=sqrt(8) l5=sqrt(6) l6=sqrt(6) l7=sqrt(8) l8=sqrt(6) l9=sqrt(6) l10=10 damping=0.9
-@parameters rho=1.225 cd_tether=1.28 d_tether=0.01 
+@parameters rho=1.225 cd_tether=1.28 d_tether=0.004 
 @variables pos(t)[1:3, 1:points]  = POS0
 @variables vel(t)[1:3, 1:points]  = VEL0
 @variables acc(t)[1:3, 1:points]
@@ -49,7 +52,7 @@ VEL0 = zeros(3, points)
 @variables half_drag_force(t)[1:3, 1:segments]
 # New observable variable to record drag force for each segment:
 @variables drag_force(t)[1:3, 1:segments]
-@variables total_force(t)[1:3, 1:segments]
+@variables total_force(t)[1:3, 1:points]
 
 # basic differential equations for positions and velocities
 eqs1 = vcat(D.(pos) .~ vel,
@@ -81,7 +84,7 @@ for i in 1:segments
        v_apparent[:, i]   ~ v_wind_tether .- (vel[:, conn[i][1]] + vel[:, conn[i][2]]) / 2,
        v_app_perp[:, i]   ~ v_apparent[:, i] - (v_apparent[:, i] ⋅ unit_vector[:, i]) .* unit_vector[:, i],
        norm_v_app[i]      ~ norm(v_app_perp[:, i]),
-       half_drag_force[:, i] ~ 0.25 * rho * cd_tether * norm_v_app[i] * (rest_lengths[i]*d_tether/1000.0) * v_app_perp[:, i]#,
+       half_drag_force[:, i] ~ 0.25 * rho * cd_tether * norm_v_app[i] * (rest_lengths[i]*d_tether) * v_app_perp[:, i]#,
        #drag_force[:, i]   ~ half_drag_force[:, i]  # assign computed drag to drag_force
     ]
     eqs2 = vcat(eqs2, reduce(vcat, eqs))
@@ -101,7 +104,7 @@ for i in 1:points
     ExternalForces = [F1, F2, F3, F4, F5]
     if i <= length(ExternalForces)
         push!(eqs, total_force[:, i] ~ force + ExternalForces[i])
-    elseif i != 6        # (optional additional constraint)
+    elseif i != 6        # (optional additional constraint)                  
         push!(eqs, total_force[:, i] ~ force)
     end
     push!(eqs, acc[:, i] ~ G_EARTH + total_force[:, i] / m)
@@ -120,8 +123,18 @@ prob = ODEProblem(simple_sys, nothing, tspan)
 elapsed_time = @elapsed sol = solve(prob, Rodas5(); dt, abstol=tol, reltol=tol, saveat=ts) 
 println("Elapsed time: $(elapsed_time) s, speed: $(round(duration/elapsed_time)) times real-time")
 
+# Extract the total force acting on each point over time
+total_force_sol = sol[total_force, :]
+
+# Print the total force for each point at every saved time step.
+for (i, t_val) in enumerate(ts)
+    println("At t = $(t_val):")
+    for point in 1:points
+        println("  Point $(point) total force: ", total_force_sol[i][:, point])
+    end
+end
 # # Print the drag (drag_force) values for each segment at every saved time step
-# drag_sol = sol[drag_force, :]
+# drag_sol = sol[half_drag_force, :]
 # for (i, t_val) in enumerate(ts)
 #     println("At t = $(t_val):")
 #     for seg in 1:segments
