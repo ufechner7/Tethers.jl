@@ -9,11 +9,11 @@ include("videoKPS5.jl")
 # 3D: [x,y,z] , x is the heading , z is up and y perpendicular to both
 G_EARTH::Vector{Float64} = [0.0, 0.0, -9.81]
 v_wind_tether::Vector{Float64} = [0.0, 50, 0.0]
-F1::Vector{Float64} = [0.0, 0.0,  10]
-F2::Vector{Float64} = [0.0, 0.0,  22]
+F1::Vector{Float64} = [0.0, 0.0,  20]
+F2::Vector{Float64} = [0.0, 0.0,  25]
 F3::Vector{Float64} = [0.0, 0.0, 27]
-F4::Vector{Float64} = [0.0, 0,  10]
-F5::Vector{Float64} = [0.0,  0, 10]
+F4::Vector{Float64} = [0.0, 0,  20]
+F5::Vector{Float64} = [0.0,  0, 20]
 tethersegments::Int64 = 6
 segments::Int64 = 9 + tethersegments    
 points::Int64 = 5 + tethersegments  
@@ -31,7 +31,7 @@ end
 VEL0 = zeros(3, points)
 
 # defining the model, Z component upwards	
-@parameters K1=400 K2=50 K3=200 m=1.0 l1=sqrt(10) l2=2.0 l3=sqrt(10) l4=sqrt(8) l5=sqrt(6) l6=sqrt(6) l7=sqrt(8) l8=sqrt(6) l9=sqrt(6) l10=10 damping=0.9
+@parameters K1=4000 K2=500 K3=2000 m=1.0 l1=sqrt(10) l2=2.0 l3=sqrt(10) l4=sqrt(8) l5=sqrt(6) l6=sqrt(6) l7=sqrt(8) l8=sqrt(6) l9=sqrt(6) l10=10 damping=0.9
 @parameters rho=1.225 cd_tether=1.28 d_tether=0.01 
 @variables pos(t)[1:3, 1:points]  = POS0
 @variables vel(t)[1:3, 1:points]  = VEL0
@@ -49,6 +49,7 @@ VEL0 = zeros(3, points)
 @variables half_drag_force(t)[1:3, 1:segments]
 # New observable variable to record drag force for each segment:
 @variables drag_force(t)[1:3, 1:segments]
+@variables total_force(t)[1:3, 1:segments]
 
 # basic differential equations for positions and velocities
 eqs1 = vcat(D.(pos) .~ vel,
@@ -80,8 +81,8 @@ for i in 1:segments
        v_apparent[:, i]   ~ v_wind_tether .- (vel[:, conn[i][1]] + vel[:, conn[i][2]]) / 2,
        v_app_perp[:, i]   ~ v_apparent[:, i] - (v_apparent[:, i] ⋅ unit_vector[:, i]) .* unit_vector[:, i],
        norm_v_app[i]      ~ norm(v_app_perp[:, i]),
-       half_drag_force[:, i] ~ 0.25 * rho * cd_tether * norm_v_app[i] * (rest_lengths[i]*d_tether/1000.0) * v_app_perp[:, i],
-       drag_force[:, i]   ~ half_drag_force[:, i]  # assign computed drag to drag_force
+       half_drag_force[:, i] ~ 0.25 * rho * cd_tether * norm_v_app[i] * (rest_lengths[i]*d_tether/1000.0) * v_app_perp[:, i]#,
+       #drag_force[:, i]   ~ half_drag_force[:, i]  # assign computed drag to drag_force
     ]
     eqs2 = vcat(eqs2, reduce(vcat, eqs))
     # (Optional: you can remove the println below so that only numerical values are printed later)
@@ -119,15 +120,15 @@ prob = ODEProblem(simple_sys, nothing, tspan)
 elapsed_time = @elapsed sol = solve(prob, Rodas5(); dt, abstol=tol, reltol=tol, saveat=ts) 
 println("Elapsed time: $(elapsed_time) s, speed: $(round(duration/elapsed_time)) times real-time")
 
-# Print the drag (drag_force) values for each segment at every saved time step
-drag_sol = sol[drag_force, :]
-for (i, t_val) in enumerate(ts)
-    println("At t = $(t_val):")
-    for seg in 1:segments
-         # Extract the 3D drag vector for this segment at this time step
-         println("  Segment $(seg) drag: ", drag_sol[i][:, seg])
-    end
-end
+# # Print the drag (drag_force) values for each segment at every saved time step
+# drag_sol = sol[drag_force, :]
+# for (i, t_val) in enumerate(ts)
+#     println("At t = $(t_val):")
+#     for seg in 1:segments
+#          # Extract the 3D drag vector for this segment at this time step
+#          println("  Segment $(seg) drag: ", drag_sol[i][:, seg])
+#     end
+# end
 
 # Plotting
 # Extract solution positions
