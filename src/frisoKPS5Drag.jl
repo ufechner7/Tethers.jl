@@ -10,11 +10,10 @@ include("videoKPS5.jl")
 G_EARTH::Vector{Float64} = [0.0, 0.0, -9.81]
 v_wind_tether::Vector{Float64} = [0.0, 100, 0.0]
 F1::Vector{Float64} = [0.0, 0.0,  5]
-F2::Vector{Float64} = [0.0, 0.0,  16]
-F3::Vector{Float64} = [0.0, 0.0, 18]
+F2::Vector{Float64} = [0.0, 0.0,  22]
+F3::Vector{Float64} = [0.0, 0.0, 20]
 F4::Vector{Float64} = [0.0, 0,  10]
 F5::Vector{Float64} = [0.0,  0, 10]
-C_SPRING::Float64 = 1000.0
 segments::Int64 = 10   
 points::Int64 = 6  
 duration::Float64 = 10.0  # Simulation time [s]
@@ -43,7 +42,7 @@ POS0 = [
 @variables v_app_perp(t)[1:3, 1:segments]
 @variables norm_v_app(t)[1:segments]
 @variables half_drag_force(t)[1:3, 1:segments]
-@variables total_force(t)[1:3, 1:segments]
+@variables total_force(t)[1:3, 1:points]
 
 # basic differential equations
 eqs1 = vcat(D.(pos) .~ vel,
@@ -92,9 +91,9 @@ for i in 1:points
             sum([half_drag_force[:, j] for j in 1:segments if conn[j][1] == i]; init=zeros(3))+
             sum([half_drag_force[:, j] for j in 1:segments if conn[j][2] == i]; init=zeros(3))
 
-    ExternalForces = [F1, F2, F3, F4, F5]
-    if i <= length(ExternalForces)
-        push!(eqs, total_force[:, i] ~ force + ExternalForces[i])
+    external_forces = [F1, F2, F3, F4, F5]
+    if i <= length(external_forces)
+        push!(eqs, total_force[:, i] ~ force + external_forces[i])
     #else        #not sure if this is needed
         #push!(eqs, total_force[:, i] ~ force)
     end

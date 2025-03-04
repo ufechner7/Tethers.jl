@@ -44,7 +44,7 @@ VEL0 = zeros(3, points)
 @variables v_app_perp(t)[1:3, 1:segments]
 @variables norm_v_app(t)[1:segments]
 @variables half_drag_force(t)[1:3, 1:segments]
-@variables total_force(t)[1:3, 1:segments]
+@variables total_force(t)[1:3, 1:points]
 
 # basic differential equations
 eqs1 = vcat(D.(pos) .~ vel,
@@ -73,7 +73,7 @@ for i in 1:segments
        unit_vector[:, i]  ~ -segment[:, i] / norm1[i], 
        rel_vel[:, i]      ~ vel[:, conn[i][2]] - vel[:, conn[i][1]], 
        spring_vel[i]      ~ -unit_vector[:, i] ⋅ rel_vel[:, i],  
-       c_spring[i]        ~ k, #(k_segments[i]/(rest_lengths[i])) * (0.25 + 0.75*(norm1[i] > rest_lengths[i])),   #using unit spring constant K, 
+       c_spring[i]        ~ (k_segments[i]/(rest_lengths[i])) * (0.25 + 0.75*(norm1[i] > rest_lengths[i])),   #using unit spring constant K, 
        spring_force[:, i] ~ (c_spring[i] * (norm1[i] - rest_lengths[i]) + damping * spring_vel[i]) * unit_vector[:, i]
     ]
     eqs2 = vcat(eqs2, reduce(vcat, eqs))
@@ -91,7 +91,7 @@ for i in 1:points
     ExternalForces = [F1, F2, F3, F4, F5]
     if i <= length(ExternalForces)
         push!(eqs, total_force[:, i] ~ force + ExternalForces[i])
-    elseif i!=6        #not sure if this is needed
+    elseif i!=6        #origin
         push!(eqs, total_force[:, i] ~ force)
     end
     push!(eqs, acc[:, i] ~ G_EARTH + total_force[:, i] / m)  
