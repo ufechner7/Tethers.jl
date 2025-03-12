@@ -1,4 +1,4 @@
-using Test, LinearAlgebra
+using Test, LinearAlgebra, MAT
 include("../src/Tether_quasistatic.jl")
 
 function get_init_cond(filename)
@@ -37,8 +37,8 @@ function get_output_objfun(filename)
 end
 
 @testset "ObjFun_test" begin  
-    stateVec, kitePos, kiteVel, windVel, tetherLength, settings = get_init_cond("test/data/input_basic_test.mat")
-    Fobj_ref, p0_ref, pj_ref, T0_ref = get_output_objfun("test/data/basic_test_results.mat")
+    stateVec, kitePos, kiteVel, windVel, tetherLength, settings = get_init_cond("data/input_basic_test.mat")
+    Fobj_ref, p0_ref, pj_ref, T0_ref = get_output_objfun("data/basic_test_results.mat")
     # Call objective function
     Fobj, T0, pj, p0 = objFun(stateVec, kitePos, kiteVel, windVel, tetherLength, settings)
 
@@ -51,7 +51,7 @@ end
     # Test values
     @test Fobj == Fobj_ref
     @test T0 == T0_ref
-    @test p ≈ pj_ref
+    @test pj ≈ pj_ref
     @test p0 == p0_ref
     nothing
 end
