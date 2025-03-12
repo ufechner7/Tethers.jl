@@ -4,25 +4,15 @@ struct Settings
     rho::Float64
     g_earth::Vector{Float64}
     cd_tether::Float64
-    d_tether::Float64                                 # tether diameter                  [mm]
+    d_tether::Float64                               # tether diameter                  [mm]
     rho_tether::Float64                             # density of Dyneema            [kg/m³]
     c_spring::Float64   
 end
 
-stts = Settings(1.225, [0; 0; -9.81], 0.9, 4.0, 750.0, 614600.0)
-stateVec = [0; 0; 0]
-kitePos = [10; 10; 40]
-kiteVel = [1; 1; 1]
-windVel =  [10 10 10 10 10;
-            10 10 10 10 10;
-            10 10 10 10 10]
-
-tetherLength = 100
-
 function objFun(stateVec, kitePos, kiteVel, windVel, tetherLength, settings)
 
     # settings follows same syntax as Settings3 in Tether_09.jl
-    g  = settings.g_earth[3]   # in this function, g is considered a scalar 
+    g  = abs(settings.g_earth[3])  # in this function, g is considered a scalar 
 
     Ns = size(windVel, 2)           # number of masses - windVel is a 3xNs matrix
     Ls = tetherLength/(Ns+1)        # segment length
@@ -102,6 +92,3 @@ function objFun(stateVec, kitePos, kiteVel, windVel, tetherLength, settings)
 
     return Fobj, T0, pj, p0
 end
-
-Fobj, T0, pj, p0 = objFun(stateVec, kitePos, kiteVel, windVel, 
-                            tetherLength, stts)
