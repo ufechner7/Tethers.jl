@@ -79,7 +79,13 @@ rest_lengths = [l1, l2, l3, l4, l5, l6, l7, l8, l9]
 rest_lengths = vcat(rest_lengths, [(l10+V_RO*t)/tethersegments for _ in 1:tethersegments]...)
 k_segments = [K2, K3, K2, K2, K3, K3, K2, K3, K3]
 k_segments = vcat(k_segments, [K1 for _ in 1:tethersegments]...)
-
+# -----------------------------
+# Mass Distribution
+# -----------------------------
+mass_tether = (d_tether^2)*pi*rho_tether*l10
+mass_tetherpoints = mass_tether/(tethersegments+1)
+PointMasses = [m_bridle+mass_tetherpoints, m_kite, m_kite, m_kite, m_kite]
+PointMasses = vcat(PointMasses, [mass_tetherpoints for _ in 1:tethersegments]...)
 # -----------------------------
 # Equations for Each Segment (Spring Forces, Drag, etc.)
 # -----------------------------
@@ -100,15 +106,6 @@ for i in 1:segments
     ]
     eqs2 = vcat(eqs2, reduce(vcat, eqs))
 end
-
-# -----------------------------
-# Mass Distribution
-# -----------------------------
-mass_tether = (d_tether^2)*pi*rho_tether*l10
-mass_tetherpoints = mass_tether/(tethersegments+1)
-PointMasses = [m_bridle+mass_tetherpoints, m_kite, m_kite, m_kite, m_kite]
-PointMasses = vcat(PointMasses, [mass_tetherpoints for _ in 1:tethersegments]...)
-
 # -----------------------------
 # Force Balance at Each Point
 # -----------------------------
@@ -120,7 +117,6 @@ for i in 1:points
             sum([spring_force[:, j] for j in 1:segments if conn[j][1] == i]; init=zeros(3)) +
             sum([half_drag_force[:, j] for j in 1:segments if conn[j][1] == i]; init=zeros(3)) +
             sum([half_drag_force[:, j] for j in 1:segments if conn[j][2] == i]; init=zeros(3))
-    #ExternalForces = [F1, F2, F3, F4, F5]
     v_app_point[:, i] ~ v_wind_tether - vel[:, i]
     if i in 2:5
         L=0.5*rho*Cl*S*(v_app_point[1, i]*v_app_point[1, i] + v_app_point[2, i]*v_app_point[2, i] + v_app_point[3, i]*v_app_point[3, i])
@@ -130,16 +126,8 @@ for i in 1:points
     end
     push!(eqs, acc[:, i] ~ G_EARTH + total_force[:, i] / PointMasses[i])
     eqs2 = vcat(eqs2, reduce(vcat, eqs))
-end
-
-# -----------------------------
-# Define Apparent Velocity for Each Point
-# -----------------------------
-for i in 1:points
-    global eqs2
     eqs2 = vcat(eqs2, v_app_point[:, i] ~ v_wind_tether - vel[:, i])
 end
-
 # -----------------------------
 # Build and Solve the ODE System
 # -----------------------------
@@ -153,25 +141,6 @@ ts = 0:dt:duration
 prob = ODEProblem(simple_sys, nothing, tspan)
 elapsed_time = @elapsed sol = solve(prob, Rodas5(); dt=dt, abstol=tol, reltol=tol, saveat=ts)
 println("Elapsed time: $(elapsed_time) s, speed: $(round(duration/elapsed_time)) times real-time")
-
-# -----------------------------
-# Extract and Print the Apparent Velocity for Each Point
-# -----------------------------
-v_app_point_sol = sol[v_app_point, :]
-
-println("\nApparent velocity (norm) for each point at each saved time step:")
-for (i, t_val) in enumerate(ts)
-    println("At t = $(t_val):")
-    for pt in 1:points
-         app_norm = norm(v_app_point_sol[i][:, pt])
-         println("  Point $(pt): norm = $(app_norm)")
-    end
-    for pt in 2:5
-        v_app = v_app_point_sol[i][:, pt]
-        L = 3.43 * (v_app[1]^2 + v_app[2]^2 + v_app[3]^2)
-        println("  Point $(pt): L = $(L)")
-    end
-end
 
 # -----------------------------
 # Plotting (Animation)
