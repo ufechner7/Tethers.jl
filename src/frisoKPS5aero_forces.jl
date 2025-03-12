@@ -11,12 +11,7 @@ include("videoKPS5.jl")
 # Coordinate system: [x,y,z] where x is heading, z is up, and y is perpendicular.
 G_EARTH = [0.0, 0.0, -9.81]
 v_wind_tether = [0.0, 15, 0.0]
-F1 = [0.0, 0.0, 25]
-F2 = [0.0, 0.0, 100]
-F3 = [0.0, 0.0, 120]
-F4 = [0.0, 0, 50]
-F5 = [0.0, 0, 50]
-tethersegments = 12
+tethersegments = 6
 segments = 9 + tethersegments    
 points = 5 + tethersegments  
 duration = 10.0              # Simulation time [s]
@@ -35,10 +30,10 @@ VEL0 = zeros(3, points)
 # -----------------------------
 # Define Model Parameters and Variables
 # -----------------------------
-@parameters K1=614600  K2=10000 K3=60000 m_kite=6.2/4 m_bridle=8.4 rho_tether=724 
+@parameters K1=100000  K2=10000 K3=60000 m_kite=6.2/4 m_bridle=8.4 rho_tether=724 
 @parameters l1=sqrt(10) l2=2.0 l3=sqrt(10) l4=sqrt(8) l5=sqrt(6) l6=sqrt(6) l7=sqrt(8) l8=sqrt(6) l9=sqrt(6) l10=10
 @parameters damping=0.9
-@parameters rho=1.225 cd_tether=0.958 d_tether=0.004 Cl=0.8 S=7 
+@parameters rho=1.225 cd_tether=0.958 d_tether=0.004 Cl=0.2 S=7 
 
 # State variables for points
 @variables pos(t)[1:3, 1:points] = POS0
@@ -95,7 +90,7 @@ for i in 1:segments
        unit_vector[:, i]  ~ -segment[:, i] / norm1[i],
        rel_vel[:, i]      ~ vel[:, conn[i][2]] - vel[:, conn[i][1]],
        spring_vel[i]      ~ -unit_vector[:, i] ⋅ rel_vel[:, i],
-       c_spring[i]        ~ (k_segments[i]/rest_lengths[i]) * (0.1 + 0.9*(norm1[i] > rest_lengths[i])),
+       c_spring[i]        ~ (k_segments[i]/rest_lengths[i]) * (0.01 + 0.99*(norm1[i] > rest_lengths[i])),
        spring_force[:, i] ~ (c_spring[i]*(norm1[i] - rest_lengths[i]) + damping * spring_vel[i]) * unit_vector[:, i],
        v_apparent[:, i]   ~ v_wind_tether .- (vel[:, conn[i][1]] + vel[:, conn[i][2]]) / 2,
        v_app_perp[:, i]   ~ v_apparent[:, i] - (v_apparent[:, i] ⋅ unit_vector[:, i]) .* unit_vector[:, i],
@@ -126,9 +121,9 @@ for i in 1:points
             sum([half_drag_force[:, j] for j in 1:segments if conn[j][2] == i]; init=zeros(3))
     #ExternalForces = [F1, F2, F3, F4, F5]
     v_app_point[:, i] ~ v_wind_tether - vel[:, i]
-    if i in 2:5
+    if i in 2:3
         L=0.5*rho*Cl*S*(v_app_point[1, i]*v_app_point[1, i] + v_app_point[2, i]*v_app_point[2, i] + v_app_point[3, i]*v_app_point[3, i])
-        push!(eqs, total_force[:, i] ~ force + [0.0, 0.0, L/4]) 
+        push!(eqs, total_force[:, i] ~ force + [0.0, 0.0, L]) 
     elseif i != 6        # (optional additional constraint)                  
         push!(eqs, total_force[:, i] ~ force)
     end
@@ -169,6 +164,11 @@ for (i, t_val) in enumerate(ts)
     for pt in 1:points
          app_norm = norm(v_app_point_sol[i][:, pt])
          println("  Point $(pt): norm = $(app_norm)")
+    end
+    for pt in 2:5
+        v_app = v_app_point_sol[i][:, pt]
+        L = 3.43 * (v_app[1]^2 + v_app[2]^2 + v_app[3]^2)
+        println("  Point $(pt): L = $(L)")
     end
 end
 
