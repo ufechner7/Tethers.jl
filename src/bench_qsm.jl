@@ -48,11 +48,11 @@ function objFun!(res, stateVec, kitePos, kiteVel, windVel, tetherLength, setting
     pj[3, Ns] = Ls * cosθ * cosφ
 
     # Velocity and acceleration calculations
-    ω = cross(kitePos / norm_p^2, kiteVel)
-    @inbounds for k in 1:3
-        vj[k, Ns] = v_parallel * p_unit[k] + cross(ω, @view(pj[:, Ns]))[k]
-        aj[k, Ns] = cross(ω, cross(ω, @view(pj[:, Ns])))[k]
-    end
+    ω = cross(kitePos / norm_p^2, kiteVel) # 3 alloc
+    a = cross(ω, @view(pj[:, Ns]))         # 3 alloc
+    b = cross(ω, cross(ω, @view(pj[:, Ns])))
+    vj[:, Ns] .= v_parallel * p_unit + a
+    aj[:, Ns] .= b
 
     # Drag calculation for first element
     v_a_p1 = vj[1, Ns] - windVel[1, Ns]
@@ -164,17 +164,18 @@ function objFun!(res, stateVec, kitePos, kiteVel, windVel, tetherLength, setting
     nothing
 end
 
-stateVec = MVector{3}(rand(3,))
-kitePos = SVector{3}([100, 100, 300])
-kiteVel = SVector{3}([0, 0, 0])
-windVel = SMatrix{3, 15}(rand(3,15))
+stateVec::MVector{3} = MVector{3}(rand(3,))
+kitePos::SVector{3} = SVector{3}([100, 100, 300])
+kiteVel::SVector{3} = SVector{3}([0, 0, 0])
+windVel::SMatrix{3, 15} = SMatrix{3, 15}(rand(3,15))
 tetherLength = 500
-settings = Settings(1.225, [0, 0, -9.806], 0.9, 4, 0.85, 500000)
-Ns = size(windVel, 2)
-buffers = [zeros(3, Ns), zeros(3, Ns), zeros(3, Ns), zeros(3, Ns), zeros(3, Ns)]
-res = zeros(3)
+settings::Settings = Settings(1.225, [0, 0, -9.806], 0.9, 4, 0.85, 500000)
+Ns::Int64 = size(windVel, 2)
+buffers::Vector{Matrix{Float64}} = [zeros(3, Ns), zeros(3, Ns), zeros(3, Ns), zeros(3, Ns), zeros(3, Ns)]
+res::Vector{Float64} = zeros(3)
 
-@benchmark objFun!(res, stateVec, kitePos, kiteVel, windVel, tetherLength, settings, buffers)
+objFun!(res, stateVec, kitePos, kiteVel, windVel, tetherLength, settings, buffers)
+@allocations objFun!(res, stateVec, kitePos, kiteVel, windVel, tetherLength, settings, buffers)
 
 
 
