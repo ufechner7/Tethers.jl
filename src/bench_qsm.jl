@@ -106,10 +106,10 @@ function objFun!(res, stateVec, kitePos, kiteVel, windVel, tetherLength, setting
         pj[3, ii-1] = pj[3, ii] + l_i_1 * ft_dir[3]
 
         # Velocity and acceleration
-        for k in 1:3
-            vj[k, ii-1] = v_parallel * p_unit[k] + cross(ω, @view(pj[:, ii-1]))[k]
-            aj[k, ii-1] = cross(ω, cross(ω, @view(pj[:, ii-1])))[k]
-        end
+        a = cross(ω, @view(pj[:, ii-1]))
+        b = cross(ω, cross(ω, @view(pj[:, ii-1])))
+        vj[:, ii-1] .= v_parallel * p_unit + a
+        aj[:, ii-1] .= b
 
         # Drag calculations
         v_a_p1 = vj[1, ii] - windVel[1, ii]
