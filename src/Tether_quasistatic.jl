@@ -1,5 +1,18 @@
 using LinearAlgebra
 
+#= BenchmarkTools.Trial: 10000 samples with 1 evaluation per sample.
+ Range (min … max):  15.000 μs …  2.990 ms  ┊ GC (min … max): 0.00% … 0.00%
+ Time  (median):     17.300 μs              ┊ GC (median):    0.00%
+ Time  (mean ± σ):   19.955 μs ± 55.673 μs  ┊ GC (mean ± σ):  6.56% ± 2.77%
+
+    ▁▄▆▇█▇▅▄▂▂▂▁                                              ▂
+  █▇████████████▇▅▅▆█▅▅▃▄▄▄▄▄▆▆▆▇▇████▇█▇▇▇▇▇▆▇▇▇▇▅▆▄▅▄▄▃▄▅▃▄ █
+  15 μs        Histogram: log(frequency) by time      35.2 μs <
+
+ Memory estimate: 38.36 KiB, allocs estimate: 519. =#
+
+
+ 
 struct Settings 
     rho::Float64
     g_earth::Vector{Float64}
@@ -9,8 +22,27 @@ struct Settings
     c_spring::Float64   
 end
 
-function objFun(stateVec, kitePos, kiteVel, windVel, tetherLength, settings)
+"""
+    objFun(stateVec, kitePos, kiteVel, windVel, tetherLength, settings)
 
+Calculate difference between tether end and kite given tether ground segment orientation and magnitude.
+
+# Arguments
+- stateVec:: (3, ) Vector{Float64} state vector (theta [rad], phi [rad], Tn [N]) - tether orientation and tension at ground station
+- kitePos:: (3, ) Vector{Float64} kite position vector in wind reference frame
+- kiteVel:: (3, ) Vector{Float64} kite velocity vector in wind reference frame
+- windVel:: (3, Ns) Matrix{Float64} wind velocity vector in wind reference frame for each Ns node of the tether
+- tetherLength: tether length
+- settings:: Settings struct containing enviromental and tether parameters
+
+# Returns
+- Fobj:: (3, ) Vector{Float64} difference between tether end and kite segment
+- T0:: (3, ) Vector{Float64} force from the kite to the end of tether
+- pj:: (3, Ns) Matrix{Float64} x,y,z - coordinates of the Ns tether nodes
+- p0:: (3, ) Vector{Float64}  x,y,z - coordinates of the kite-tether attachment
+"""
+function objFun(stateVec, kitePos, kiteVel, windVel, tetherLength, settings)
+    
     # settings follows same syntax as Settings3 in Tether_09.jl
     g  = abs(settings.g_earth[3])  # in this function, g is considered a scalar 
 
@@ -92,3 +124,12 @@ function objFun(stateVec, kitePos, kiteVel, windVel, tetherLength, settings)
 
     return Fobj, T0, pj, p0
 end
+
+#= stateVec = rand(3,)
+kitePos = [100, 100, 300] 
+kiteVel = [0, 0, 0]
+windVel = rand(3,15)
+tetherLength = 500
+settings = Settings(1.225, [0, 0, -9.806], 0.9, 4, 0.85, 500000)
+
+objFun(stateVec, kitePos, kiteVel, windVel, tetherLength, settings) =#
