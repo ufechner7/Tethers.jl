@@ -1,5 +1,7 @@
 using LinearAlgebra, StaticArrays, BenchmarkTools
 
+const MVec3 = MVector{3, Float64}
+
 struct Settings 
     rho::Float64
     g_earth::MVector{3, Float64}
@@ -48,9 +50,9 @@ function objFun!(res, stateVec, kitePos, kiteVel, windVel, tetherLength, setting
     pj[3, Ns] = Ls * cosθ * cosφ
 
     # Velocity and acceleration calculations
-    ω = cross(kitePos / norm_p^2, kiteVel) # 3 alloc
-    a = cross(ω, @view(pj[:, Ns]))         # 3 alloc
-    b = cross(ω, cross(ω, @view(pj[:, Ns])))
+    ω = cross(MVec3(kitePos / norm_p^2), MVec3(kiteVel)) # 3 alloc
+    a = cross(ω, MVec3(@view(pj[:, Ns])))         # 3 alloc
+    b = cross(ω, cross(ω, MVec3(@view(pj[:, Ns]))))
     vj[:, Ns] .= v_parallel * p_unit + a
     aj[:, Ns] .= b
 
@@ -106,8 +108,8 @@ function objFun!(res, stateVec, kitePos, kiteVel, windVel, tetherLength, setting
         pj[3, ii-1] = pj[3, ii] + l_i_1 * ft_dir[3]
 
         # Velocity and acceleration
-        a = cross(ω, @view(pj[:, ii-1]))           # 28 allocations
-        b = cross(ω, cross(ω, @view(pj[:, ii-1]))) # 28 allocations
+        a = cross(ω, MVec3(@view(pj[:, ii-1])))           # 28 allocations
+        b = cross(ω, cross(ω, MVec3(@view(pj[:, ii-1])))) # 28 allocations
         vj[:, ii-1] .= v_parallel * p_unit + a
         aj[:, ii-1] .= b
 
