@@ -164,15 +164,15 @@ function objFun!(res, stateVec, kitePos, kiteVel, windVel, tetherLength, setting
     nothing
 end
 
-stateVec::MVector{3} = MVector{3}(rand(3,))
-kitePos::SVector{3} = SVector{3}([100, 100, 300])
-kiteVel::SVector{3} = SVector{3}([0, 0, 0])
-windVel::SMatrix{3, 15} = SMatrix{3, 15}(rand(3,15))
+stateVec = MVector{3}(rand(3,))
+kitePos = SVector{3}([100, 100, 300])
+kiteVel = SVector{3}([0, 0, 0])
+windVel = SMatrix{3, 15}(rand(3,15))
 tetherLength = 500
-settings::Settings = Settings(1.225, [0, 0, -9.806], 0.9, 4, 0.85, 500000)
-Ns::Int64 = size(windVel, 2)
-buffers::Vector{Matrix{Float64}} = [zeros(3, Ns), zeros(3, Ns), zeros(3, Ns), zeros(3, Ns), zeros(3, Ns)]
-res::Vector{Float64} = zeros(3)
+settings = Settings(1.225, [0, 0, -9.806], 0.9, 4, 0.85, 500000)
+Ns = size(windVel, 2)
+buffers= [zeros(3, Ns), zeros(3, Ns), zeros(3, Ns), zeros(3, Ns), zeros(3, Ns)]
+res = zeros(3)
 
 objFun!(res, stateVec, kitePos, kiteVel, windVel, tetherLength, settings, buffers)
 @benchmark objFun!(res, stateVec, kitePos, kiteVel, windVel, tetherLength, settings, buffers)
