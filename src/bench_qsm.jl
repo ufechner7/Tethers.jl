@@ -50,7 +50,7 @@ function objFun!(res, stateVec, kitePos, kiteVel, windVel, tetherLength, setting
     pj[3, Ns] = Ls * cosθ * cosφ
 
     # Velocity and acceleration calculations
-    ω = cross(MVec3(kitePos / norm_p^2), MVec3(kiteVel)) # 3 alloc
+    ω = cross(kitePos / norm_p^2, kiteVel) # 3 alloc
     a = cross(ω, MVec3(@view(pj[:, Ns])))         # 3 alloc
     b = cross(ω, cross(ω, MVec3(@view(pj[:, Ns]))))
     vj[:, Ns] .= v_parallel * p_unit + a
@@ -93,7 +93,7 @@ function objFun!(res, stateVec, kitePos, kiteVel, windVel, tetherLength, setting
             g_term = mj * g
         end
 
-        @views for k in 1:3
+        for k in 1:3
             FT[k, ii-1] = mj_total * aj[k, ii] + FT[k, ii] - Fd[k, ii]
         end
         FT[3, ii-1] += g_term
