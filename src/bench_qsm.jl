@@ -106,8 +106,8 @@ function objFun!(res, stateVec, kitePos, kiteVel, windVel, tetherLength, setting
         pj[3, ii-1] = pj[3, ii] + l_i_1 * ft_dir[3]
 
         # Velocity and acceleration
-        a = cross(ω, @view(pj[:, ii-1]))
-        b = cross(ω, cross(ω, @view(pj[:, ii-1])))
+        a = cross(ω, @view(pj[:, ii-1]))           # 28 allocations
+        b = cross(ω, cross(ω, @view(pj[:, ii-1]))) # 28 allocations
         vj[:, ii-1] .= v_parallel * p_unit + a
         aj[:, ii-1] .= b
 
@@ -175,7 +175,7 @@ buffers::Vector{Matrix{Float64}} = [zeros(3, Ns), zeros(3, Ns), zeros(3, Ns), ze
 res::Vector{Float64} = zeros(3)
 
 objFun!(res, stateVec, kitePos, kiteVel, windVel, tetherLength, settings, buffers)
-@allocations objFun!(res, stateVec, kitePos, kiteVel, windVel, tetherLength, settings, buffers)
+@benchmark objFun!(res, stateVec, kitePos, kiteVel, windVel, tetherLength, settings, buffers)
 
 
 
