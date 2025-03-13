@@ -1,4 +1,4 @@
-using LinearAlgebra, StaticArrays
+using LinearAlgebra, StaticArrays, BenchmarkTools
 
 struct Settings 
     rho::Float64
@@ -10,7 +10,7 @@ struct Settings
 end
 
 
-function objFun(stateVec, kitePos, kiteVel, windVel, tetherLength, settings, buffers)
+function objFun!(res, stateVec, kitePos, kiteVel, windVel, tetherLength, settings, buffers)
     g = abs(settings.g_earth[3])
     Ns = size(windVel, 2)
     Ls = tetherLength / (Ns + 1)
@@ -160,9 +160,8 @@ function objFun(stateVec, kitePos, kiteVel, windVel, tetherLength, settings, buf
           pj[2,1] + l_i_1*T0_dir2,
           pj[3,1] + l_i_1*T0_dir3]
 
-    Fobj = kitePos - p0
-
-    return Fobj, SVector(T0_1, T0_2, T0_3), pj, p0
+    res .= kitePos - p0
+    nothing
 end
 
 stateVec = MVector{3}(rand(3,))
@@ -173,9 +172,9 @@ tetherLength = 500
 settings = Settings(1.225, [0, 0, -9.806], 0.9, 4, 0.85, 500000)
 Ns = size(windVel, 2)
 buffers = [zeros(3, Ns), zeros(3, Ns), zeros(3, Ns), zeros(3, Ns), zeros(3, Ns)]
+res = zeros(3)
 
-objFun(stateVec, kitePos, kiteVel, windVel, tetherLength, settings, buffers)
-@time objFun(stateVec, kitePos, kiteVel, windVel, tetherLength, settings, buffers)
+@benchmark objFun!(res, stateVec, kitePos, kiteVel, windVel, tetherLength, settings, buffers)
 
 
 
