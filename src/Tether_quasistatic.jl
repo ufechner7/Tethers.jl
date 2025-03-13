@@ -33,7 +33,7 @@ Calculate difference between tether end and kite given tether ground segment ori
 - kiteVel:: (3, ) Vector{Float64} kite velocity vector in wind reference frame
 - windVel:: (3, Ns) Matrix{Float64} wind velocity vector in wind reference frame for each Ns node of the tether
 - tetherLength: tether length
-- settings:: Settings struct containing enviromental and tether parameters
+- settings:: Settings struct containing environmental and tether parameters
 
 # Returns
 - Fobj:: (3, ) Vector{Float64} difference between tether end and kite segment
