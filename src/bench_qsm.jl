@@ -10,7 +10,7 @@ struct Settings
 end
 
 
-function objFun(stateVec, kitePos, kiteVel, windVel, tetherLength, settings)
+function objFun(stateVec, kitePos, kiteVel, windVel, tetherLength, settings, buffers)
     g = abs(settings.g_earth[3])
     Ns = size(windVel, 2)
     Ls = tetherLength / (Ns + 1)
@@ -20,11 +20,11 @@ function objFun(stateVec, kitePos, kiteVel, windVel, tetherLength, settings)
     E = settings.c_spring / A
 
     # Preallocate arrays
-    FT = zeros(3, Ns)
-    Fd = zeros(3, Ns)
-    pj = zeros(3, Ns)
-    vj = zeros(3, Ns)
-    aj = zeros(3, Ns)
+    FT = buffers[1]
+    Fd = buffers[2]
+    pj = buffers[3]
+    vj = buffers[4]
+    aj = buffers[5]
 
     # Unpack state variables
     θ, φ, Tn = stateVec[1], stateVec[2], stateVec[3]
@@ -171,9 +171,11 @@ kiteVel = SVector{3}([0, 0, 0])
 windVel = SMatrix{3, 15}(rand(3,15))
 tetherLength = 500
 settings = Settings(1.225, [0, 0, -9.806], 0.9, 4, 0.85, 500000)
+Ns = size(windVel, 2)
+buffers = [zeros(3, Ns), zeros(3, Ns), zeros(3, Ns), zeros(3, Ns), zeros(3, Ns)]
 
-objFun(stateVec, kitePos, kiteVel, windVel, tetherLength, settings)
-@time objFun(stateVec, kitePos, kiteVel, windVel, tetherLength, settings)
+objFun(stateVec, kitePos, kiteVel, windVel, tetherLength, settings, buffers)
+@time objFun(stateVec, kitePos, kiteVel, windVel, tetherLength, settings, buffers)
 
 
 
