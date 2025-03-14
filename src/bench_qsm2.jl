@@ -20,7 +20,7 @@ struct Settings
     c_spring::Float64   
 end
 
-function objFun(stateVec, kitePos, kiteVel, windVel, tetherLength, settings)
+function objFun!(res, stateVec, kitePos, kiteVel, windVel, tetherLength, settings)
 
     # settings follows same syntax as Settings3 in Tether_09.jl
     g  = abs(settings.g_earth[3])  # in this function, g is considered a scalar 
@@ -97,9 +97,8 @@ function objFun(stateVec, kitePos, kiteVel, windVel, tetherLength, settings)
     l_i_1 = (norm(T0)/(E*A) + 1) * Ls
     p0 = pj + l_i_1 .* (T0 / norm(T0))
     
-    Fobj = p - p0
-
-    return Fobj, T0, pj, p0
+    res .= p - p0
+    nothing
 end
 
 stateVec = rand(SVector{3, Float64})
@@ -108,9 +107,7 @@ kiteVel = SA_F64[0, 0, 0]
 windVel = rand(SVector{3, Float64}, 15)
 tetherLength = 500.0
 settings = Settings(1.225, SA_F64[0, 0, -9.806], 0.9, 4, 0.85, 500000)
+res = zeros(3)
 
-objFun(stateVec, kitePos, kiteVel, windVel, tetherLength, settings)
-@benchmark objFun(stateVec, kitePos, kiteVel, windVel, tetherLength, settings)
-
-
-
+objFun!(res, stateVec, kitePos, kiteVel, windVel, tetherLength, settings)
+@benchmark objFun!(res, stateVec, kitePos, kiteVel, windVel, tetherLength, settings)
