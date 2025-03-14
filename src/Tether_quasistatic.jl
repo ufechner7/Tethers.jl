@@ -1,12 +1,11 @@
 using LinearAlgebra, StaticArrays, ADTypes, NonlinearSolve, MAT
 
 """
-    simulate_tether
+    simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings)
 
-Trust-region nonlinear systems of equation solver to determine the tether shape and forces.
+Function to determine the tether shape and forces, based on a quasi-static model.
 
 # Arguments
-- res::Vector{Float64} difference between tether end and kite segment
 - state_vec::MVector{3, Float64} state vector (theta [rad], phi [rad], Tn [N]) - tether orientation and tension at ground station
 - kite_pos::MVector{3, Float64} kite position vector in wind reference frame
 - kite_vel::MVector{3, Float64} kite velocity vector in wind reference frame
@@ -18,9 +17,8 @@ Trust-region nonlinear systems of equation solver to determine the tether shape 
 - state_vec::MVector{3, Float64} state vector (theta [rad], phi [rad], Tn [N]) - tether orientation and tension at ground station 
 - tether_pos::Matrix{Float64} x,y,z - coordinates of the Ns tether nodes
 - force_gnd::Float64 Line tension at the ground station
-- force_kite::Vector{Float64} force from the kite to the end of tether, Fvec, x
+- force_kite::Vector{Float64} force from the kite to the end of tether
 - p0::Vector{Float64}  x,y,z - coordinates of the kite-tether attachment
-
 """
 function simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings)
    
@@ -54,11 +52,10 @@ Contains the environmental and tether properties
 # Fields
   - rho::Float64: density of air [kg/m³] 
   - g_earth::MVector{Float64}: gravitational acceleration [m/s]
-    cd_tether::Float64: drag ceofficient of the tether
-    d_tether::Float64: diameter of the tether [mm]
-    rho_tether::Float64: density of the tether (Dyneema) [kg/m³]
-    c_spring::Float64: axial stiffness of the tether EA [N] 
-
+  - cd_tether::Float64: drag ceofficient of the tether
+  - d_tether::Float64: diameter of the tether [mm]
+  - rho_tether::Float64: density of the tether (Dyneema) [kg/m³]
+  - c_spring::Float64: axial stiffness of the tether EA [N] 
 """ 
 const MVec3 = MVector{3, Float64}
 
@@ -74,7 +71,8 @@ end
 """
     res!(res, state_vec, param)
 
-Calculates difference between tether end and kite given tether ground segment orientation and magnitude.
+Calculates difference between tether end and kite given tether ground segment orientation 
+and magnitude.
 
 # Arguments
 - res::Vector{Float64} difference between tether end and kite segment
@@ -265,7 +263,7 @@ end
 """
     get_initial_conditions(filename)
 
-Loads the initialisation data for the basic examples and tests
+Loads the initialization data for the basic examples and tests
 
 # Arguments
 - filename: the filename of the mat file to read
