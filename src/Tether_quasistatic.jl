@@ -6,19 +6,21 @@ using LinearAlgebra, StaticArrays, ADTypes, NonlinearSolve, MAT
 Function to determine the tether shape and forces, based on a quasi-static model.
 
 # Arguments
-- state_vec::MVector{3, Float64} state vector (theta [rad], phi [rad], Tn [N]) - tether orientation and tension at ground station
-- kite_pos::MVector{3, Float64} kite position vector in wind reference frame
-- kite_vel::MVector{3, Float64} kite velocity vector in wind reference frame
+- state_vec::MVector{3, Float64}: state vector (theta [rad], phi [rad], Tn [N]);  
+  tether orientation and tension at ground station
+- kite_pos::MVector{3, Float64}: kite position vector in wind reference frame
+- kite_vel::MVector{3, Float64}: kite velocity vector in wind reference frame
 - wind_vel:: (3, Ns) MMatrix{Float64} wind velocity vector in wind reference frame for each Ns node of the tether
 - tether_length: tether length
 - settings:: Settings struct containing environmental and tether parameters: see [Settings](@ref)
 
 # Returns
-- state_vec::MVector{3, Float64} state vector (theta [rad], phi [rad], Tn [N]) - tether orientation and tension at ground station 
-- tether_pos::Matrix{Float64} x,y,z - coordinates of the Ns tether nodes
-- force_gnd::Float64 Line tension at the ground station
-- force_kite::Vector{Float64} force from the kite to the end of tether
-- p0::Vector{Float64}  x,y,z - coordinates of the kite-tether attachment
+- state_vec::MVector{3, Float64}: state vector (theta [rad], phi [rad], Tn [N]);  
+  tether orientation and tension at ground station 
+- tether_pos::Matrix{Float64}: x,y,z - coordinates of the tether nodes
+- force_gnd::Float64: Line tension at the ground station
+- force_kite::Vector{Float64}: force from the kite to the end of tether
+- p0::Vector{Float64}:  x,y,z - coordinates of the kite-tether attachment
 """
 function simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings)
    
@@ -317,7 +319,7 @@ Loads the output from the original MATLAB objective function for the tests
 """
 function get_test_output(filename)
     vars        = matread(filename) 
-    res        = MVector{3}(vec(get(vars,"res", 0)))
+    res        = MVector{3}(vec(get(vars,"Fobj", 0)))
     p0          = MVector{3}(vec(get(vars,"p0", 0)))
     pj          = get(vars,"pj", 0)
     T0          = MVector{3}(vec(get(vars,"T0", 0)))
