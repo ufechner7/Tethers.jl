@@ -1,5 +1,16 @@
 using LinearAlgebra, StaticArrays, BenchmarkTools
 
+#= BenchmarkTools.Trial: 10000 samples with 186 evaluations per sample.
+ Range (min … max):  552.016 ns …  33.646 μs  ┊ GC (min … max): 0.00% … 97.83%
+ Time  (median):     556.575 ns               ┊ GC (median):    0.00%
+ Time  (mean ± σ):   570.646 ns ± 463.443 ns  ┊ GC (mean ± σ):  1.27% ±  1.83%
+
+  ▁ ▁██▆▅▃▂▁▁▁▁▁ ▂▄▃▂▂▂▂▁▁▁▁▄▄▃▂▁▁▁▁▁ ▁▁     ▁                  ▂
+  █████████████████████████████████████████████▇█▇▆▆▇▆▆▆▆▆▆▆▆▅▆ █
+  552 ns        Histogram: log(frequency) by time        606 ns <
+
+ Memory estimate: 80 bytes, allocs estimate: 2. =#
+
 const MVec3 = MVector{3, Float64}
 
 struct Settings 
