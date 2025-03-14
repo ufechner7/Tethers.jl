@@ -49,6 +49,7 @@ julia = "1.10, 1.11"
 
 [extras]
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+REPL = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
 
 [targets]
 test = ["Documenter"]
