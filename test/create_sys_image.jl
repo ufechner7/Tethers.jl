@@ -6,7 +6,7 @@ FAST=true
 @info "Creating sysimage ..."
 push!(LOAD_PATH,joinpath(pwd(),"src"))
 
-pkgs=[:ModelingToolkit, :OrdinaryDiffEq, :SteadyStateDiffEq, :Timers]
+pkgs=[:ModelingToolkit, :OrdinaryDiffEq, :SteadyStateDiffEq, :Timers, :REPL]
 if FAST
     push!(pkgs, :ControlPlots)
 end 
