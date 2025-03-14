@@ -4,6 +4,8 @@ include("../src/Tether_quasistatic.jl")
 
 # Read the initial conditions from a .mat file
 state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings = get_initial_conditions("test/data/input_basic_test.mat")
+# state_vec, tether_pos, force_gnd, force_kite, p0 = simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings)
+simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings; prn=true)
 
 @benchmark simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings)
 
