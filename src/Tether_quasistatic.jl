@@ -22,8 +22,7 @@ Function to determine the tether shape and forces, based on a quasi-static model
 - force_kite::Vector{Float64}: force from the kite to the end of tether
 - p0::Vector{Float64}:  x,y,z - coordinates of the kite-tether attachment
 """
-function simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings)
-   
+function simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings; prn=false)
     Ns = size(wind_vel, 2)
     buffers= [zeros(3, Ns), zeros(3, Ns), zeros(3, Ns), zeros(3, Ns), zeros(3, Ns)]
     
@@ -34,7 +33,13 @@ function simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length,
     # Define the nonlinear problem
     prob = NonlinearProblem(res!, state_vec, param)
     # Solve the problem with TrustRegion method
-    state_vec = solve(prob, TrustRegion(autodiff=AutoFiniteDiff()); show_trace = Val(false)) 
+    sol = solve(prob, TrustRegion(autodiff=AutoFiniteDiff()); show_trace = Val(false)) 
+
+    iterations = sol.stats.nsteps  # Field name may vary; verify with `propertynames(sol)`
+    state_vec = sol.u
+    if prn
+        println("Iterations: ", iterations)
+    end
 
     # Set the returnFlag to true so that res! returns outputs
     param = (; param..., returnFlag=true)
@@ -42,8 +47,7 @@ function simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length,
     res, force_kite, tether_pos, p0 = res!(res, state_vec, param)
 
     force_gnd = state_vec[3]
-    return state_vec, tether_pos, force_gnd, force_kite, p0
-
+    state_vec, tether_pos, force_gnd, force_kite, p0
 end
 
 """
