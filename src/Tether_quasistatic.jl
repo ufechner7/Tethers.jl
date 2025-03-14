@@ -1,48 +1,48 @@
 using LinearAlgebra, StaticArrays, ADTypes, NonlinearSolve, MAT
 
 """
-    tetherQuasiStatic
+    simulate_tether
 
 Trust-region nonlinear systems of equation solver to determine the tether shape and forces.
 
 # Arguments
-- res:: (3, ) Vector{Float64} difference between tether end and kite segment
-- state_vec:: (3, ) MVector{3, Float64} state vector (theta [rad], phi [rad], Tn [N]) - tether orientation and tension at ground station
-- kite_pos:: (3, ) MVector{3, Float64} kite position vector in wind reference frame
-- kite_vel:: (3, ) MVector{3, Float64} kite velocity vector in wind reference frame
+- res::Vector{Float64} difference between tether end and kite segment
+- state_vec::MVector{3, Float64} state vector (theta [rad], phi [rad], Tn [N]) - tether orientation and tension at ground station
+- kite_pos::MVector{3, Float64} kite position vector in wind reference frame
+- kite_vel::MVector{3, Float64} kite velocity vector in wind reference frame
 - wind_vel:: (3, Ns) MMatrix{Float64} wind velocity vector in wind reference frame for each Ns node of the tether
 - tether_length: tether length
-- settings:: Settings struct containing enviromental and tether parameters: see [Settings](@ref)
+- settings:: Settings struct containing environmental and tether parameters: see [Settings](@ref)
 
 # Returns
-- state_vec:: (3, ) MVector{3, Float64} state vector (theta [rad], phi [rad], Tn [N]) - tether orientation and tension at ground station 
-- tether_pos:: (3, Ns) Matrix{Float64} x,y,z - coordinates of the Ns tether nodes
-- Ft_ground:: Float64 Line tension at the ground station
-- Ft_kite:: (3, ) Vector{Float64} force from the kite to the end of tether, Fvec, x
-- p0:: (3, ) Vector{Float64}  x,y,z - coordinates of the kite-tether attachment
+- state_vec::MVector{3, Float64} state vector (theta [rad], phi [rad], Tn [N]) - tether orientation and tension at ground station 
+- tether_pos::Matrix{Float64} x,y,z - coordinates of the Ns tether nodes
+- force_gnd::Float64 Line tension at the ground station
+- force_kite::Vector{Float64} force from the kite to the end of tether, Fvec, x
+- p0::Vector{Float64}  x,y,z - coordinates of the kite-tether attachment
 
 """
-function tetherQuasiStatic(state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings)
+function simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings)
    
     Ns = size(wind_vel, 2)
     buffers= [zeros(3, Ns), zeros(3, Ns), zeros(3, Ns), zeros(3, Ns), zeros(3, Ns)]
     
-    # Pack parameters in param named tuple - false sets objFun! for in-place solution
+    # Pack parameters in param named tuple - false sets res! for in-place solution
     param = (kite_pos=kite_pos, kite_vel=kite_vel, wind_vel=wind_vel, 
          tether_length=tether_length, settings=settings, buffers=buffers, 
          returnFlag=false)
     # Define the nonlinear problem
-    prob = NonlinearProblem(objFun!, state_vec, param)
+    prob = NonlinearProblem(res!, state_vec, param)
     # Solve the problem with TrustRegion method
     state_vec = solve(prob, TrustRegion(autodiff=AutoFiniteDiff()); show_trace = Val(false)) 
 
-    # Set the returnFlag to true so that objFun! returns outputs
+    # Set the returnFlag to true so that res! returns outputs
     param = (; param..., returnFlag=true)
     res = zeros(3)
-    Fobj, Ft_kite, tether_pos, p0 = objFun!(res, state_vec, param)
+    res, force_kite, tether_pos, p0 = res!(res, state_vec, param)
 
-    Ft_ground = state_vec[3]
-    return state_vec, tether_pos, Ft_ground, Ft_kite, p0
+    force_gnd = state_vec[3]
+    return state_vec, tether_pos, force_gnd, force_kite, p0
 
 end
 
@@ -72,27 +72,27 @@ struct Settings
 end
 
 """
-    objFun!(res, state_vec, param)
+    res!(res, state_vec, param)
 
 Calculates difference between tether end and kite given tether ground segment orientation and magnitude.
 
 # Arguments
-- res:: (3, ) Vector{Float64} difference between tether end and kite segment
-- state_vec:: (3, ) MVector{3, Float64} state vector (theta [rad], phi [rad], Tn [N]) - tether orientation and tension at ground station
+- res::Vector{Float64} difference between tether end and kite segment
+- state_vec::MVector{3, Float64} state vector (theta [rad], phi [rad], Tn [N]) - tether orientation and tension at ground station
 - par:: 7-elements tuple:
-    - kite_pos:: (3, ) MVector{3, Float64} kite position vector in wind reference frame
-    - kite_vel:: (3, ) MVector{3, Float64} kite velocity vector in wind reference frame
-    - wind_vel:: (3, Ns) MMatrix{Float64} wind velocity vector in wind reference frame for each Ns node of the tether
+    - kite_pos::MVector{3, Float64} kite position vector in wind reference frame
+    - kite_vel::MVector{3, Float64} kite velocity vector in wind reference frame
+    - wind_vel::MMatrix{Float64} wind velocity vector in wind reference frame for each Ns node of the tether
     - tether_length: tether length
     - settings:: Settings struct containing enviromental and tether parameters: see [Settings](@ref)
     - buffers:: (5, ) Vector{Matrix{Float64}}  Vector of (3, Ns) Matrix{Float64} empty matrices for preallocation
     - returnFlag:: Boolean to determine use for in-place optimization or for calculating returns
 
 # Returns (if returnFlag==true)
-- res:: (3, ) Vector{Float64} difference between tether end and kite segment
-- T0:: (3, ) Vector{Float64} force from the kite to the end of tether
+- res::Vector{Float64} difference between tether end and kite segment
+- T0::Vector{Float64} force from the kite to the end of tether
 - pj:: (3, Ns) Matrix{Float64} x,y,z - coordinates of the Ns tether nodes
-- p0:: (3, ) Vector{Float64}  x,y,z - coordinates of the kite-tether attachment
+- p0::Vector{Float64}  x,y,z - coordinates of the kite-tether attachment
 
 # Example usage
 state_vec = rand(3,)
@@ -101,9 +101,9 @@ kite_vel = [0, 0, 0]
 wind_vel = rand(3,15)
 tether_length = 500
 settings = Settings(1.225, [0, 0, -9.806], 0.9, 4, 0.85, 500000)
-objFun(state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings)
+res!(res, state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings)
 """
-function objFun!(res, state_vec, param)
+function res!(res, state_vec, param)
     kite_pos, kite_vel, wind_vel, tether_length, settings, buffers, returnFlag = param
     g = abs(settings.g_earth[3])
     Ns = size(wind_vel, 2)
@@ -263,7 +263,7 @@ function objFun!(res, state_vec, param)
 end
 
 """
-    getInitCond(filename)
+    get_initial_conditions(filename)
 
 Loads the initialisation data for the basic examples and tests
 
@@ -271,29 +271,26 @@ Loads the initialisation data for the basic examples and tests
 - filename: the filename of the mat file to read
 
 # Returns
-- state_vec:: MVector{3, Float64} state vector (theta [rad], phi [rad], Tn [N]) - tether orientation and tension at ground station
-- kite_pos:: MVector{3, Float64} kite position vector in wind reference frame
-- kite_vel:: MVector{3, Float64} kite velocity vector in wind reference frame
-- wind_vel:: MMatrix{3, Ns, Float64} wind velocity vector in wind reference frame for each Ns node of the tether
+- state_vec::MVector{3, Float64} state vector (theta [rad], phi [rad], Tn [N]) - tether orientation and tension at ground station
+- kite_pos::MVector{3, Float64} kite position vector in wind reference frame
+- kite_vel::MVector{3, Float64} kite velocity vector in wind reference frame
+- wind_vel::MMatrix{3, Ns, Float64} wind velocity vector in wind reference frame for each Ns node of the tether
 - tether_length: Float64 tether length
-- settings:: Settings struct containing enviromental and tether parameters: see [Settings](@ref)
+- settings::Settings struct containing enviromental and tether parameters: see [Settings](@ref)
 """
-function getInitCond(filename)
+function get_initial_conditions(filename)
     vars = matread(filename) 
     state_vec = MVector{3}(vec(get(vars,"stateVec", 0)))
     kite_pos = MVector{3}(vec(get(vars,"kitePos", 0)))
     kite_vel = MVector{3}(vec(get(vars,"kiteVel", 0)))
     wind_vel = get(vars,"windVel", 0)
-    
-
     tether_length = get(vars,"tetherLength", 0)
-
 
     ENVMT = get(vars,"ENVMT", 0) 
     rho_air = get(ENVMT, "rhos", 0) 
     g_earth = [0; 0; -abs(get(ENVMT, "g", 0))]      # in this way g_earth is a vector [0; 0; -9.81]
 
-        T = get(vars,"T", 0);
+    T = get(vars,"T", 0)
     cd_tether = get(T, "CD_tether", 0) 
     d_tether = get(T, "d_tether", 0)*1000           # tether diameter                  [mm]
     rho_tether = get(T, "rho_t", 0) 
@@ -307,7 +304,7 @@ function getInitCond(filename)
 end
 
 """
-    getOutputObjFun(filename)
+    get_test_output(filename)
 
 Loads the output from the original MATLAB objective function for the tests
 
@@ -315,22 +312,22 @@ Loads the output from the original MATLAB objective function for the tests
 - filename: the filename of the mat file to read
 
 # Returns
-- Fobj:: MVector{3, Float64} difference between tether end and kite segment
-- T0:: MVector{3, Float64} force from the kite to the end of tether
-- pj:: (3, Ns) Matrix{Float64} x,y,z - coordinates of the Ns tether nodes
-- p0:: MVector{3, Float64}  x,y,z - coordinates of the kite-tether attachment
+- res::MVector{3, Float64} difference between tether end and kite segment
+- T0::MVector{3, Float64} force from the kite to the end of tether
+- pj::(3, Ns) Matrix{Float64} x,y,z - coordinates of the Ns tether nodes
+- p0::MVector{3, Float64}  x,y,z - coordinates of the kite-tether attachment
 """
-function getOutputObjFun(filename)
+function get_test_output(filename)
     vars        = matread(filename) 
-    Fobj        = MVector{3}(vec(get(vars,"Fobj", 0)))
+    res        = MVector{3}(vec(get(vars,"res", 0)))
     p0          = MVector{3}(vec(get(vars,"p0", 0)))
     pj          = get(vars,"pj", 0)
     T0          = MVector{3}(vec(get(vars,"T0", 0)))
-    return Fobj, p0, pj, T0
+    return res, p0, pj, T0
 end
 
 """
-    getAnalyticCatenary(filename)
+    get_analytic_catenary(filename)
 
 Loads the analytic catenary curve for the 2D catenary example
 
@@ -341,7 +338,7 @@ Loads the analytic catenary curve for the 2D catenary example
 - x_cat: x coordinates of the catenary curve
 - y_cat: x coordinates of the catenary curve
 """
-function getAnalyticCatenary(filename)
+function get_analytic_catenary(filename)
     vars        = matread(filename)
     vars        = get(vars, "analytic_catenary", 0)
     x_cat       = vec(get(vars, "x", 0))
