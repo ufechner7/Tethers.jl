@@ -26,6 +26,6 @@ __BENCH__ = true;
 #     events = Int64(round(length(sol.t)- set.duration/set.dt)-1)
 #     @test events >= 4 # 8 events with Rodas5, 4 events with KenCarp4
 # end
-include("test_basic.jl")
+include("test_qsm.jl")
 nothing
 
