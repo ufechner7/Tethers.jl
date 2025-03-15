@@ -310,29 +310,6 @@ function get_initial_conditions(filename)
 end
 
 """
-    get_test_output(filename)
-
-Loads the output from the original MATLAB objective function for the tests
-
-# Arguments
-- filename: the filename of the mat file to read
-
-# Returns
-- res::MVector{3, Float64} difference between tether end and kite segment
-- T0::MVector{3, Float64} force from the kite to the end of tether
-- pj::(3, Ns) Matrix{Float64} x,y,z - coordinates of the Ns tether nodes
-- p0::MVector{3, Float64}  x,y,z - coordinates of the kite-tether attachment
-"""
-function get_test_output(filename)
-    vars        = matread(filename) 
-    res        = MVector{3}(vec(get(vars,"Fobj", 0)))
-    p0          = MVector{3}(vec(get(vars,"p0", 0)))
-    pj          = get(vars,"pj", 0)
-    T0          = MVector{3}(vec(get(vars,"T0", 0)))
-    return res, p0, pj, T0
-end
-
-"""
     get_analytic_catenary(filename)
 
 Loads the analytic catenary curve for the 2D catenary example
