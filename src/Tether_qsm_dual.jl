@@ -58,7 +58,8 @@ function simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length,
          tether_length=tether_length, settings=settings, buffers=buffers, 
          returnFlag=false)
     # Define the nonlinear problem
-    prob = NonlinearProblem(res!, state_vec, param)
+    dual_vec = Dual.(state_vec, 0)
+    prob = NonlinearProblem(res!, dual_vec, param)
     # Solve the problem with TrustRegion method
     sol = solve(prob, TrustRegion(); show_trace = Val(false)) 
 
