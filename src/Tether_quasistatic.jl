@@ -84,7 +84,8 @@ and magnitude.
 
 # Arguments
 - res::Vector{Float64} difference between tether end and kite segment
-- state_vec::MVector{3, Float64} state vector (theta [rad], phi [rad], Tn [N]) - tether orientation and tension at ground station
+- state_vec::MVector{3, Float64} state vector (theta [rad], phi [rad], Tn [N]);
+  tether orientation and tension at ground station
 - par:: 7-elements tuple:
     - kite_pos::MVector{3, Float64} kite position vector in wind reference frame
     - kite_vel::MVector{3, Float64} kite velocity vector in wind reference frame
@@ -277,12 +278,13 @@ Loads the initialization data for the basic examples and tests
 - filename: the filename of the mat file to read
 
 # Returns
-- state_vec::MVector{3, Float64} state vector (theta [rad], phi [rad], Tn [N]) - tether orientation and tension at ground station
+- state_vec::MVector{3, Float64} state vector (theta [rad], phi [rad], Tn [N])  
+  tether orientation and tension at ground station
 - kite_pos::MVector{3, Float64} kite position vector in wind reference frame
 - kite_vel::MVector{3, Float64} kite velocity vector in wind reference frame
 - wind_vel::MMatrix{3, Ns, Float64} wind velocity vector in wind reference frame for each Ns node of the tether
 - tether_length: Float64 tether length
-- settings::Settings struct containing enviromental and tether parameters: see [Settings](@ref)
+- settings::Settings struct containing environmental and tether parameters: see [Settings](@ref)
 """
 function get_initial_conditions(filename)
     vars = matread(filename) 
