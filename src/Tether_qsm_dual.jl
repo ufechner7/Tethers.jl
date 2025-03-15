@@ -68,13 +68,13 @@ function simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length,
         println("Iterations: ", iterations)
     end
 
-    # Set the returnFlag to true so that res! returns outputs
-    param = (; param..., returnFlag=true)
-    res = zeros(Dual, 3)
-    res, force_kite, tether_pos, p0 = res!(res, state_vec, param)
+    # # Set the returnFlag to true so that res! returns outputs
+    # param = (; param..., returnFlag=true)
+    # res = zeros(Dual, 3)
+    # res, force_kite, tether_pos, p0 = res!(res, state_vec, param)
 
-    force_gnd = state_vec[3]
-    state_vec, tether_pos, force_gnd, force_kite, p0
+    # force_gnd = state_vec[3]
+    # state_vec, tether_pos, force_gnd, force_kite, p0
 end
 
 
