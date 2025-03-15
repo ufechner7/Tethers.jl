@@ -86,8 +86,8 @@ Calculates difference between tether end and kite given tether ground segment or
 and magnitude.
 
 # Arguments
-- res::Vector{Float64} difference between tether end and kite segment
-- state_vec::MVector{3, Float64} state vector (theta [rad], phi [rad], Tn [N]) - tether orientation and tension at ground station
+- res: 3 element vector, difference between tether end and kite segment
+- state_vec::state vector (theta [rad], phi [rad], Tn [N]) - tether orientation and tension at ground station
 - par:: 7-elements tuple:
     - kite_pos::MVector{3, Float64} kite position vector in wind reference frame
     - kite_vel::MVector{3, Float64} kite velocity vector in wind reference frame
@@ -98,7 +98,7 @@ and magnitude.
     - returnFlag:: Boolean to determine use for in-place optimization or for calculating returns
 
 # Returns (if returnFlag==true)
-- res::Vector{Float64} difference between tether end and kite segment
+- res::residual of length 3, difference between tether end and kite segment
 - T0::Vector{Float64} force from the kite to the end of tether
 - pj:: (3, Ns) Matrix{Float64} x,y,z - coordinates of the Ns tether nodes
 - p0::Vector{Float64}  x,y,z - coordinates of the kite-tether attachment
