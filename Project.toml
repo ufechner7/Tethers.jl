@@ -23,6 +23,7 @@ PackageCompiler = "9b87118b-4619-50d2-8e1e-99f35a4d4d9d"
 Parameters = "d96e819e-fc66-5662-9728-84c9c7592b0a"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 PyCall = "438e738f-606a-5dbb-bf0a-cddfbfd45ab0"
+REPL = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 SteadyStateDiffEq = "9672c7b4-1e72-59bd-8a11-6ac3964bc41f"
@@ -51,7 +52,6 @@ julia = "1.10, 1.11"
 
 [extras]
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
-REPL = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
 
 [targets]
 test = ["Documenter"]
