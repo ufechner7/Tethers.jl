@@ -1,4 +1,4 @@
 using CondaPkg
 CondaPkg.withenv() do
-    run(`python src/Tether_07.py`)
+    run(`python examples_python/Tether_07.py`)
 end
