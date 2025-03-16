@@ -1,13 +1,13 @@
 using LinearAlgebra, StaticArrays, BenchmarkTools
 
-# BenchmarkTools.Trial: 10000 samples with 178 evaluations per sample.
-#  Range (min … max):  553.315 segments … 644.944 segments  ┊ GC (min … max): 0.00% … 0.00%
-#  Time  (median):     557.809 segments               ┊ GC (median):    0.00%
-#  Time  (mean ± σ):   559.732 segments ±   5.933 segments  ┊ GC (mean ± σ):  0.00% ± 0.00%
+# BenchmarkTools.Trial: 10000 samples with 177 evaluations per sample.
+#  Range (min … max):  536.215 ns … 687.797 ns  ┊ GC (min … max): 0.00% … 0.00%
+#  Time  (median):     541.186 ns               ┊ GC (median):    0.00%
+#  Time  (mean ± σ):   543.990 ns ±  12.127 ns  ┊ GC (mean ± σ):  0.00% ± 0.00%
 
-#     ▁▄▅▅▆█▅▆▄▅▆▇▂▅▁▁▂  ▁            ▁▁▁▂▃▂▂▂▁▂▂▂            ▁▁  ▂
-#   ▆███████████████████▇█▅▅▅▃▃▃▁▁▅▆▇███████████████▇▇▆▇▅▆▇▅▇████ █
-#   553 segments        Histogram: log(frequency) by time        581 segments <
+#   ▄█▆▆█▆▅▁▃▂▁  ▁▃▃▃▂                                            ▂
+#   ████████████▇████████▇▇▇▇▆▇▇▇▅▅▅▄▅▄▆▃▅▅▃▂▆▄▅▄▅▄▄▄▄▅▅▅▄▂▅▅▇▇▆▅ █
+#   536 ns        Histogram: log(frequency) by time        606 ns <
 
 #  Memory estimate: 0 bytes, allocs estimate: 0.
 
