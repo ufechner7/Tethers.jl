@@ -68,7 +68,7 @@ function simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length,
     # Pack parameters in param named tuple - false sets res! for in-place solution
     param = (kite_pos=kite_pos, kite_vel=kite_vel, wind_vel=wind_vel, 
          tether_length=tether_length, settings=settings, buffers=buffers, 
-         returnFlag=false)
+         return_result=false)
     # Define the nonlinear problem
     prob = NonlinearProblem(res!, state_vec, param)
     # Solve the problem with TrustRegion method
@@ -80,8 +80,8 @@ function simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length,
         println("Iterations: ", iterations)
     end
 
-    # Set the returnFlag to true so that res! returns outputs
-    param = (; param..., returnFlag=true)
+    # Set the return_result to true so that res! returns outputs
+    param = (; param..., return_result=true)
     res = MVector(0.0, 0, 0)
     res, force_kite, tether_pos, p0 = res!(res, state_vec, param)
 
@@ -105,11 +105,11 @@ and magnitude.
     - kite_vel::MVector{3, Float64} kite velocity vector in wind reference frame
     - wind_vel::MMatrix{Float64} wind velocity vector in wind reference frame for each Ns node of the tether
     - tether_length: tether length
-    - settings:: Settings struct containing enviromental and tether parameters: see [Settings](@ref)
+    - settings:: Settings struct containing environmental and tether parameters: see [Settings](@ref)
     - buffers:: (5, ) Vector{Matrix{Float64}}  Vector of (3, Ns) Matrix{Float64} empty matrices for preallocation
-    - returnFlag:: Boolean to determine use for in-place optimization or for calculating returns
+    - return_result:: Boolean to determine use for in-place optimization or for calculating returns
 
-# Returns (if returnFlag==true)
+# Returns (if return_result==true)
 - res::Vector{Float64} difference between tether end and kite segment
 - T0::Vector{Float64} force from the kite to the end of tether
 - pj:: (3, Ns) Matrix{Float64} x,y,z - coordinates of the Ns tether nodes
@@ -125,7 +125,7 @@ settings = Settings(1.225, [0, 0, -9.806], 0.9, 4, 0.85, 500000)
 res!(res, state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings)
 """
 function res!(res, state_vec, param)
-    kite_pos, kite_vel, wind_vel, tether_length, settings, buffers, returnFlag = param
+    kite_pos, kite_vel, wind_vel, tether_length, settings, buffers, return_result = param
     g = abs(settings.g_earth[3])
     Ns = size(wind_vel, 2)
     Ls = tether_length / (Ns + 1)
@@ -274,7 +274,7 @@ function res!(res, state_vec, param)
                  pj[3,1] + l_i_1*T0_dir3)
 
     res .= kite_pos - p0
-    if returnFlag
+    if return_result
         return res, MVector(T0_1, T0_2, T0_3), pj, p0
     else
         nothing
