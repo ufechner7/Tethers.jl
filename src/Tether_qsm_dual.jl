@@ -71,8 +71,8 @@ Function to determine the tether shape and forces, based on a quasi-static model
 """
 function simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings; prn=false)
     Ns = size(wind_vel, 2)
-    buffers = (DiffCache(zeros(3, Ns)), DiffCache(zeros(3, Ns)), DiffCache(zeros(3, Ns)), DiffCache(zeros(3, Ns)), 
-               DiffCache(zeros(3, Ns)), DiffCache(zeros(3)), DiffCache(zeros(3)), DiffCache(zeros(3)))
+    buffers = (DiffCache(MMatrix{3, 15}(zeros(3, Ns))), DiffCache(MMatrix{3, 15}(zeros(3, Ns))), DiffCache(MMatrix{3, 15}(zeros(3, Ns))), DiffCache(MMatrix{3, 15}(zeros(3, Ns))),
+               DiffCache(MMatrix{3, 15}(zeros(3, Ns))), DiffCache(MVec3(zeros(3))), DiffCache(MVec3(zeros(3))), DiffCache(MVec3(zeros(3))))
     
     # Pack parameters in param named tuple - false sets res! for in-place solution
     param = (kite_pos=kite_pos, kite_vel=kite_vel, wind_vel=wind_vel, 
