@@ -2,7 +2,18 @@ using LinearAlgebra, StaticArrays, ADTypes, NonlinearSolve, MAT, ForwardDiff, Pr
 # experimental version for using automated differentiation
 
 const MVec3 = MVector{3, Float64}
-const cache = DiffCache(zeros(3))
+
+# Iterations: 36
+# BenchmarkTools.Trial: 10000 samples with 1 evaluation per sample.
+#  Range (min … max):  134.230 μs …   8.674 ms  ┊ GC (min … max): 0.00% … 96.67%
+#  Time  (median):     203.255 μs               ┊ GC (median):    0.00%
+#  Time  (mean ± σ):   224.409 μs ± 216.736 μs  ┊ GC (mean ± σ):  9.40% ±  9.63%
+
+#     █▂                                                           
+#   ▄▇██▃▂▂▂▂▂▂▂▂▁▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▂▂▂▂▂ ▂
+#   134 μs           Histogram: frequency by time         1.74 ms <
+
+#  Memory estimate: 415.94 KiB, allocs estimate: 7901.
 
 """
     Settings
@@ -51,7 +62,7 @@ Function to determine the tether shape and forces, based on a quasi-static model
 """
 function simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings; prn=false)
     Ns = size(wind_vel, 2)
-    buffers = [DiffCache(zeros(3, Ns)), DiffCache(zeros(3, Ns)), DiffCache(zeros(3, Ns)), DiffCache(zeros(3, Ns)), DiffCache(zeros(3, Ns)), ]
+    buffers = [DiffCache(zeros(3, Ns)), DiffCache(zeros(3, Ns)), DiffCache(zeros(3, Ns)), DiffCache(zeros(3, Ns)), DiffCache(zeros(3, Ns))]
     
     # Pack parameters in param named tuple - false sets res! for in-place solution
     param = (kite_pos=kite_pos, kite_vel=kite_vel, wind_vel=wind_vel, 
@@ -70,7 +81,7 @@ function simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length,
 
     # Set the returnFlag to true so that res! returns outputs
     param = (; param..., returnFlag=true)
-    res = get_tmp(cache, state_vec)
+    res = zeros(3)
     res, force_kite, tether_pos, p0 = res!(res, state_vec, param)
 
     force_gnd = state_vec[3]
