@@ -1,4 +1,4 @@
-using LinearAlgebra, StaticArrays, ADTypes, NonlinearSolve, MAT, ForwardDiff
+using LinearAlgebra, StaticArrays, ADTypes, NonlinearSolve, MAT, ForwardDiff, PreallocationTools
 # experimental version for using automated differentiation
 
 const MVec3 = MVector{3, Float64}
@@ -51,7 +51,7 @@ Function to determine the tether shape and forces, based on a quasi-static model
 """
 function simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings; prn=false)
     Ns = size(wind_vel, 2)
-    buffers= [zeros(Dual, 3, Ns), zeros(Dual, 3, Ns), zeros(Dual, 3, Ns), zeros(Dual, 3, Ns), zeros(Dual, 3, Ns)]
+    buffers = [DiffCache(zeros(3, Ns)), DiffCache(zeros(3, Ns)), DiffCache(zeros(3, Ns)), DiffCache(zeros(3, Ns)), DiffCache(zeros(3, Ns)), ]
     
     # Pack parameters in param named tuple - false sets res! for in-place solution
     param = (kite_pos=kite_pos, kite_vel=kite_vel, wind_vel=wind_vel, 
@@ -123,11 +123,11 @@ function res!(res, state_vec, param)
     E = settings.c_spring / A
 
     # Preallocate arrays
-    FT = buffers[1]
-    Fd = buffers[2]
-    pj = buffers[3]
-    vj = buffers[4]
-    aj = buffers[5]
+    FT = get_tmp(buffers[1], state_vec)
+    Fd = get_tmp(buffers[2], state_vec)
+    pj = get_tmp(buffers[3], state_vec)
+    vj = get_tmp(buffers[4], state_vec)
+    aj = get_tmp(buffers[5], state_vec)
 
     # Unpack state variables
     θ, φ, Tn = state_vec[1], state_vec[2], state_vec[3]
