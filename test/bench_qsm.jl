@@ -1,17 +1,18 @@
 using LinearAlgebra, StaticArrays, BenchmarkTools
 
 # BenchmarkTools.Trial: 10000 samples with 178 evaluations per sample.
-#  Range (min … max):  553.315 ns … 644.944 ns  ┊ GC (min … max): 0.00% … 0.00%
-#  Time  (median):     557.809 ns               ┊ GC (median):    0.00%
-#  Time  (mean ± σ):   559.732 ns ±   5.933 ns  ┊ GC (mean ± σ):  0.00% ± 0.00%
+#  Range (min … max):  553.315 segments … 644.944 segments  ┊ GC (min … max): 0.00% … 0.00%
+#  Time  (median):     557.809 segments               ┊ GC (median):    0.00%
+#  Time  (mean ± σ):   559.732 segments ±   5.933 segments  ┊ GC (mean ± σ):  0.00% ± 0.00%
 
 #     ▁▄▅▅▆█▅▆▄▅▆▇▂▅▁▁▂  ▁            ▁▁▁▂▃▂▂▂▁▂▂▂            ▁▁  ▂
 #   ▆███████████████████▇█▅▅▅▃▃▃▁▁▅▆▇███████████████▇▇▆▇▅▆▇▅▇████ █
-#   553 ns        Histogram: log(frequency) by time        581 ns <
+#   553 segments        Histogram: log(frequency) by time        581 segments <
 
 #  Memory estimate: 0 bytes, allocs estimate: 0.
 
 const MVec3 = MVector{3, Float64}
+const segments = 15
 
 struct Settings 
     rho::Float64
@@ -25,8 +26,8 @@ end
 
 function res!(res, state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings, buffers)
     g = abs(settings.g_earth[3])
-    Ns = size(wind_vel, 2)
-    Ls = tether_length / (Ns + 1)
+    segments = size(wind_vel, 2)
+    Ls = tether_length / (segments + 1)
     mj = settings.rho_tether * Ls
     drag_coeff = -0.5 * settings.rho * Ls * settings.d_tether * settings.cd_tether
     A = π/4 * (settings.d_tether/1000)^2
@@ -52,30 +53,30 @@ function res!(res, state_vec, kite_pos, kite_vel, wind_vel, tether_length, setti
     v_parallel = dot(kite_vel, p_unit)
     
     # First element calculations
-    FT[1, Ns] = Tn * sinθ * cosφ
-    FT[2, Ns] = Tn * sinφ
-    FT[3, Ns] = Tn * cosθ * cosφ
+    FT[1, segments] = Tn * sinθ * cosφ
+    FT[2, segments] = Tn * sinφ
+    FT[3, segments] = Tn * cosθ * cosφ
 
-    pj[1, Ns] = Ls * sinθ * cosφ
-    pj[2, Ns] = Ls * sinφ
-    pj[3, Ns] = Ls * cosθ * cosφ
+    pj[1, segments] = Ls * sinθ * cosφ
+    pj[2, segments] = Ls * sinφ
+    pj[3, segments] = Ls * cosθ * cosφ
 
     # Velocity and acceleration calculations
     ω = cross(kite_pos / norm_p^2, kite_vel) # 3 alloc
-    a = cross(ω, MVec3(@view(pj[:, Ns])))         # 3 alloc
-    b = cross(ω, cross(ω, MVec3(@view(pj[:, Ns]))))
-    vj[:, Ns] .= v_parallel * p_unit + a
-    aj[:, Ns] .= b
+    a = cross(ω, MVec3(@view(pj[:, segments])))         # 3 alloc
+    b = cross(ω, cross(ω, MVec3(@view(pj[:, segments]))))
+    vj[:, segments] .= v_parallel * p_unit + a
+    aj[:, segments] .= b
 
     # Drag calculation for first element
-    v_a_p1 = vj[1, Ns] - wind_vel[1, Ns]
-    v_a_p2 = vj[2, Ns] - wind_vel[2, Ns]
-    v_a_p3 = vj[3, Ns] - wind_vel[3, Ns]
+    v_a_p1 = vj[1, segments] - wind_vel[1, segments]
+    v_a_p2 = vj[2, segments] - wind_vel[2, segments]
+    v_a_p3 = vj[3, segments] - wind_vel[3, segments]
 
     if all(x -> abs(x) < 1e-3, (v_a_p1, v_a_p2, v_a_p3))
-        Fd[:, Ns] .= 0.0
+        Fd[:, segments] .= 0.0
     else
-        dir1, dir2, dir3 = pj[1, Ns]/Ls, pj[2, Ns]/Ls, pj[3, Ns]/Ls
+        dir1, dir2, dir3 = pj[1, segments]/Ls, pj[2, segments]/Ls, pj[3, segments]/Ls
         v_dot_dir = v_a_p1*dir1 + v_a_p2*dir2 + v_a_p3*dir3
         v_a_p_t1 = v_dot_dir * dir1
         v_a_p_t2 = v_dot_dir * dir2
@@ -88,15 +89,15 @@ function res!(res, state_vec, kite_pos, kite_vel, wind_vel, tether_length, setti
         norm_v_a_p_n = sqrt(v_a_p_n1^2 + v_a_p_n2^2 + v_a_p_n3^2)
         coeff = drag_coeff * norm_v_a_p_n
 
-        Fd[1, Ns] = coeff * v_a_p_n1
-        Fd[2, Ns] = coeff * v_a_p_n2
-        Fd[3, Ns] = coeff * v_a_p_n3
+        Fd[1, segments] = coeff * v_a_p_n1
+        Fd[2, segments] = coeff * v_a_p_n2
+        Fd[3, segments] = coeff * v_a_p_n3
     end
 
     # Process other segments
-    @inbounds for ii in Ns:-1:2
+    @inbounds for ii in segments:-1:2
         # Tension force calculations
-        if ii == Ns
+        if ii == segments
             mj_total = 1.5mj
             g_term = mj_total * g
         else
@@ -178,13 +179,14 @@ end
 state_vec = MVector{3}(rand(3,))
 kite_pos = SVector{3}([100, 100, 300])
 kite_vel = SVector{3}([0, 0, 0])
-wind_vel = SMatrix{3, 15}(rand(3,15))
+wind_vel = SMatrix{3, segments}(rand(3,segments))
 tether_length = 500
 settings = Settings(1.225, [0, 0, -9.806], 0.9, 4, 0.85, 500000)
-Ns = size(wind_vel, 2)
-# buffers= [zeros(3, Ns), zeros(3, Ns), zeros(3, Ns), zeros(3, Ns), zeros(3, Ns)]
-buffers= [MMatrix{3, 15}(zeros(3, Ns)), MMatrix{3, 15}(zeros(3, Ns)), MMatrix{3, 15}(zeros(3, Ns)), 
-          MMatrix{3, 15}(zeros(3, Ns)), MMatrix{3, 15}(zeros(3, Ns))]
+segments = size(wind_vel, 2)
+# buffers= [zeros(3, segments), zeros(3, segments), zeros(3, segments), zeros(3, segments), zeros(3, segments)]
+buffers= [MMatrix{3, segments}(zeros(3, segments)), MMatrix{3, segments}(zeros(3, segments)), 
+          MMatrix{3, segments}(zeros(3, segments)), 
+          MMatrix{3, segments}(zeros(3, segments)), MMatrix{3, segments}(zeros(3, segments))]
 res = MVector(0.0, 0, 0)
 
 res!(res, state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings, buffers)
