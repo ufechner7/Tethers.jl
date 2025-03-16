@@ -1,4 +1,7 @@
 using StaticArrays, LinearAlgebra
+
+const segments = 15
+
 include("../src/Tether_quasistatic.jl")
 
 function main()
