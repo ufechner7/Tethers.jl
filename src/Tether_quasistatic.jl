@@ -162,9 +162,9 @@ function res!(res, state_vec, param)
     pj[3, Ns] = Ls * cosθ * cosφ
 
     # Velocity and acceleration calculations
-    ω = cross(kite_pos / norm_p^2, kite_vel) # 3 alloc
-    a = cross(ω, SVec3(@view(pj[:, Ns])))         # 3 alloc
-    b = cross(ω, cross(ω, SVec3(@view(pj[:, Ns]))))
+    ω = cross(kite_pos / norm_p^2, kite_vel)
+    a = cross(ω, SVec3(pj[:, Ns]))         
+    b = cross(ω, cross(ω, SVec3(pj[:, Ns])))
     vj[:, Ns] .= v_parallel * p_unit + a
     aj[:, Ns] .= b
 
@@ -205,9 +205,7 @@ function res!(res, state_vec, param)
             g_term = mj * g
         end
 
-        for k in 1:3
-            FT[k, ii-1] = mj_total * aj[k, ii] + FT[k, ii] - Fd[k, ii]
-        end
+        FT[:, ii-1] .= mj_total * aj[:, ii] + FT[:, ii] - Fd[:, ii]
         FT[3, ii-1] += g_term
 
         # Position calculations
@@ -220,8 +218,8 @@ function res!(res, state_vec, param)
         pj[3, ii-1] = pj[3, ii] + l_i_1 * ft_dir[3]
 
         # Velocity and acceleration
-        a = cross(ω, SVec3(@view(pj[:, ii-1])))           # 28 allocations
-        b = cross(ω, cross(ω, SVec3(@view(pj[:, ii-1])))) # 28 allocations
+        a = cross(ω, SVec3(pj[:, ii-1]))           
+        b = cross(ω, cross(ω, SVec3(pj[:, ii-1])))
         vj[:, ii-1] .= v_parallel * p_unit + a
         aj[:, ii-1] .= b
 
