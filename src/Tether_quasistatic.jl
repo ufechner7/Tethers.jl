@@ -5,15 +5,15 @@ const SVec3 = SVector{3, Float64}
 
 # Iterations: 36
 # BenchmarkTools.Trial: 10000 samples with 1 evaluation per sample.
-#  Range (min … max):   91.360 μs …  2.343 ms  ┊ GC (min … max): 0.00% … 94.11%
-#  Time  (median):      97.450 μs              ┊ GC (median):    0.00%
-#  Time  (mean ± σ):   100.826 μs ± 47.860 μs  ┊ GC (mean ± σ):  1.13% ±  2.28%
+#  Range (min … max):  86.280 μs …  2.512 ms  ┊ GC (min … max): 0.00% … 94.45%
+#  Time  (median):     90.780 μs              ┊ GC (median):    0.00%
+#  Time  (mean ± σ):   94.702 μs ± 48.326 μs  ┊ GC (mean ± σ):  1.10% ±  2.09%
 
-#      ▃██▄▁                                                      
-#   ▁▂▅██████▇▆▆▆▅▅▅▄▅▄▄▄▄▄▄▄▄▄▄▄▃▄▃▃▄▃▃▃▃▃▃▃▂▂▂▂▂▂▂▂▂▂▂▂▁▂▁▁▁▁▁ ▃
-#   91.4 μs         Histogram: frequency by time          118 μs <
+#      ▆█▆▃▂                                                     
+#   ▁▃███████▆▆▅▅▄▄▄▄▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▂▃▃▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▁▁▁ ▃
+#   86.3 μs         Histogram: frequency by time         111 μs <
 
-#  Memory estimate: 39.81 KiB, allocs estimate: 976.
+#  Memory estimate: 41.61 KiB, allocs estimate: 981.
 
 """
     Settings
@@ -62,7 +62,7 @@ Function to determine the tether shape and forces, based on a quasi-static model
 """
 function simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings; prn=false)
     Ns = size(wind_vel, 2)
-    buffers= [zeros(3, Ns), zeros(3, Ns), zeros(3, Ns), zeros(3, Ns), zeros(3, Ns)]
+    buffers= [MMatrix{3, 15}(zeros(3, Ns)), MMatrix{3, 15}(zeros(3, Ns)), MMatrix{3, 15}(zeros(3, Ns)), MMatrix{3, 15}(zeros(3, Ns)), MMatrix{3, 15}(zeros(3, Ns))]
     
     # Pack parameters in param named tuple - false sets res! for in-place solution
     param = (kite_pos=kite_pos, kite_vel=kite_vel, wind_vel=wind_vel, 
