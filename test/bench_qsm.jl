@@ -1,15 +1,15 @@
 using LinearAlgebra, StaticArrays, BenchmarkTools
 
-#= BenchmarkTools.Trial: 10000 samples with 186 evaluations per sample.
- Range (min … max):  552.016 ns …  33.646 μs  ┊ GC (min … max): 0.00% … 97.83%
- Time  (median):     556.575 ns               ┊ GC (median):    0.00%
- Time  (mean ± σ):   570.646 ns ± 463.443 ns  ┊ GC (mean ± σ):  1.27% ±  1.83%
+# BenchmarkTools.Trial: 10000 samples with 182 evaluations per sample.
+#  Range (min … max):  578.846 ns … 705.934 ns  ┊ GC (min … max): 0.00% … 0.00%
+#  Time  (median):     583.242 ns               ┊ GC (median):    0.00%
+#  Time  (mean ± σ):   584.927 ns ±   6.106 ns  ┊ GC (mean ± σ):  0.00% ± 0.00%
 
-  ▁ ▁██▆▅▃▂▁▁▁▁▁ ▂▄▃▂▂▂▂▁▁▁▁▄▄▃▂▁▁▁▁▁ ▁▁     ▁                  ▂
-  █████████████████████████████████████████████▇█▇▆▆▇▆▆▆▆▆▆▆▆▅▆ █
-  552 ns        Histogram: log(frequency) by time        606 ns <
+#       ██▁▄▃ ▅▃▂ ▂                                                
+#   ▂▄▄▄█████▅███▆█▃▅▃▃▃▂▂▂▂▂▂▂▁▂▂▂▂▂▂▂▂▃▃▃▃▃▃▃▃▃▃▃▂▂▂▂▂▂▂▂▂▂▂▂▂▂ ▃
+#   579 ns           Histogram: frequency by time          606 ns <
 
- Memory estimate: 80 bytes, allocs estimate: 2. =#
+#  Memory estimate: 0 bytes, allocs estimate: 0.
 
 const MVec3 = MVector{3, Float64}
 
@@ -169,9 +169,9 @@ function objFun!(res, stateVec, kitePos, kiteVel, windVel, tetherLength, setting
     T0_dir2 = T0_2/T0_norm
     T0_dir3 = T0_3/T0_norm
 
-    p0 = [pj[1,1] + l_i_1*T0_dir1, 
+    p0 = MVector(pj[1,1] + l_i_1*T0_dir1, 
           pj[2,1] + l_i_1*T0_dir2,
-          pj[3,1] + l_i_1*T0_dir3]
+          pj[3,1] + l_i_1*T0_dir3)
 
     res .= kitePos - p0
     nothing
