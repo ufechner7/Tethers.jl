@@ -5,15 +5,15 @@ const SVec3 = SVector{3, Float64}
 
 # Iterations: 36
 # BenchmarkTools.Trial: 10000 samples with 1 evaluation per sample.
-#  Range (min … max):  86.280 μs …  2.512 ms  ┊ GC (min … max): 0.00% … 94.45%
-#  Time  (median):     90.780 μs              ┊ GC (median):    0.00%
-#  Time  (mean ± σ):   94.702 μs ± 48.326 μs  ┊ GC (mean ± σ):  1.10% ±  2.09%
+#  Range (min … max):  84.169 μs …  2.388 ms  ┊ GC (min … max): 0.00% … 93.18%
+#  Time  (median):     89.110 μs              ┊ GC (median):    0.00%
+#  Time  (mean ± σ):   92.513 μs ± 47.339 μs  ┊ GC (mean ± σ):  1.10% ±  2.09%
 
-#      ▆█▆▃▂                                                     
-#   ▁▃███████▆▆▅▅▄▄▄▄▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▂▃▃▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▁▁▁ ▃
-#   86.3 μs         Histogram: frequency by time         111 μs <
+#     ▂█▇▆▂▁                                                     
+#   ▁▃██████▆▆▆▅▅▅▄▅▄▄▄▃▃▄▃▃▃▃▃▃▄▃▃▃▃▃▃▃▃▃▃▃▃▂▂▂▃▂▂▂▂▂▂▂▂▂▂▂▁▁▁ ▃
+#   84.2 μs         Histogram: frequency by time         108 μs <
 
-#  Memory estimate: 41.61 KiB, allocs estimate: 981.
+#  Memory estimate: 41.20 KiB, allocs estimate: 971.
 
 """
     Settings
@@ -72,7 +72,7 @@ function simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length,
     # Define the nonlinear problem
     prob = NonlinearProblem(res!, state_vec, param)
     # Solve the problem with TrustRegion method
-    sol = solve(prob, TrustRegion(autodiff=AutoFiniteDiff()); show_trace = Val(false)) 
+    sol = solve(prob, TrustRegion(autodiff=AutoFiniteDiff())) 
 
     iterations = sol.stats.nsteps  # Field name may vary; verify with `propertynames(sol)`
     state_vec = sol.u
