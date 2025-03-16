@@ -1,13 +1,13 @@
 using LinearAlgebra, StaticArrays, BenchmarkTools
 
-# BenchmarkTools.Trial: 10000 samples with 182 evaluations per sample.
-#  Range (min … max):  578.846 ns … 705.934 ns  ┊ GC (min … max): 0.00% … 0.00%
-#  Time  (median):     583.242 ns               ┊ GC (median):    0.00%
-#  Time  (mean ± σ):   584.927 ns ±   6.106 ns  ┊ GC (mean ± σ):  0.00% ± 0.00%
+# BenchmarkTools.Trial: 10000 samples with 178 evaluations per sample.
+#  Range (min … max):  553.315 ns … 644.944 ns  ┊ GC (min … max): 0.00% … 0.00%
+#  Time  (median):     557.809 ns               ┊ GC (median):    0.00%
+#  Time  (mean ± σ):   559.732 ns ±   5.933 ns  ┊ GC (mean ± σ):  0.00% ± 0.00%
 
-#       ██▁▄▃ ▅▃▂ ▂                                                
-#   ▂▄▄▄█████▅███▆█▃▅▃▃▃▂▂▂▂▂▂▂▁▂▂▂▂▂▂▂▂▃▃▃▃▃▃▃▃▃▃▃▂▂▂▂▂▂▂▂▂▂▂▂▂▂ ▃
-#   579 ns           Histogram: frequency by time          606 ns <
+#     ▁▄▅▅▆█▅▆▄▅▆▇▂▅▁▁▂  ▁            ▁▁▁▂▃▂▂▂▁▂▂▂            ▁▁  ▂
+#   ▆███████████████████▇█▅▅▅▃▃▃▁▁▅▆▇███████████████▇▇▆▇▅▆▇▅▇████ █
+#   553 ns        Histogram: log(frequency) by time        581 ns <
 
 #  Memory estimate: 0 bytes, allocs estimate: 0.
 
@@ -184,8 +184,10 @@ windVel = SMatrix{3, 15}(rand(3,15))
 tetherLength = 500
 settings = Settings(1.225, [0, 0, -9.806], 0.9, 4, 0.85, 500000)
 Ns = size(windVel, 2)
-buffers= [zeros(3, Ns), zeros(3, Ns), zeros(3, Ns), zeros(3, Ns), zeros(3, Ns)]
-res = zeros(3)
+# buffers= [zeros(3, Ns), zeros(3, Ns), zeros(3, Ns), zeros(3, Ns), zeros(3, Ns)]
+buffers= [MMatrix{3, 15}(zeros(3, Ns)), MMatrix{3, 15}(zeros(3, Ns)), MMatrix{3, 15}(zeros(3, Ns)), 
+          MMatrix{3, 15}(zeros(3, Ns)), MMatrix{3, 15}(zeros(3, Ns))]
+res = MVector(0.0, 0, 0)
 
 objFun!(res, stateVec, kitePos, kiteVel, windVel, tetherLength, settings, buffers)
 @benchmark objFun!(res, stateVec, kitePos, kiteVel, windVel, tetherLength, settings, buffers)
