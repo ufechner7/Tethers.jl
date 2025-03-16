@@ -4,15 +4,15 @@ const MVec3 = MVector{3, Float64}
 
 # Iterations: 36
 # BenchmarkTools.Trial: 10000 samples with 1 evaluation per sample.
-#  Range (min … max):   95.611 μs …  3.036 ms  ┊ GC (min … max): 0.00% … 93.55%
-#  Time  (median):     102.330 μs              ┊ GC (median):    0.00%
-#  Time  (mean ± σ):   105.508 μs ± 52.477 μs  ┊ GC (mean ± σ):  0.95% ±  1.87%
+#  Range (min … max):   95.450 μs …  3.302 ms  ┊ GC (min … max): 0.00% … 92.58%
+#  Time  (median):     101.225 μs              ┊ GC (median):    0.00%
+#  Time  (mean ± σ):   105.055 μs ± 54.879 μs  ┊ GC (mean ± σ):  0.99% ±  1.86%
 
-#      ▄██▄▁                                                      
-#   ▁▂▅█████▇▆▆▆▅▆▅▅▄▄▃▄▄▃▄▄▄▄▄▄▅▅▅▅▅▅▅▅▄▄▃▃▃▃▃▃▂▃▂▂▂▃▂▂▂▂▂▂▁▁▁▁ ▃
-#   95.6 μs         Histogram: frequency by time          121 μs <
+#       ▅█▅▁                                                      
+#   ▁▁▂▆████▆▅▄▄▄▄▄▃▃▃▃▃▂▂▃▃▃▃▃▃▄▄▄▄▄▃▄▃▃▃▃▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▁▁▁▁▁▁ ▂
+#   95.4 μs         Histogram: frequency by time          121 μs <
 
-#  Memory estimate: 39.86 KiB, allocs estimate: 977.
+#  Memory estimate: 39.81 KiB, allocs estimate: 976.
 
 """
     Settings
@@ -80,7 +80,7 @@ function simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length,
 
     # Set the returnFlag to true so that res! returns outputs
     param = (; param..., returnFlag=true)
-    res = zeros(3)
+    res = MVector(0.0, 0, 0)
     res, force_kite, tether_pos, p0 = res!(res, state_vec, param)
 
     force_gnd = state_vec[3]
