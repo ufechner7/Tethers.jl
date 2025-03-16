@@ -104,9 +104,7 @@ function objFun!(res, stateVec, kitePos, kiteVel, windVel, tetherLength, setting
             g_term = mj * g
         end
 
-        for k in 1:3
-            FT[k, ii-1] = mj_total * aj[k, ii] + FT[k, ii] - Fd[k, ii]
-        end
+        FT[:, ii-1] .= mj_total * aj[:, ii] + FT[:, ii] - Fd[:, ii]
         FT[3, ii-1] += g_term
 
         # Position calculations
