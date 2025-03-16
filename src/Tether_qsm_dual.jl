@@ -282,9 +282,9 @@ function res!(res, state_vec, param)
     T0_dir2 = T0_2/T0_norm
     T0_dir3 = T0_3/T0_norm
 
-    p0 = [pj[1,1] + l_i_1*T0_dir1, 
+    p0 = MVector(pj[1,1] + l_i_1*T0_dir1, 
           pj[2,1] + l_i_1*T0_dir2,
-          pj[3,1] + l_i_1*T0_dir3]
+          pj[3,1] + l_i_1*T0_dir3)
 
     res .= kite_pos - p0
     if returnFlag

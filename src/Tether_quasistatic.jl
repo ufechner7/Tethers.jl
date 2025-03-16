@@ -4,15 +4,15 @@ const MVec3 = MVector{3, Float64}
 
 # Iterations: 36
 # BenchmarkTools.Trial: 10000 samples with 1 evaluation per sample.
-#  Range (min … max):   95.169 μs …  3.417 ms  ┊ GC (min … max): 0.00% … 95.50%
-#  Time  (median):     103.330 μs              ┊ GC (median):    0.00%
-#  Time  (mean ± σ):   106.198 μs ± 59.810 μs  ┊ GC (mean ± σ):  1.10% ±  1.90%
+#  Range (min … max):   95.611 μs …  3.036 ms  ┊ GC (min … max): 0.00% … 93.55%
+#  Time  (median):     102.330 μs              ┊ GC (median):    0.00%
+#  Time  (mean ± σ):   105.508 μs ± 52.477 μs  ┊ GC (mean ± σ):  0.95% ±  1.87%
 
-#     ▃█▆▂                                                        
-#   ▁▄████▇█▆▆▆▆▆▆▅▅▆▅▅▅▅▄▄▄▄▄▅▅▅▅▆▅▆▅▅▄▄▄▃▃▃▂▃▂▃▂▃▃▂▂▂▂▂▂▁▁▁▁▁▁ ▃
-#   95.2 μs         Histogram: frequency by time          124 μs <
+#      ▄██▄▁                                                      
+#   ▁▂▅█████▇▆▆▆▅▆▅▅▄▄▃▄▄▃▄▄▄▄▄▄▅▅▅▅▅▅▅▅▄▄▃▃▃▃▃▃▂▃▂▂▂▃▂▂▂▂▂▂▁▁▁▁ ▃
+#   95.6 μs         Histogram: frequency by time          121 μs <
 
-#  Memory estimate: 46.53 KiB, allocs estimate: 1118.
+#  Memory estimate: 39.86 KiB, allocs estimate: 977.
 
 """
     Settings
@@ -269,9 +269,9 @@ function res!(res, state_vec, param)
     T0_dir2 = T0_2/T0_norm
     T0_dir3 = T0_3/T0_norm
 
-    p0 = [pj[1,1] + l_i_1*T0_dir1, 
-          pj[2,1] + l_i_1*T0_dir2,
-          pj[3,1] + l_i_1*T0_dir3]
+    p0 = MVector(pj[1,1] + l_i_1*T0_dir1, 
+                 pj[2,1] + l_i_1*T0_dir2,
+                 pj[3,1] + l_i_1*T0_dir3)
 
     res .= kite_pos - p0
     if returnFlag
