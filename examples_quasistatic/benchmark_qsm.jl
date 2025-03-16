@@ -1,5 +1,7 @@
 using BenchmarkTools
 
+const segments = 15
+
 include("../src/Tether_quasistatic.jl")
 
 # Read the initial conditions from a .mat file

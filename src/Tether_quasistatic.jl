@@ -2,6 +2,7 @@ using LinearAlgebra, StaticArrays, ADTypes, NonlinearSolve, MAT
 
 const MVec3 = MVector{3, Float64}
 const SVec3 = SVector{3, Float64}
+# const segments = 15
 
 # Iterations: 36
 # BenchmarkTools.Trial: 10000 samples with 1 evaluation per sample.
@@ -48,7 +49,7 @@ Function to determine the tether shape and forces, based on a quasi-static model
   tether orientation and tension at ground station
 - kite_pos::MVector{3, Float64}: kite position vector in wind reference frame
 - kite_vel::MVector{3, Float64}: kite velocity vector in wind reference frame
-- wind_vel:: (3, Ns) MMatrix{Float64} wind velocity vector in wind reference frame for each Ns node of the tether
+- wind_vel:: (3, segments) MMatrix{Float64} wind velocity vector in wind reference frame for each segment of the tether
 - tether_length: tether length
 - settings:: Settings struct containing environmental and tether parameters: see [Settings](@ref)
 
@@ -61,9 +62,8 @@ Function to determine the tether shape and forces, based on a quasi-static model
 - p0::Vector{Float64}:  x,y,z - coordinates of the kite-tether attachment
 """
 function simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings; prn=false)
-    Ns = size(wind_vel, 2)
-    buffers= [MMatrix{3, 15}(zeros(3, Ns)), MMatrix{3, 15}(zeros(3, Ns)), MMatrix{3, 15}(zeros(3, Ns)), 
-              MMatrix{3, 15}(zeros(3, Ns)), MMatrix{3, 15}(zeros(3, Ns))]
+    buffers= [MMatrix{3, 15}(zeros(3, segments)), MMatrix{3, 15}(zeros(3, segments)), MMatrix{3, 15}(zeros(3, segments)), 
+              MMatrix{3, 15}(zeros(3, segments)), MMatrix{3, 15}(zeros(3, segments))]
     
     # Pack parameters in param named tuple - false sets res! for in-place solution
     param = (kite_pos=kite_pos, kite_vel=kite_vel, wind_vel=wind_vel, 
@@ -103,16 +103,16 @@ and magnitude.
 - par:: 7-elements tuple:
     - kite_pos::MVector{3, Float64} kite position vector in wind reference frame
     - kite_vel::MVector{3, Float64} kite velocity vector in wind reference frame
-    - wind_vel::MMatrix{Float64} wind velocity vector in wind reference frame for each Ns node of the tether
+    - wind_vel::MMatrix{Float64} wind velocity vector in wind reference frame for each segment of the tether
     - tether_length: tether length
     - settings:: Settings struct containing environmental and tether parameters: see [Settings](@ref)
-    - buffers:: (5, ) Vector{Matrix{Float64}}  Vector of (3, Ns) Matrix{Float64} empty matrices for preallocation
+    - buffers:: (5, ) Vector{Matrix{Float64}}  Vector of (3, segments) Matrix{Float64} empty matrices for preallocation
     - return_result:: Boolean to determine use for in-place optimization or for calculating returns
 
 # Returns (if return_result==true)
 - res::Vector{Float64} difference between tether end and kite segment
 - T0::Vector{Float64} force from the kite to the end of tether
-- pj:: (3, Ns) Matrix{Float64} x,y,z - coordinates of the Ns tether nodes
+- pj:: (3, segments) Matrix{Float64} x,y,z - coordinates of the tether nodes
 - p0::Vector{Float64}  x,y,z - coordinates of the kite-tether attachment
 
 # Example usage
@@ -127,8 +127,7 @@ res!(res, state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings)
 function res!(res, state_vec, param)
     kite_pos, kite_vel, wind_vel, tether_length, settings, buffers, return_result = param
     g = abs(settings.g_earth[3])
-    Ns = size(wind_vel, 2)
-    Ls = tether_length / (Ns + 1)
+    Ls = tether_length / (segments + 1)
     mj = settings.rho_tether * Ls
     drag_coeff = -0.5 * settings.rho * Ls * settings.d_tether * settings.cd_tether
     A = π/4 * (settings.d_tether/1000)^2
@@ -154,30 +153,30 @@ function res!(res, state_vec, param)
     v_parallel = dot(kite_vel, p_unit)
     
     # First element calculations
-    FT[1, Ns] = Tn * sinθ * cosφ
-    FT[2, Ns] = Tn * sinφ
-    FT[3, Ns] = Tn * cosθ * cosφ
+    FT[1, segments] = Tn * sinθ * cosφ
+    FT[2, segments] = Tn * sinφ
+    FT[3, segments] = Tn * cosθ * cosφ
 
-    pj[1, Ns] = Ls * sinθ * cosφ
-    pj[2, Ns] = Ls * sinφ
-    pj[3, Ns] = Ls * cosθ * cosφ
+    pj[1, segments] = Ls * sinθ * cosφ
+    pj[2, segments] = Ls * sinφ
+    pj[3, segments] = Ls * cosθ * cosφ
 
     # Velocity and acceleration calculations
     ω = cross(kite_pos / norm_p^2, kite_vel)
-    a = cross(ω, SVec3(pj[:, Ns]))         
-    b = cross(ω, cross(ω, SVec3(pj[:, Ns])))
-    vj[:, Ns] .= v_parallel * p_unit + a
-    aj[:, Ns] .= b
+    a = cross(ω, SVec3(pj[:, segments]))         
+    b = cross(ω, cross(ω, SVec3(pj[:, segments])))
+    vj[:, segments] .= v_parallel * p_unit + a
+    aj[:, segments] .= b
 
     # Drag calculation for first element
-    v_a_p1 = vj[1, Ns] - wind_vel[1, Ns]
-    v_a_p2 = vj[2, Ns] - wind_vel[2, Ns]
-    v_a_p3 = vj[3, Ns] - wind_vel[3, Ns]
+    v_a_p1 = vj[1, segments] - wind_vel[1, segments]
+    v_a_p2 = vj[2, segments] - wind_vel[2, segments]
+    v_a_p3 = vj[3, segments] - wind_vel[3, segments]
 
     if all(x -> abs(x) < 1e-3, (v_a_p1, v_a_p2, v_a_p3))
-        Fd[:, Ns] .= 0.0
+        Fd[:, segments] .= 0.0
     else
-        dir1, dir2, dir3 = pj[1, Ns]/Ls, pj[2, Ns]/Ls, pj[3, Ns]/Ls
+        dir1, dir2, dir3 = pj[1, segments]/Ls, pj[2, segments]/Ls, pj[3, segments]/Ls
         v_dot_dir = v_a_p1*dir1 + v_a_p2*dir2 + v_a_p3*dir3
         v_a_p_t1 = v_dot_dir * dir1
         v_a_p_t2 = v_dot_dir * dir2
@@ -190,15 +189,15 @@ function res!(res, state_vec, param)
         norm_v_a_p_n = sqrt(v_a_p_n1^2 + v_a_p_n2^2 + v_a_p_n3^2)
         coeff = drag_coeff * norm_v_a_p_n
 
-        Fd[1, Ns] = coeff * v_a_p_n1
-        Fd[2, Ns] = coeff * v_a_p_n2
-        Fd[3, Ns] = coeff * v_a_p_n3
+        Fd[1, segments] = coeff * v_a_p_n1
+        Fd[2, segments] = coeff * v_a_p_n2
+        Fd[3, segments] = coeff * v_a_p_n3
     end
 
     # Process other segments
-    @inbounds for ii in Ns:-1:2
+    @inbounds for ii in segments:-1:2
         # Tension force calculations
-        if ii == Ns
+        if ii == segments
             mj_total = 1.5mj
             g_term = mj_total * g
         else
@@ -294,7 +293,7 @@ Loads the initialization data for the basic examples and tests
   tether orientation and tension at ground station
 - kite_pos::MVector{3, Float64} kite position vector in wind reference frame
 - kite_vel::MVector{3, Float64} kite velocity vector in wind reference frame
-- wind_vel::MMatrix{3, Ns, Float64} wind velocity vector in wind reference frame for each Ns node of the tether
+- wind_vel::MMatrix{3, segments, Float64} wind velocity vector in wind reference frame for each segment of the tether
 - tether_length: Float64 tether length
 - settings::Settings struct containing environmental and tether parameters: see [Settings](@ref)
 """
