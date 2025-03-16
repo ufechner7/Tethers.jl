@@ -23,10 +23,10 @@ struct Settings
 end
 
 
-function res!(res, stateVec, kitePos, kiteVel, windVel, tetherLength, settings, buffers)
+function res!(res, state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings, buffers)
     g = abs(settings.g_earth[3])
-    Ns = size(windVel, 2)
-    Ls = tetherLength / (Ns + 1)
+    Ns = size(wind_vel, 2)
+    Ls = tether_length / (Ns + 1)
     mj = settings.rho_tether * Ls
     drag_coeff = -0.5 * settings.rho * Ls * settings.d_tether * settings.cd_tether
     A = π/4 * (settings.d_tether/1000)^2
@@ -40,16 +40,16 @@ function res!(res, stateVec, kitePos, kiteVel, windVel, tetherLength, settings, 
     aj = buffers[5]
 
     # Unpack state variables
-    θ, φ, Tn = stateVec[1], stateVec[2], stateVec[3]
+    θ, φ, Tn = state_vec[1], state_vec[2], state_vec[3]
 
     # Precompute common values
     sinθ = sin(θ)
     cosθ = cos(θ)
     sinφ = sin(φ)
     cosφ = cos(φ)
-    norm_p = norm(kitePos)
-    p_unit = kitePos ./ norm_p
-    v_parallel = dot(kiteVel, p_unit)
+    norm_p = norm(kite_pos)
+    p_unit = kite_pos ./ norm_p
+    v_parallel = dot(kite_vel, p_unit)
     
     # First element calculations
     FT[1, Ns] = Tn * sinθ * cosφ
@@ -61,16 +61,16 @@ function res!(res, stateVec, kitePos, kiteVel, windVel, tetherLength, settings, 
     pj[3, Ns] = Ls * cosθ * cosφ
 
     # Velocity and acceleration calculations
-    ω = cross(kitePos / norm_p^2, kiteVel) # 3 alloc
+    ω = cross(kite_pos / norm_p^2, kite_vel) # 3 alloc
     a = cross(ω, MVec3(@view(pj[:, Ns])))         # 3 alloc
     b = cross(ω, cross(ω, MVec3(@view(pj[:, Ns]))))
     vj[:, Ns] .= v_parallel * p_unit + a
     aj[:, Ns] .= b
 
     # Drag calculation for first element
-    v_a_p1 = vj[1, Ns] - windVel[1, Ns]
-    v_a_p2 = vj[2, Ns] - windVel[2, Ns]
-    v_a_p3 = vj[3, Ns] - windVel[3, Ns]
+    v_a_p1 = vj[1, Ns] - wind_vel[1, Ns]
+    v_a_p2 = vj[2, Ns] - wind_vel[2, Ns]
+    v_a_p3 = vj[3, Ns] - wind_vel[3, Ns]
 
     if all(x -> abs(x) < 1e-3, (v_a_p1, v_a_p2, v_a_p3))
         Fd[:, Ns] .= 0.0
@@ -123,9 +123,9 @@ function res!(res, stateVec, kitePos, kiteVel, windVel, tetherLength, settings, 
         aj[:, ii-1] .= b
 
         # Drag calculations
-        v_a_p1 = vj[1, ii] - windVel[1, ii]
-        v_a_p2 = vj[2, ii] - windVel[2, ii]
-        v_a_p3 = vj[3, ii] - windVel[3, ii]
+        v_a_p1 = vj[1, ii] - wind_vel[1, ii]
+        v_a_p2 = vj[2, ii] - wind_vel[2, ii]
+        v_a_p3 = vj[3, ii] - wind_vel[3, ii]
 
         if all(x -> abs(x) < 1e-3, (v_a_p1, v_a_p2, v_a_p3))
             Fd[:, ii-1] .= 0.0
@@ -171,24 +171,24 @@ function res!(res, stateVec, kitePos, kiteVel, windVel, tetherLength, settings, 
           pj[2,1] + l_i_1*T0_dir2,
           pj[3,1] + l_i_1*T0_dir3)
 
-    res .= kitePos - p0
+    res .= kite_pos - p0
     nothing
 end
 
-stateVec = MVector{3}(rand(3,))
-kitePos = SVector{3}([100, 100, 300])
-kiteVel = SVector{3}([0, 0, 0])
-windVel = SMatrix{3, 15}(rand(3,15))
-tetherLength = 500
+state_vec = MVector{3}(rand(3,))
+kite_pos = SVector{3}([100, 100, 300])
+kite_vel = SVector{3}([0, 0, 0])
+wind_vel = SMatrix{3, 15}(rand(3,15))
+tether_length = 500
 settings = Settings(1.225, [0, 0, -9.806], 0.9, 4, 0.85, 500000)
-Ns = size(windVel, 2)
+Ns = size(wind_vel, 2)
 # buffers= [zeros(3, Ns), zeros(3, Ns), zeros(3, Ns), zeros(3, Ns), zeros(3, Ns)]
 buffers= [MMatrix{3, 15}(zeros(3, Ns)), MMatrix{3, 15}(zeros(3, Ns)), MMatrix{3, 15}(zeros(3, Ns)), 
           MMatrix{3, 15}(zeros(3, Ns)), MMatrix{3, 15}(zeros(3, Ns))]
 res = MVector(0.0, 0, 0)
 
-res!(res, stateVec, kitePos, kiteVel, windVel, tetherLength, settings, buffers)
-@benchmark res!(res, stateVec, kitePos, kiteVel, windVel, tetherLength, settings, buffers)
+res!(res, state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings, buffers)
+@benchmark res!(res, state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings, buffers)
 
 
 
