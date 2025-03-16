@@ -5,15 +5,15 @@ const MVec3 = MVector{3, Float64}
 
 # Iterations: 36
 # BenchmarkTools.Trial: 10000 samples with 1 evaluation per sample.
-#  Range (min … max):  134.230 μs …   8.674 ms  ┊ GC (min … max): 0.00% … 96.67%
-#  Time  (median):     203.255 μs               ┊ GC (median):    0.00%
-#  Time  (mean ± σ):   224.409 μs ± 216.736 μs  ┊ GC (mean ± σ):  9.40% ±  9.63%
+# Range (min … max):  115.619 μs …   8.848 ms  ┊ GC (min … max): 0.00% … 97.10%
+# Time  (median):     153.630 μs               ┊ GC (median):    0.00%
+# Time  (mean ± σ):   162.871 μs ± 168.648 μs  ┊ GC (mean ± σ):  6.08% ±  6.58%
 
-#     █▂                                                           
-#   ▄▇██▃▂▂▂▂▂▂▂▂▁▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▂▂▂▂▂ ▂
-#   134 μs           Histogram: frequency by time         1.74 ms <
+#     ▁           ▁▃▃▄▄▇▇██▆▇▆▄▅▄▅▃▃▁                              
+#   ▂▆█▇▅▃▃▄▄▅▅▆▇█████████████████████▆▅▄▃▂▂▂▂▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁ ▄
+#   121 μs           Histogram: frequency by time          233 μs <
 
-#  Memory estimate: 415.94 KiB, allocs estimate: 7901.
+#  Memory estimate: 202.27 KiB, allocs estimate: 3687.
 
 """
     Settings
@@ -36,6 +36,15 @@ struct Settings
     d_tether::Float64                              
     rho_tether::Float64                             
     c_spring::Float64   
+end
+
+function cross!(out::AbstractVector, a::AbstractVector, b::AbstractVector)
+    @inbounds begin
+        out[1] = a[2]*b[3] - a[3]*b[2]
+        out[2] = a[3]*b[1] - a[1]*b[3]
+        out[3] = a[1]*b[2] - a[2]*b[1]
+    end
+    return out
 end
 
 """
@@ -62,7 +71,8 @@ Function to determine the tether shape and forces, based on a quasi-static model
 """
 function simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings; prn=false)
     Ns = size(wind_vel, 2)
-    buffers = [DiffCache(zeros(3, Ns)), DiffCache(zeros(3, Ns)), DiffCache(zeros(3, Ns)), DiffCache(zeros(3, Ns)), DiffCache(zeros(3, Ns))]
+    buffers = (DiffCache(zeros(3, Ns)), DiffCache(zeros(3, Ns)), DiffCache(zeros(3, Ns)), DiffCache(zeros(3, Ns)), 
+               DiffCache(zeros(3, Ns)), DiffCache(zeros(3)), DiffCache(zeros(3)), DiffCache(zeros(3)))
     
     # Pack parameters in param named tuple - false sets res! for in-place solution
     param = (kite_pos=kite_pos, kite_vel=kite_vel, wind_vel=wind_vel, 
@@ -161,9 +171,12 @@ function res!(res, state_vec, param)
     pj[3, Ns] = Ls * cosθ * cosφ
 
     # Velocity and acceleration calculations
-    ω = cross(kite_pos / norm_p^2, kite_vel) # 3 alloc
-    a = cross(ω, (@view(pj[:, Ns])))         # 3 alloc
-    b = cross(ω, cross(ω, (@view(pj[:, Ns]))))
+    ω = get_tmp(buffers[6], state_vec)
+    cross!(ω, kite_pos / norm_p^2, kite_vel)
+    a = get_tmp(buffers[7], state_vec)
+    cross!(a, ω, (@view(pj[:, Ns])))
+    b = get_tmp(buffers[8], state_vec)
+    cross!(b, ω, cross(ω, (@view(pj[:, Ns]))))
     vj[:, Ns] .= v_parallel * p_unit + a
     aj[:, Ns] .= b
 
@@ -219,8 +232,8 @@ function res!(res, state_vec, param)
         pj[3, ii-1] = pj[3, ii] + l_i_1 * ft_dir[3]
 
         # Velocity and acceleration
-        a = cross(ω, (@view(pj[:, ii-1])))           # 28 allocations
-        b = cross(ω, cross(ω, (@view(pj[:, ii-1])))) # 28 allocations
+        cross!(a, ω, (@view(pj[:, ii-1])))          
+        cross!(b, ω, cross(ω, (@view(pj[:, ii-1]))))
         vj[:, ii-1] .= v_parallel * p_unit + a
         aj[:, ii-1] .= b
 
