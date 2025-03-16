@@ -5,15 +5,15 @@ const MVec3 = MVector{3, Float64}
 
 # Iterations: 36
 # BenchmarkTools.Trial: 10000 samples with 1 evaluation per sample.
-# Range (min … max):  115.619 μs …   8.848 ms  ┊ GC (min … max): 0.00% … 97.10%
-# Time  (median):     153.630 μs               ┊ GC (median):    0.00%
-# Time  (mean ± σ):   162.871 μs ± 168.648 μs  ┊ GC (mean ± σ):  6.08% ±  6.58%
+#  Range (min … max):  103.920 μs …   2.508 ms  ┊ GC (min … max):  0.00% … 91.64%
+#  Time  (median):     124.560 μs               ┊ GC (median):     0.00%
+#  Time  (mean ± σ):   149.064 μs ± 169.569 μs  ┊ GC (mean ± σ):  12.93% ± 10.44%
 
-#     ▁           ▁▃▃▄▄▇▇██▆▇▆▄▅▄▅▃▃▁                              
-#   ▂▆█▇▅▃▃▄▄▅▅▆▇█████████████████████▆▅▄▃▂▂▂▂▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁ ▄
-#   121 μs           Histogram: frequency by time          233 μs <
+#   █▂                                                             
+#   ██▂▄▂▂▂▂▂▁▂▂▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▂▂▂▂▂▂▂ ▂
+#   104 μs           Histogram: frequency by time         1.49 ms <
 
-#  Memory estimate: 202.27 KiB, allocs estimate: 3687.
+#  Memory estimate: 328.67 KiB, allocs estimate: 2292.
 
 """
     Settings
