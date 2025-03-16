@@ -23,7 +23,7 @@ Contains the environmental and tether properties
 # Fields
   - rho::Float64: density of air [kg/m³] 
   - g_earth::MVector{Float64}: gravitational acceleration [m/s]
-  - cd_tether::Float64: drag ceofficient of the tether
+  - cd_tether::Float64: drag coefficient of the tether
   - d_tether::Float64: diameter of the tether [mm]
   - rho_tether::Float64: density of the tether (Dyneema) [kg/m³]
   - c_spring::Float64: axial stiffness of the tether EA [N] 
