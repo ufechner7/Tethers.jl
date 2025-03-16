@@ -182,7 +182,6 @@ kite_vel = SVector{3}([0, 0, 0])
 wind_vel = SMatrix{3, segments}(rand(3,segments))
 tether_length = 500
 settings = Settings(1.225, [0, 0, -9.806], 0.9, 4, 0.85, 500000)
-segments = size(wind_vel, 2)
 # buffers= [zeros(3, segments), zeros(3, segments), zeros(3, segments), zeros(3, segments), zeros(3, segments)]
 buffers= [MMatrix{3, segments}(zeros(3, segments)), MMatrix{3, segments}(zeros(3, segments)), 
           MMatrix{3, segments}(zeros(3, segments)), 
