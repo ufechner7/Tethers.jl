@@ -1,16 +1,17 @@
 using LinearAlgebra, StaticArrays, ADTypes, NonlinearSolve, MAT
 
 const MVec3 = MVector{3, Float64}
+const SVec3 = SVector{3, Float64}
 
 # Iterations: 36
 # BenchmarkTools.Trial: 10000 samples with 1 evaluation per sample.
-#  Range (min … max):   95.450 μs …  3.302 ms  ┊ GC (min … max): 0.00% … 92.58%
-#  Time  (median):     101.225 μs              ┊ GC (median):    0.00%
-#  Time  (mean ± σ):   105.055 μs ± 54.879 μs  ┊ GC (mean ± σ):  0.99% ±  1.86%
+#  Range (min … max):   91.360 μs …  2.343 ms  ┊ GC (min … max): 0.00% … 94.11%
+#  Time  (median):      97.450 μs              ┊ GC (median):    0.00%
+#  Time  (mean ± σ):   100.826 μs ± 47.860 μs  ┊ GC (mean ± σ):  1.13% ±  2.28%
 
-#       ▅█▅▁                                                      
-#   ▁▁▂▆████▆▅▄▄▄▄▄▃▃▃▃▃▂▂▃▃▃▃▃▃▄▄▄▄▄▃▄▃▃▃▃▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▁▁▁▁▁▁ ▂
-#   95.4 μs         Histogram: frequency by time          121 μs <
+#      ▃██▄▁                                                      
+#   ▁▂▅██████▇▆▆▆▅▅▅▄▅▄▄▄▄▄▄▄▄▄▄▄▃▄▃▃▄▃▃▃▃▃▃▃▂▂▂▂▂▂▂▂▂▂▂▂▁▂▁▁▁▁▁ ▃
+#   91.4 μs         Histogram: frequency by time          118 μs <
 
 #  Memory estimate: 39.81 KiB, allocs estimate: 976.
 
@@ -162,8 +163,8 @@ function res!(res, state_vec, param)
 
     # Velocity and acceleration calculations
     ω = cross(kite_pos / norm_p^2, kite_vel) # 3 alloc
-    a = cross(ω, MVec3(@view(pj[:, Ns])))         # 3 alloc
-    b = cross(ω, cross(ω, MVec3(@view(pj[:, Ns]))))
+    a = cross(ω, SVec3(@view(pj[:, Ns])))         # 3 alloc
+    b = cross(ω, cross(ω, SVec3(@view(pj[:, Ns]))))
     vj[:, Ns] .= v_parallel * p_unit + a
     aj[:, Ns] .= b
 
@@ -219,8 +220,8 @@ function res!(res, state_vec, param)
         pj[3, ii-1] = pj[3, ii] + l_i_1 * ft_dir[3]
 
         # Velocity and acceleration
-        a = cross(ω, MVec3(@view(pj[:, ii-1])))           # 28 allocations
-        b = cross(ω, cross(ω, MVec3(@view(pj[:, ii-1])))) # 28 allocations
+        a = cross(ω, SVec3(@view(pj[:, ii-1])))           # 28 allocations
+        b = cross(ω, cross(ω, SVec3(@view(pj[:, ii-1])))) # 28 allocations
         vj[:, ii-1] .= v_parallel * p_unit + a
         aj[:, ii-1] .= b
 
