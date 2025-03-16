@@ -2,6 +2,18 @@ using LinearAlgebra, StaticArrays, ADTypes, NonlinearSolve, MAT
 
 const MVec3 = MVector{3, Float64}
 
+# Iterations: 36
+# BenchmarkTools.Trial: 10000 samples with 1 evaluation per sample.
+#  Range (min … max):   95.169 μs …  3.417 ms  ┊ GC (min … max): 0.00% … 95.50%
+#  Time  (median):     103.330 μs              ┊ GC (median):    0.00%
+#  Time  (mean ± σ):   106.198 μs ± 59.810 μs  ┊ GC (mean ± σ):  1.10% ±  1.90%
+
+#     ▃█▆▂                                                        
+#   ▁▄████▇█▆▆▆▆▆▆▅▅▆▅▅▅▅▄▄▄▄▄▅▅▅▅▆▅▆▅▅▄▄▄▃▃▃▂▃▂▃▂▃▃▂▂▂▂▂▂▁▁▁▁▁▁ ▃
+#   95.2 μs         Histogram: frequency by time          124 μs <
+
+#  Memory estimate: 46.53 KiB, allocs estimate: 1118.
+
 """
     Settings
 
