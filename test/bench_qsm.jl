@@ -23,7 +23,7 @@ struct Settings
 end
 
 
-function objFun!(res, stateVec, kitePos, kiteVel, windVel, tetherLength, settings, buffers)
+function res!(res, stateVec, kitePos, kiteVel, windVel, tetherLength, settings, buffers)
     g = abs(settings.g_earth[3])
     Ns = size(windVel, 2)
     Ls = tetherLength / (Ns + 1)
@@ -187,8 +187,8 @@ buffers= [MMatrix{3, 15}(zeros(3, Ns)), MMatrix{3, 15}(zeros(3, Ns)), MMatrix{3,
           MMatrix{3, 15}(zeros(3, Ns)), MMatrix{3, 15}(zeros(3, Ns))]
 res = MVector(0.0, 0, 0)
 
-objFun!(res, stateVec, kitePos, kiteVel, windVel, tetherLength, settings, buffers)
-@benchmark objFun!(res, stateVec, kitePos, kiteVel, windVel, tetherLength, settings, buffers)
+res!(res, stateVec, kitePos, kiteVel, windVel, tetherLength, settings, buffers)
+@benchmark res!(res, stateVec, kitePos, kiteVel, windVel, tetherLength, settings, buffers)
 
 
 
