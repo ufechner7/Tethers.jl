@@ -5,15 +5,15 @@ const MVec3 = MVector{3, Float64}
 
 # Iterations: 36
 # BenchmarkTools.Trial: 10000 samples with 1 evaluation per sample.
-#  Range (min … max):  103.920 μs …   2.508 ms  ┊ GC (min … max):  0.00% … 91.64%
-#  Time  (median):     124.560 μs               ┊ GC (median):     0.00%
-#  Time  (mean ± σ):   149.064 μs ± 169.569 μs  ┊ GC (mean ± σ):  12.93% ± 10.44%
+#  Range (min … max):   95.520 μs …   3.157 ms  ┊ GC (min … max):  0.00% … 93.75%
+#  Time  (median):     110.690 μs               ┊ GC (median):     0.00%
+#  Time  (mean ± σ):   130.976 μs ± 141.300 μs  ┊ GC (mean ± σ):  10.16% ±  8.85%
 
-#   █▂                                                             
-#   ██▂▄▂▂▂▂▂▁▂▂▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▂▂▂▂▂▂▂ ▂
-#   104 μs           Histogram: frequency by time         1.49 ms <
+#    ▂▇█▄▂                                                         
+#   ▄██████▅▃▂▂▂▂▂▂▂▄▅▄▃▃▃▂▂▂▂▂▂▁▁▂▂▁▂▁▁▂▂▁▂▁▂▂▂▁▂▁▁▁▂▁▁▂▁▁▁▁▁▁▁▂ ▃
+#   95.5 μs          Histogram: frequency by time          317 μs <
 
-#  Memory estimate: 328.67 KiB, allocs estimate: 2292.
+#  Memory estimate: 263.83 KiB, allocs estimate: 1187.
 
 """
     Settings
@@ -38,7 +38,7 @@ struct Settings
     c_spring::Float64   
 end
 
-function cross!(out::AbstractVector, a::AbstractVector, b::AbstractVector)
+@inline function cross!(out::AbstractVector, a::AbstractVector, b::AbstractVector)
     @inbounds begin
         out[1] = a[2]*b[3] - a[3]*b[2]
         out[2] = a[3]*b[1] - a[1]*b[3]
