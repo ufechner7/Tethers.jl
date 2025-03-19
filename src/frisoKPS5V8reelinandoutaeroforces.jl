@@ -12,6 +12,7 @@ include("videoKPS5.jl")
 # Coordinate system: [x,y,z] where x is heading, z is up, and y is perpendicular.
 G_EARTH = [0.0, 0.0, -9.81]
 v_wind_tether = [0.0, 15, 0.0]
+V_RO = -0.5
 tethersegments = 6
 segments = 9 + tethersegments    
 points = 5 + tethersegments  
@@ -78,7 +79,7 @@ conn = [(1,2), (2,3), (3,1), (1,4), (2,4), (3,4), (1,5), (2,5), (3,5)]
 conn = vcat(conn, [(6+i, 6+i+1) for i in 0:(tethersegments-2)]...)  # tether segments
 conn = vcat(conn, [(6+tethersegments-1, 1)])
 rest_lengths = [l1, l2, l3, l4, l5, l6, l7, l8, l9]
-rest_lengths = vcat(rest_lengths, [l10/tethersegments for _ in 1:tethersegments]...)
+rest_lengths = vcat(rest_lengths, [(l10+V_RO*t)/tethersegments for _ in 1:tethersegments]...)
 k_segments = [K2, K3, K2, K2, K3, K3, K2, K3, K3]
 k_segments = vcat(k_segments, [K1 for _ in 1:tethersegments]...)
 
@@ -220,3 +221,4 @@ for i in 1:length(Z)
     plt.show(block=false)
 end
 nothing  # Ensures the script runs to completion
+
