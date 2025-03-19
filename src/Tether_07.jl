@@ -9,14 +9,14 @@ using ControlPlots
     v_wind_tether::Vector{Float64} = [2, 0.0, 0.0]
     rho = 1.225
     cd_tether = 0.958
-    l0 = 50                                      # initial tether length             [m]
-    v_ro = 2                                     # reel-out speed                  [m/s]
+    l0 = 10                                      # initial tether length             [m]
+    v_ro = 0                                    # reel-out speed                  [m/s]
     d_tether = 4                                 # tether diameter                  [mm]
     rho_tether = 724                             # density of Dyneema            [kg/m³]
     c_spring = 614600                            # unit spring constant              [N]
     rel_compression_stiffness = 0.01             # relative compression stiffness    [-]
     damping = 473                                # unit damping constant            [Ns]
-    segments::Int64 = 5                          # number of tether segments         [-]
+    segments::Int64 = 4                          # number of tether segments         [-]
     α0 = π/10                                    # initial tether angle            [rad]
     duration = 10                                # duration of the simulation        [s]
     save::Bool = false                           # save png files in folder video

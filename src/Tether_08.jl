@@ -9,7 +9,7 @@ using ControlPlots
 
 @with_kw mutable struct Settings3 @deftype Float64
     g_earth::Vector{Float64} = [0.0, 0.0, -9.81] # gravitational acceleration     [m/s²]
-    v_wind_tether::Vector{Float64} = [2, 0.0, 0.0]
+    v_wind_tether::Vector{Float64} = [20, 0.0, 0.0]
     rho = 1.225
     cd_tether = 0.958
     l0 = 70                                      # initial tether length             [m]

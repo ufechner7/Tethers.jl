@@ -1,4 +1,3 @@
-#added aero forces and KCU Drag
 using Timers
 tic()
 using LinearAlgebra, ModelingToolkit, OrdinaryDiffEq, ControlPlots 
@@ -12,6 +11,7 @@ include("videoKPS5.jl")
 # Coordinate system: [x,y,z] where x is heading, z is up, and y is perpendicular.
 G_EARTH = [0.0, 0.0, -9.81]
 v_wind_tether = [0.0, 15, 0.0]
+V_RO::Float64 = 0.5                         # reel-out velocity                [m/s]
 tethersegments = 6
 segments = 9 + tethersegments    
 points = 5 + tethersegments  
@@ -35,8 +35,6 @@ VEL0 = zeros(3, points)
 @parameters l1=sqrt(10) l2=2.0 l3=sqrt(10) l4=sqrt(8) l5=sqrt(6) l6=sqrt(6) l7=sqrt(8) l8=sqrt(6) l9=sqrt(6) l10=10
 @parameters damping=0.9
 @parameters rho=1.225 cd_tether=0.958 d_tether=0.004 Cl=0.1 S=7 
-@parameters kcu_cd = 0.47 kcu_diameter = 0.38
-
 
 # State variables for points
 @variables pos(t)[1:3, 1:points] = POS0
@@ -59,7 +57,6 @@ VEL0 = zeros(3, points)
 @variables v_app_perp(t)[1:3, 1:segments]
 @variables norm_v_app(t)[1:segments]
 @variables half_drag_force(t)[1:3, 1:segments]
-@variables drag_force(t)[1:3, 1:segments]  # (if needed)
 @variables total_force(t)[1:3, 1:points]
 
 # -----------------------------
@@ -78,10 +75,16 @@ conn = [(1,2), (2,3), (3,1), (1,4), (2,4), (3,4), (1,5), (2,5), (3,5)]
 conn = vcat(conn, [(6+i, 6+i+1) for i in 0:(tethersegments-2)]...)  # tether segments
 conn = vcat(conn, [(6+tethersegments-1, 1)])
 rest_lengths = [l1, l2, l3, l4, l5, l6, l7, l8, l9]
-rest_lengths = vcat(rest_lengths, [l10/tethersegments for _ in 1:tethersegments]...)
+rest_lengths = vcat(rest_lengths, [(l10+V_RO*t)/tethersegments for _ in 1:tethersegments]...)
 k_segments = [K2, K3, K2, K2, K3, K3, K2, K3, K3]
 k_segments = vcat(k_segments, [K1 for _ in 1:tethersegments]...)
-
+# -----------------------------
+# Mass Distribution
+# -----------------------------
+mass_tether = (d_tether^2)*pi*rho_tether*l10
+mass_tetherpoints = mass_tether/(tethersegments+1)
+PointMasses = [m_bridle+mass_tetherpoints, m_kite, m_kite, m_kite, m_kite]
+PointMasses = vcat(PointMasses, [mass_tetherpoints for _ in 1:tethersegments]...)
 # -----------------------------
 # Equations for Each Segment (Spring Forces, Drag, etc.)
 # -----------------------------
@@ -93,7 +96,7 @@ for i in 1:segments
        unit_vector[:, i]  ~ -segment[:, i] / norm1[i],
        rel_vel[:, i]      ~ vel[:, conn[i][2]] - vel[:, conn[i][1]],
        spring_vel[i]      ~ -unit_vector[:, i] ⋅ rel_vel[:, i],
-       c_spring[i]        ~ (k_segments[i]/rest_lengths[i]) * (0.1 + 0.9*(norm1[i] > rest_lengths[i])),
+       c_spring[i]        ~ (k_segments[i]/rest_lengths[i]) * (0.01 + 0.99*(norm1[i] > rest_lengths[i])),
        spring_force[:, i] ~ (c_spring[i]*(norm1[i] - rest_lengths[i]) + damping * spring_vel[i]) * unit_vector[:, i],
        v_apparent[:, i]   ~ v_wind_tether .- (vel[:, conn[i][1]] + vel[:, conn[i][2]]) / 2,
        v_app_perp[:, i]   ~ v_apparent[:, i] - (v_apparent[:, i] ⋅ unit_vector[:, i]) .* unit_vector[:, i],
@@ -102,15 +105,6 @@ for i in 1:segments
     ]
     eqs2 = vcat(eqs2, reduce(vcat, eqs))
 end
-
-# -----------------------------
-# Mass Distribution
-# -----------------------------
-mass_tether = (d_tether^2)*pi*rho_tether*l10
-mass_tetherpoints = mass_tether/(tethersegments+1)
-PointMasses = [m_bridle+mass_tetherpoints, m_kite, m_kite, m_kite, m_kite]
-PointMasses = vcat(PointMasses, [mass_tetherpoints for _ in 1:tethersegments]...)
-
 # -----------------------------
 # Force Balance at Each Point
 # -----------------------------
@@ -122,35 +116,17 @@ for i in 1:points
             sum([spring_force[:, j] for j in 1:segments if conn[j][1] == i]; init=zeros(3)) +
             sum([half_drag_force[:, j] for j in 1:segments if conn[j][1] == i]; init=zeros(3)) +
             sum([half_drag_force[:, j] for j in 1:segments if conn[j][2] == i]; init=zeros(3))
-    #ExternalForces = [F1, F2, F3, F4, F5]
     v_app_point[:, i] ~ v_wind_tether - vel[:, i]
-    if i == 1
-
-        area_kcu = pi * ((kcu_diameter / 2) ^ 2)
-        Dx = 0.5*rho*kcu_cd *area_kcu*(v_app_point[1, i]*v_app_point[1, i])
-        Dy = 0.5*rho*kcu_cd *area_kcu*(v_app_point[2, i]*v_app_point[2, i])
-        Dz = 0.5*rho*kcu_cd *area_kcu*(v_app_point[3, i]*v_app_point[3, i])
-        D = [Dx, Dy, Dz]
-
-        push!(eqs, total_force[:, i] ~ force + D)
-    elseif i in 2:5
+    if i in 2:5
         L=0.5*rho*Cl*S*(v_app_point[1, i]*v_app_point[1, i] + v_app_point[2, i]*v_app_point[2, i] + v_app_point[3, i]*v_app_point[3, i])
         push!(eqs, total_force[:, i] ~ force + [0.0, 0.0, L]) 
-    elseif i != 6 && i != 1        # (optional additional constraint)                  
+    elseif i != 6        # (optional additional constraint)                  
         push!(eqs, total_force[:, i] ~ force)
     end
     push!(eqs, acc[:, i] ~ G_EARTH + total_force[:, i] / PointMasses[i])
     eqs2 = vcat(eqs2, reduce(vcat, eqs))
-end
-
-# -----------------------------
-# Define Apparent Velocity for Each Point
-# -----------------------------
-for i in 1:points
-    global eqs2
     eqs2 = vcat(eqs2, v_app_point[:, i] ~ v_wind_tether - vel[:, i])
 end
-
 # -----------------------------
 # Build and Solve the ODE System
 # -----------------------------
@@ -164,25 +140,6 @@ ts = 0:dt:duration
 prob = ODEProblem(simple_sys, nothing, tspan)
 elapsed_time = @elapsed sol = solve(prob, Rodas5(); dt=dt, abstol=tol, reltol=tol, saveat=ts)
 println("Elapsed time: $(elapsed_time) s, speed: $(round(duration/elapsed_time)) times real-time")
-
-# -----------------------------
-# Extract and Print the Apparent Velocity for Each Point
-# -----------------------------
-v_app_point_sol = sol[v_app_point, :]
-
-println("\nApparent velocity (norm) for each point at each saved time step:")
-for (i, t_val) in enumerate(ts)
-    println("At t = $(t_val):")
-    for pt in 1:points
-         app_norm = norm(v_app_point_sol[i][:, pt])
-         println("  Point $(pt): norm = $(app_norm)")
-    end
-    for pt in 2:5
-        v_app = v_app_point_sol[i][:, pt]
-        L = 3.43 * (v_app[1]^2 + v_app[2]^2 + v_app[3]^2)
-        println("  Point $(pt): L = $(L)")
-    end
-end
 
 # -----------------------------
 # Plotting (Animation)

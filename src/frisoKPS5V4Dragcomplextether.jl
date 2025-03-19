@@ -8,12 +8,12 @@ include("videoKPS5.jl")
 # 🔹 Define struct for simulation settings 
 # 3D: [x,y,z] , x is the heading , z is up and y perpendicular to both
 G_EARTH::Vector{Float64} = [0.0, 0.0, -9.81]
-v_wind_tether::Vector{Float64} = [0.0, 30 , 0.0]
-F1::Vector{Float64} = [0.0, 0.0,  25]
-F2::Vector{Float64} = [0.0, 0.0,  100]
-F3::Vector{Float64} = [0.0, 0.0, 120]
-F4::Vector{Float64} = [0.0, 0,  50]
-F5::Vector{Float64} = [0.0,  0, 50]
+v_wind_tether::Vector{Float64} = [0.0, 15 , 0.0]
+F1::Vector{Float64} = [0.0, 0.0,  0.0]
+F2::Vector{Float64} = [0.0, 0.0,  192]
+F3::Vector{Float64} = [0.0, 0.0, 192]
+F4::Vector{Float64} = [0.0, 0,  192]
+F5::Vector{Float64} = [0.0,  0, 192]
 tethersegments::Int64 = 12
 segments::Int64 = 9 + tethersegments    
 points::Int64 = 5 + tethersegments  
@@ -92,8 +92,8 @@ end
 #mass distribution
 mass_tether = (d_tether^2 )* pi * rho_tether*l10
 mass_tetherpoints = mass_tether/(tethersegments+1)
-PointMasses = [m_bridle+mass_tetherpoints, m_kite, m_kite, m_kite, m_kite]
-PointMasses = vcat(PointMasses, [mass_tetherpoints for _ in 1:tethersegments]...)
+PointMassesBridleKite = [m_bridle+mass_tetherpoints, m_kite, m_kite, m_kite, m_kite]
+PointMasses = vcat(PointMassesBridleKite, [mass_tetherpoints for _ in 1:tethersegments]...)
 # Apply force balance for all points
 for i in 1:points  
     global eqs2
@@ -128,7 +128,7 @@ println("Elapsed time: $(elapsed_time) s, speed: $(round(duration/elapsed_time))
 # # Extract the total force acting on each point over time
 # spring = sol[spring_force, :]
 
-# #Print the total force for each point at every saved time step.
+#Print the total force for each point at every saved time step.
 # for (i, t_val) in enumerate(ts)
 #     println("At t = $(t_val):")
 #     for point in 1:points
@@ -149,7 +149,21 @@ println("Elapsed time: $(elapsed_time) s, speed: $(round(duration/elapsed_time))
 # ground_force_drag=(sol[half_drag_force,10])
 # ground_force = ground_force_spring + ground_force_drag
 # println("Ground force: ", norm.(eachcol(ground_force)))
+# Extracting the Apparent Velocity
+# -----------------------------
+# Note: v_apparent is defined on the segments (each connecting two points).
+# To inspect its value over time, we extract it from the solution.
+v_app_sol = sol[v_apparent, :]
 
+println("\nApparent velocity (norm) for each segment at each saved time step:")
+for (i, t_val) in enumerate(ts)
+    println("At t = $(t_val):")
+    for seg in 1:segments
+         # Compute the norm of the apparent velocity vector for segment 'seg'
+         app_norm = norm(v_app_sol[i][:, seg])
+         println("  Segment $(seg): norm = $(app_norm)")
+    end
+end
 
 # Plotting
 # Extract solution positions
