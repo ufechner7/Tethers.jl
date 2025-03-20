@@ -30,13 +30,13 @@ Contains the environmental and tether properties
   - c_spring::Float64: axial stiffness of the tether EA [N] 
 """ 
 
-struct Settings 
-    rho::Float64
-    g_earth::MVector{3, Float64}
-    cd_tether::Float64
-    d_tether::Float64                              
-    rho_tether::Float64                             
-    c_spring::Float64   
+@with_kw mutable struct Settings @deftype Float64
+    rho = 1.225
+    g_earth::MVector{3, Float64} = [0.0, 0.0, -9.81]
+    cd_tether = 0.958                            
+    d_tether = 4                                 
+    rho_tether = 724                             
+    c_spring = 614600                            
 end
 
 """
