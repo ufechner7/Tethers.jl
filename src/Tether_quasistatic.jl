@@ -1,4 +1,4 @@
-using LinearAlgebra, StaticArrays, ADTypes, NonlinearSolve, MAT
+using LinearAlgebra, StaticArrays, ADTypes, NonlinearSolve, MAT, Parameters
 
 const MVec3 = MVector{3, Float64}
 const SVec3 = SVector{3, Float64}
