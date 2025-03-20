@@ -62,12 +62,13 @@ Function to determine the tether shape and forces, based on a quasi-static model
 - p0::Vector{Float64}:  x,y,z - coordinates of the kite-tether attachment
 """
 function simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings; prn=false)
-    buffers= [MMatrix{3, 15}(zeros(3, segments)), MMatrix{3, 15}(zeros(3, segments)), MMatrix{3, 15}(zeros(3, segments)), 
-              MMatrix{3, 15}(zeros(3, segments)), MMatrix{3, 15}(zeros(3, segments))]
+    segments = size(wind_vel)[2]
+    buffers= [MMatrix{3, segments}(zeros(3, segments)), MMatrix{3, segments}(zeros(3, segments)), MMatrix{3, segments}(zeros(3, segments)), 
+              MMatrix{3, segments}(zeros(3, segments)), MMatrix{3, segments}(zeros(3, segments))]
     
     # Pack parameters in param named tuple - false sets res! for in-place solution
     param = (kite_pos=kite_pos, kite_vel=kite_vel, wind_vel=wind_vel, 
-         tether_length=tether_length, settings=settings, buffers=buffers, 
+         tether_length=tether_length, settings=settings, buffers=buffers, segments = segments, 
          return_result=false)
     # Define the nonlinear problem
     prob = NonlinearProblem(res!, state_vec, param)
@@ -79,7 +80,6 @@ function simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length,
     if prn
         println("Iterations: ", iterations)
     end
-
     # Set the return_result to true so that res! returns outputs
     param = (; param..., return_result=true)
     res = MVector(0.0, 0, 0)
@@ -107,6 +107,7 @@ and magnitude.
     - tether_length: tether length
     - settings:: Settings struct containing environmental and tether parameters: see [Settings](@ref)
     - buffers:: (5, ) Vector{Matrix{Float64}}  Vector of (3, segments) Matrix{Float64} empty matrices for preallocation
+    - segments:: number of tether segments
     - return_result:: Boolean to determine use for in-place optimization or for calculating returns
 
 # Returns (if return_result==true)
@@ -125,7 +126,7 @@ settings = Settings(1.225, [0, 0, -9.806], 0.9, 4, 0.85, 500000)
 res!(res, state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings)
 """
 function res!(res, state_vec, param)
-    kite_pos, kite_vel, wind_vel, tether_length, settings, buffers, return_result = param
+    kite_pos, kite_vel, wind_vel, tether_length, settings, buffers, segments, return_result = param
     g = abs(settings.g_earth[3])
     Ls = tether_length / (segments + 1)
     mj = settings.rho_tether * Ls
@@ -319,6 +320,60 @@ function get_initial_conditions(filename)
 
     settings = Settings(rho_air, g_earth, cd_tether, d_tether, rho_tether, c_spring)
 
+    return state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings
+end
+
+function init_quasistatic(kite_pos, tether_length; kite_vel = nothing, segments = nothing, wind_vel = nothing, settings = nothing)
+    @assert isa(kite_pos, MVector{3}) || error("kite_pos must be a MVector of size (3,1)")
+    if isnothing(kite_vel) 
+        kite_vel = MVector{3}([0.0, 0.0, 0.0])
+    end
+
+    if isnothing(segments) && isnothing(wind_vel)
+        segments = 7
+        wind_vel = zeros(3, segments)
+    elseif isnothing(segments) && !isnothing(wind_vel)
+        @assert size(wind_vel)[1] == 3 || error("wind_vel should have 3 rows!")
+        segments = size(wind_vel)[2]
+    elseif !isnothing(segments) && isnothing(wind_vel)
+        wind_vel = zeros(3, segments)
+    elseif !isnothing(segments) || !isnothing(wind_vel)
+        @assert size(wind_vel)[1] == 3 || error("wind_vel should have 3 rows!")
+        @assert size(wind_vel)[2] == segments || error("wind_vel should have the same number of columns as segments!")
+    end
+
+    if isnothing(settings)
+        settings = Settings()
+    else
+        @assert typeof(settings) == Settings || error("settings should be of type Settings!")
+    end
+
+    if kite_pos[1] != 0.0
+        az_angle = atan(kite_pos[2]/kite_pos[1]) 
+    else
+        if kite_pos[2] == 0.0
+            az_angle = 0.0
+        elseif kite_pos[2] > 0
+            az_angle = pi/2
+        else 
+            az_angle = -pi/2
+        end
+    end
+
+    kite_dist = norm(kite_pos)
+    k_tether = settings.c_spring/tether_length
+    sqrt_xy = sqrt(kite_pos[1]^2 + kite_pos[2]^2)
+    el_angle = atan(kite_pos[3]/sqrt_xy)        
+        
+    if kite_dist >= tether_length #straight tether
+        tension = k_tether*(kite_dist-tether_length)
+        state_vec = MVector{3}([el_angle, az_angle, tension])
+    else 
+        el_angle = 0
+        tension = 0
+        state_vec = MVector{3}([el_angle, az_angle, tension])        
+    end
+    
     return state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings
 end
 
