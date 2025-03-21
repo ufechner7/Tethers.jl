@@ -1,5 +1,5 @@
-#rest lenghts defined from function [done]
-#beta added
+#rest lenghts defined from function 
+#angle beta added, angle between Zaxis and the origin-bridle in XZ plane
 using Timers
 tic()
 using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, Parameters, ControlPlots
@@ -12,6 +12,12 @@ include("videoKPS5.jl")
     v_wind_tether::Vector{Float64} = [0.0, 15, 0.0]      # wind velocity [m/s]
     conn::Vector{Tuple{Int, Int}} = [(1,2), (2,3),
      (3,1), (1,4), (2,4), (3,4), (1,5), (2,5), (3,5)]    # connections between KITE points
+    KITEPOS0::Matrix{Float64} = 
+    [0.000   1    -1    0    0;
+    0.000   0     0    2   -2;
+    0.000   3     3    2    2]                           # KITE points
+    beta::Float64 = pi/8                                # angle XZ plane, netween origin and bridle point [rad]
+    l_totaltether::Float64 = 10.0                             # tether length [m]
     v_ro::Float64 = 1.0                                  # reel-out speed [m/s]
     tethersegments::Int64 = 6                            # number of tether segments [-]
     segments::Int64 = 9 + tethersegments                 # total segments [-]
@@ -38,10 +44,10 @@ end
 # -----------------------------
 # Calculate Initial State
 # -----------------------------
-function calc_initial_state(se)               #first point bridle system, sixth point origin
-    POS0 = [0.000   1    -1    0    0    0.000;
-            0.000   0     0    2   -2    0.000;
-            10.000  13   13   12   12    0.000]
+function calc_initial_state(se)
+    P1LOCATION = [se.l_totaltether*sin(se.beta) 0 se.l_totaltether*cos(se.beta)]
+    POS0 = se.KITEPOS0 .+ P1LOCATION'
+    POS0 = hcat(POS0, zeros(3, 1))
     if se.tethersegments > 1                  # adding extra nodes for tether segments
         extra_nodes = [POS0[:,6] + (POS0[:,1] - POS0[:,6]) * i / se.tethersegments for i in 1:(se.tethersegments-1)]
         POS0 = hcat(POS0, extra_nodes...)
