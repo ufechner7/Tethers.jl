@@ -28,10 +28,6 @@ plt.show() =#
 
 
 tether_pos = hcat(p0, tether_pos, [0; 0; 0])
-
-phi = atan(tether_pos[3, end-1]/sqrt(tether_pos[1, end-1]^2 + tether_pos[2, end-1]^2))
-theta = atan(tether_pos[2, end-1]/tether_pos[1, end-1])
-
 plt.figure("3D view").add_subplot(projection="3d").set_aspect("equal")
 plt.plot3D(tether_pos[1,:], tether_pos[2,:], tether_pos[3,:], marker = "o")
 plt.scatter3D(0, 0, 0,  s = 200, marker = "s", c = "C7")
