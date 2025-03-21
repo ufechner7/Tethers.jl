@@ -362,17 +362,18 @@ function init_quasistatic(kite_pos, tether_length; kite_vel = nothing, segments 
 
     kite_dist = norm(kite_pos)
     k_tether = settings.c_spring/tether_length
-    sqrt_xy = sqrt(kite_pos[1]^2 + kite_pos[2]^2)
-    el_angle = atan(kite_pos[3]/sqrt_xy)        
+    phi_init = atan(kite_pos[2],sqrt(kite_dist^2-kite_pos[2]^2));
+    if abs(phi_init)<1e-5
+        phi_init = 0;
+    end
+    theta_init = atan(kite_pos[1],kite_pos[2]);
         
     if kite_dist >= tether_length #straight tether
         tension = k_tether*(kite_dist-tether_length)
-        state_vec = MVector{3}([el_angle, az_angle, tension])
     else 
-        el_angle = 0
-        tension = 0
-        state_vec = MVector{3}([el_angle, az_angle, tension])        
+        tension = 10000
     end
+    state_vec = MVector{3}([theta_init, phi_init, tension])        
     
     return state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings
 end
@@ -395,4 +396,17 @@ function get_analytic_catenary(filename)
     x_cat       = vec(get(vars, "x", 0))
     y_cat       = vec(get(vars, "y", 0))
     return x_cat, y_cat
+end
+
+
+function transformFromOtoW(windDirection_rad,vec_O)
+    M_WO = [cos(windDirection_rad) sin(windDirection_rad) 0; sin(windDirection_rad) -cos(windDirection_rad) 0;  0 0 -1]
+    vec_W = M_WO*vec_O
+    return vec_W
+end
+
+function transformFromWtoO(windDirection_rad,vec_W)
+    M_OW = [cos(windDirection_rad) sin(windDirection_rad) 0; sin(windDirection_rad) -cos(windDirection_rad) 0; 0 0 -1]
+    vec_O = M_OW*vec_W
+    return vec_O
 end
