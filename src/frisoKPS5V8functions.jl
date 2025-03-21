@@ -44,6 +44,7 @@ function calc_initial_state(se)
 end
 
 function model(se)
+    global sys, POS0
     POS0, VEL0 = calc_initial_state(se)
     @parameters K1=se.K1 K2=se.K2 K3=se.K3 m_kite=se.m_kite m_bridle=se.m_bridle rho_tether=se.rho_tether 
     @parameters l1=sqrt(10) l2=2.0 l3=sqrt(10) l4=sqrt(8) l5=sqrt(6) l6=sqrt(6) l7=sqrt(8) l8=sqrt(6) l9=sqrt(6) l10=10
@@ -71,7 +72,7 @@ function model(se)
 
     eqs1 = vcat(D.(pos) .~ vel,
                 D.(vel) .~ acc)
-    global eqs2 = vcat(eqs1...)
+    eqs2 = vcat(eqs1...)
     eqs2 = vcat(eqs2, acc[:,6] .~ [0.0, 0.0, 0.0])
 
     conn = [(1,2), (2,3), (3,1), (1,4), (2,4), (3,4), (1,5), (2,5), (3,5)]
@@ -83,7 +84,6 @@ function model(se)
     k_segments = vcat(k_segments, [K1 for _ in 1:se.tethersegments]...)
 
     for i in 1:se.segments  
-        global eqs2
         local eqs = [
            segment[:, i]      ~ pos[:, conn[i][2]] - pos[:, conn[i][1]],
            norm1[i]           ~ norm(segment[:, i]),
@@ -106,7 +106,6 @@ function model(se)
     PointMasses = vcat(PointMasses, [mass_tetherpoints for _ in 1:se.tethersegments]...)
 
     for i in 1:se.points  
-        global eqs2
         local eqs = []  
         force = sum([spring_force[:, j] for j in 1:se.segments if conn[j][2] == i]; init=zeros(3)) -
                 sum([spring_force[:, j] for j in 1:se.segments if conn[j][1] == i]; init=zeros(3)) +
@@ -131,7 +130,6 @@ function model(se)
     end
 
     for i in 1:se.points
-        global eqs2
         eqs2 = vcat(eqs2, v_app_point[:, i] ~ se.v_wind_tether - vel[:, i])
     end
 
@@ -140,7 +138,7 @@ function model(se)
     simple_sys, pos, vel
 end
 
-function simulate(se, simple_sys, pos, vel)
+function simulate(se, simple_sys, pos, vel; prn=false)
     dt = 0.02
     tol = 1e-6
     tspan = (0.0, se.duration)
@@ -149,20 +147,22 @@ function simulate(se, simple_sys, pos, vel)
     elapsed_time = @elapsed sol = solve(prob, Rodas5(); dt=dt, abstol=tol, reltol=tol, saveat=ts)
 
     # Debugging: Print the solution
-    #println("Solution (sol):")
-    #println(sol)
+    if prn
+        println("Solution (sol):")
+        println(sol)
 
-    # Debugging: Print positions and velocities at specific time steps
-    for (i, t_val) in enumerate(ts)
-        if i % 10 == 1  # Print every 10th time step
-            println("\nTime = $t_val")
-            println("Positions (pos):")
-            println(sol[pos, i])
-            println("Velocities (vel):")
-            println(sol[vel, i])
+
+        # Debugging: Print positions and velocities at specific time steps
+        for (i, t_val) in enumerate(ts)
+            if i % 10 == 1  # Print every 10th time step
+                println("\nTime = $t_val")
+                println("Positions (pos):")
+                println(sol[pos, i])
+                println("Velocities (vel):")
+                println(sol[vel, i])
+            end
         end
     end
-
     sol, elapsed_time
 end
 function play(se, sol, pos, conn)
@@ -178,11 +178,11 @@ function play(se, sol, pos, conn)
         push!(Z, z)
     end
 
-    # Debugging: Print Y and Z arrays
-    println("Y coordinates:")
-    println(Y)
-    println("Z coordinates:")
-    println(Z)
+    # # Debugging: Print Y and Z arrays
+    # println("Y coordinates:")
+    # println(Y)
+    # println("Z coordinates:")
+    # println(Z)
 
     lines, sc = nothing, nothing
     zlim = (minimum(vcat(Z...)) - 2, maximum(vcat(Z...)) + 2)  # Renamed from ylim to zlim
@@ -209,6 +209,7 @@ function main()
 
     play(se, sol, pos, conn)
     println("Elapsed time: $(elapsed_time) s, speed: $(round(se.duration/elapsed_time)) times real-time")
+    simple_sys
 end
 
 main()
