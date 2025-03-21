@@ -1,4 +1,4 @@
-#naming and comments made more clear
+#naming and comments made more clear and concise, [DONE]
 #different dampings, relative dampings added, Unit damping added
 
 using Timers
@@ -17,13 +17,15 @@ include("videoKPS5.jl")
     points::Int64 = 5 + tethersegments                   # total points [-]
     duration::Float64 = 10                               # simulation duration [s]
     save::Bool = false                                   # save animation frames
-    K1::Float64 = 614600.0                               # TETHER unit spring constant [N/m]
-    K2::Float64 = 10000.0                                # BRIDLE unit spring constant [N/m]
-    K3::Float64 = 60000.0                                # KITE unit spring constant [N/m]
+    springconstant_tether::Float64 = 614600.0            # TETHER unit spring constant [N]
+    springconstant_bridle::Float64 = 10000.0             # BRIDLE unit spring constant [N]
+    springconstant_kite::Float64 = 60000.0               # KITE unit spring constant [N]
     m_kite::Float64 = 6.2 / 4                            # mass of kite [kg]
     m_kcu::Float64 = 8.4                                 # mass of KCU  (at bridle point)[kg]
     rho_tether::Float64 = 724.0                          # density of tether [kg/m³]
-    damping::Float64 = 0.9                               # damping coefficient
+    damping_tether::Float64 = 473                        # TETHER unit damping coefficient [Ns]
+    rel_damping_kite::Float64 = 6.0                      # KITE relative unit damping coefficient [-]
+    rel_damping_bridle:: Float64 = 6.0                    # BRIDLE relative unit damping coefficient [-]
     rho::Float64 = 1.225                                 # air density [kg/m³]
     cd_tether::Float64 = 0.958                           # drag coefficient of tether
     d_tether::Float64 = 0.004                            # tether diameter [m]
@@ -47,9 +49,10 @@ end
 
 function model(se)
     POS0, VEL0 = calc_initial_state(se)
-    @parameters K1=se.K1 K2=se.K2 K3=se.K3 m_kite=se.m_kite m_kcu=se.m_kcu rho_tether=se.rho_tether 
+    # K unit spring constant (K1 tether, K2 bridle, K3 kite); C unit damping constant (C1 tether, C2 bridle, C3 kite) 
+    @parameters K1=se.springconstant_tether K2=se.springconstant_bridle K3=se.springconstant_kite C1=se.damping_tether C2=se.rel_damping_bridle*se.damping_tether C3=se.rel_damping_kite*se.damping_tether
+    @parameters m_kite=se.m_kite m_kcu=se.m_kcu rho_tether=se.rho_tether 
     @parameters l1=sqrt(10) l2=2.0 l3=sqrt(10) l4=sqrt(8) l5=sqrt(6) l6=sqrt(6) l7=sqrt(8) l8=sqrt(6) l9=sqrt(6) l10=10
-    @parameters damping=se.damping
     @parameters rho=se.rho cd_tether=se.cd_tether d_tether=se.d_tether Cl=se.Cl S=se.S 
     @parameters kcu_cd=se.kcu_cd kcu_diameter=se.kcu_diameter
     @variables pos(t)[1:3, 1:se.points] = POS0
@@ -88,6 +91,8 @@ function model(se)
     k_segments = [K2, K3, K2, K2, K3, K3, K2, K3, K3]
     k_segments = vcat(k_segments, [K1 for _ in 1:se.tethersegments]...)
                                        # unit damping
+    c_segments = [C2, C3, C2, C2, C3, C3, C2, C3, C3]
+    c_segments = vcat(c_segments, [C1 for _ in 1:se.tethersegments]...)
                                        # masses
     mass_tether = (d_tether^2)*pi*rho_tether*l10
     mass_tetherpoints = mass_tether/(se.tethersegments+1)
@@ -104,7 +109,7 @@ function model(se)
            rel_vel[:, i]      ~ vel[:, conn[i][2]] - vel[:, conn[i][1]],
            spring_vel[i]      ~ -unit_vector[:, i] ⋅ rel_vel[:, i],
            c_spring[i]        ~ (k_segments[i]/rest_lengths[i]) * (0.1 + 0.9*(norm1[i] > rest_lengths[i])),
-           spring_force[:, i] ~ (c_spring[i]*(norm1[i] - rest_lengths[i]) + damping * spring_vel[i]) * unit_vector[:, i],
+           spring_force[:, i] ~ (c_spring[i]*(norm1[i] - rest_lengths[i]) + c_segments[i] * spring_vel[i]) * unit_vector[:, i],
            v_apparent[:, i]   ~ se.v_wind_tether .- (vel[:, conn[i][1]] + vel[:, conn[i][2]]) / 2,
            v_app_perp[:, i]   ~ v_apparent[:, i] - (v_apparent[:, i] ⋅ unit_vector[:, i]) .* unit_vector[:, i],
            norm_v_app[i]      ~ norm(v_app_perp[:, i]),
