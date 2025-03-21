@@ -348,25 +348,13 @@ function init_quasistatic(kite_pos, tether_length; kite_vel = nothing, segments 
         @assert typeof(settings) == Settings || error("settings should be of type Settings!")
     end
 
-    if kite_pos[1] != 0.0
-        az_angle = atan(kite_pos[2]/kite_pos[1]) 
-    else
-        if kite_pos[2] == 0.0
-            az_angle = 0.0
-        elseif kite_pos[2] > 0
-            az_angle = pi/2
-        else 
-            az_angle = -pi/2
-        end
-    end
-
     kite_dist = norm(kite_pos)
     k_tether = settings.c_spring/tether_length
     phi_init = atan(kite_pos[2],sqrt(kite_dist^2-kite_pos[2]^2));
     if abs(phi_init)<1e-5
         phi_init = 0;
     end
-    theta_init = atan(kite_pos[1],kite_pos[2]);
+    theta_init = atan(kite_pos[1],kite_pos[3]);
         
     if kite_dist >= tether_length #straight tether
         tension = k_tether*(kite_dist-tether_length)
