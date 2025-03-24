@@ -22,12 +22,9 @@ function main()
     # Initial position gamma = 0
     kite_pos = MVector{3}(traj[:, 1])
     # Initialise model
-    tether_length = 300
+    tether_length = 100
     segments = 10
     state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings = init_quasistatic(kite_pos, tether_length, segments = segments)
-    tether_length = 400
-    state_vec, tether_pos, Ft_ground, Ft_kite, p0 =  simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings)
-    tether_length = 500
     state_vec, tether_pos, Ft_ground, Ft_kite, p0 =  simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings)
     tether_pos = hcat(p0, tether_pos, [0; 0; 0])
 
