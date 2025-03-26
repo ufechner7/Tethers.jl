@@ -350,11 +350,11 @@ function init_quasistatic(kite_pos, tether_length; kite_vel = nothing, segments 
 
     kite_dist = norm(kite_pos)
     k_tether = settings.c_spring/tether_length
-    phi_init = atan(kite_pos[2],sqrt(kite_dist^2-kite_pos[2]^2));
+    phi_init = atan(kite_pos[2],sqrt(kite_dist^2-kite_pos[2]^2))
     if abs(phi_init)<1e-5
-        phi_init = 0;
+        phi_init = 0
     end
-    theta_init = atan(kite_pos[1],kite_pos[3]);
+    theta_init = atan(kite_pos[1],kite_pos[3])
         
     if kite_dist >= tether_length #straight tether
         tension = k_tether*(kite_dist-tether_length)
