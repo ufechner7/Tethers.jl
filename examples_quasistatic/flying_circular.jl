@@ -11,17 +11,18 @@ function main()
     traj_x = traj_dist*sin(cone_ang).*cos.(gamma)
     traj_y = traj_dist*sin(cone_ang).*sin.(gamma)
     traj_z = traj_dist*cos(cone_ang) .+ 0.0.*gamma
-    traj = [traj_x'; traj_y'; traj_z']
+    traj   = [traj_x'; traj_y'; traj_z']
 
     rot_mat = [1 0 0; 0 cos(avg_el) -sin(avg_el); 0 sin(avg_el) cos(avg_el)] 
 
     for ii = 1:size(traj)[2]
-    traj[:,ii] .= rot_mat*traj[:,ii]
+        traj[:,ii] .= rot_mat*traj[:,ii]
     end
     
     # Initial position gamma = 0
     kite_pos = MVector{3}(traj[:, 1])
-    # Initialise model
+    
+    # Initialize model
     tether_length = 100
     segments = 10
     state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings = init_quasistatic(kite_pos, tether_length, segments = segments)
