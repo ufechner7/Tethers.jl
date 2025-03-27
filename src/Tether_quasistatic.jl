@@ -1,4 +1,4 @@
-using LinearAlgebra, StaticArrays, ADTypes, NonlinearSolve, MAT, Parameters
+using LinearAlgebra, StaticArrays, ADTypes, NonlinearSolve, MAT, Parameters, QuadGK
 
 const MVec3 = MVector{3, Float64}
 const SVec3 = SVector{3, Float64}
@@ -141,7 +141,7 @@ function res!(res, state_vec, param)
     vj = buffers[4]
     aj = buffers[5]
 
-    # Unpack state variables
+    # Unpack state variables (elevation, azimuth)
     θ, φ, Tn = state_vec[1], state_vec[2], state_vec[3]
 
     # Precompute common values
@@ -154,13 +154,13 @@ function res!(res, state_vec, param)
     v_parallel = dot(kite_vel, p_unit)
     
     # First element calculations
-    FT[1, segments] = Tn * sinθ * cosφ
-    FT[2, segments] = Tn * sinφ
-    FT[3, segments] = Tn * cosθ * cosφ
+    FT[1, segments] = Tn * cosθ * cosφ # cos(elevation)cos(azimuth)
+    FT[2, segments] = Tn * cosθ * sinφ # cos(elevation)sin(azimuth)
+    FT[3, segments] = Tn * sinθ        # sin(azimuth)
 
-    pj[1, segments] = Ls * sinθ * cosφ
-    pj[2, segments] = Ls * sinφ
-    pj[3, segments] = Ls * cosθ * cosφ
+    pj[1, segments] = Ls * cosθ * cosφ
+    pj[2, segments] = Ls * cosθ * sinφ
+    pj[3, segments] = Ls * sinθ
 
     # Velocity and acceleration calculations
     ω = cross(kite_pos / norm_p^2, kite_vel)
@@ -350,16 +350,34 @@ function init_quasistatic(kite_pos, tether_length; kite_vel = nothing, segments 
 
     kite_dist = norm(kite_pos)
     k_tether = settings.c_spring/tether_length
-    phi_init = atan(kite_pos[2],sqrt(kite_dist^2-kite_pos[2]^2))
-    if abs(phi_init)<1e-5
-        phi_init = 0
-    end
-    theta_init = atan(kite_pos[1],kite_pos[3])
-        
+
+    phi_init = atan(kite_pos[2],kite_pos[1])     
+
     if kite_dist >= tether_length #straight tether
+        theta_init = atan(kite_pos[3],sqrt(kite_dist^2-kite_pos[3]^2))
         tension = k_tether*(kite_dist-tether_length)
-    else 
-        tension = 10000
+
+    else # Approximate as parabola
+        tension = 10000      
+        #=  
+        function f!(res, coeff, param)
+            kite_pos, tether_length = param
+            sqrt_term = sqrt(kite_pos[1]^2 + kite_pos[2]^2)
+            integral, err = quadgk(x -> sqrt(1 + (2*coeff[1]*x + coeff[2])^2), 0, sqrt_term, rtol=1e-8)
+            res[1] = coeff[1]*sqrt_term^2 + coeff[2]*sqrt_term + coeff[3] - kite_pos[3]
+            res[2] = integral - tether_length    
+            res[3] = coeff[1]*sqrt_term + coeff[2]        
+        end
+        param = (kite_pos, tether_length)
+        u0 = [1.0; 1.0; 1.0]
+        prob = NonlinearProblem(f!, u0, param)
+        coeff = solve(prob, NewtonRaphson(autodiff=AutoFiniteDiff()), show_trace=Val(true)) 
+        xplot = LinRange(0, sqrt(kite_pos[1]^2 + kite_pos[2]^2), 300)
+        yplot = coeff[1].*xplot.^2 + coeff[1].*xplot
+        plt.plot(xplot, yplot)
+        plt.show() 
+        =#
+        theta_init = -2#atan(2*coeff[1])                  
     end
     state_vec = MVector{3}([theta_init, phi_init, tension])        
     

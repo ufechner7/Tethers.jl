@@ -5,11 +5,10 @@ include("../src/Tether_quasistatic.jl")
 #_, kite_pos, _, _, tether_length, settings = get_initial_conditions("test/data/input_basic_test.mat")
 #state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings = get_initial_conditions("test/data/input_basic_test.mat")
 # Set initial conditions
-kite_pos = MVector{3}([100, 100, 500])
-tether_length = 500;
-state_vec = MVector{3}([2.827132149347252, -0.8, 64865.86737989248])
+kite_pos = MVector{3}([100.0, 100, 500])
+tether_length = 1.05*norm(kite_pos);
 state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings = init_quasistatic(kite_pos, tether_length, segments = 20)
-
+println(state_vec)
 state_vec, tether_pos, Ft_ground, Ft_kite, p0 =  simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings)
 println(state_vec)
 
