@@ -324,7 +324,25 @@ function get_initial_conditions(filename)
     return state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings
 end
 
+"""
+    init_quasistatic(kite_pos, tether_length; kite_vel = nothing, segments = nothing, wind_vel = nothing, settings = nothing)
+
+Initialize the quasi-static tether model providing an initial guess for the state vector based on the numerical solution of the catenary equation
+
+# Arguments
+- kite_pos::MVector{3, Float64} kite position vector in wind reference frame
+- tether_length: Float64 tether length
+- kite_vel::MVector{3, Float64} kite velocity vector in wind reference frame
+- segments::Int number of tether segments
+- wind_vel::MMatrix{3, segments, Float64} wind velocity vector in wind reference frame for each segment of the tether
+- settings::Settings struct containing environmental and tether parameters: see [Settings](@ref)
+
+# Returns
+- state_vec::MVector{3, Float64} state vector (theta [rad], phi [rad], Tn [N])  
+  tether orientation and tension at ground station
+"""
 function init_quasistatic(kite_pos, tether_length; kite_vel = nothing, segments = nothing, wind_vel = nothing, settings = nothing)
+    # Some basic checks
     @assert isa(kite_pos, MVector{3}) || error("kite_pos must be a MVector of size (3,1)")
     if isnothing(kite_vel) 
         kite_vel = MVector{3}([0.0, 0.0, 0.0])
@@ -350,8 +368,12 @@ function init_quasistatic(kite_pos, tether_length; kite_vel = nothing, segments 
     end
 
     kite_dist = norm(kite_pos)
-        phi_init = atan(kite_pos[2],kite_pos[1])     
-    tension = 10#0.0002*settings.c_spring
+
+    # azimuth angle calculation
+    phi_init = atan(kite_pos[2], kite_pos[1])        
+    
+    # tension definition
+    tension = 0.0002*settings.c_spring
     function solve_catenary(kite_pos, tether_length, segments)  
         hvec = kite_pos[1:2]    
         h = norm(hvec)
@@ -370,27 +392,26 @@ function init_quasistatic(kite_pos, tether_length; kite_vel = nothing, segments 
         prob = NonlinearProblem(f!, u0, param)
         coeff = solve(prob, NewtonRaphson(autodiff=AutoFiniteDiff()), show_trace=Val(false)) 
         coeff_val = coeff[]  # Extract scalar value
-        # Generate catenary curve
+        
+        # Adjust catenary solution to specific case
         X = LinRange(0, h, segments)
         angle1 = atan(hvec[1], hvec[2])
         XY = [sin(angle1) * X'; cos(angle1) * X']
-    
-        # Corrected computation for `x_min`
-        x_left = (1 / 2) * (log((tether_length + v) / (tether_length - v)) / coeff_val - h)
-        x_min = -x_left
-    
-        # Corrected computation for `bias`
-        bias = -cosh(x_left * coeff_val) / coeff_val
-    
+        x_min - (1 / 2) * (log((tether_length + v) / (tether_length - v)) / coeff_val - h)
+        bias = -cosh(x_left * coeff_val) / coeff_val    
         # Compute z-coordinates of catenary
         z_catenary = cosh.((X .- x_min) .* coeff_val) ./ coeff_val .+ bias
         x_catenary = XY[1, :]
         y_catenary = XY[2, :]    
         return x_catenary, y_catenary, z_catenary
     end
-    x_catenary, y_catenary, z_catenary = solve_catenary(kite_pos, tether_length, segments)  
-    theta_init = atan(z_catenary[2], sqrt(x_catenary[2]^2 + y_catenary[2]^2))     
 
+    # Solve the catenary equation
+    x_catenary, y_catenary, z_catenary = solve_catenary(kite_pos, tether_length, segments)  
+    # Calculate the elevation angle
+    theta_init = atan(z_catenary[2], sqrt(x_catenary[2]^2 + y_catenary[2]^2))    
+
+    # Assemble state vector
     state_vec = MVector{3}([theta_init, phi_init, tension])        
     
     return state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings
