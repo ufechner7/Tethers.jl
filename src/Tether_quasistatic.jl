@@ -1,4 +1,4 @@
-using LinearAlgebra, StaticArrays, ADTypes, NonlinearSolve, MAT, Parameters, QuadGK
+using LinearAlgebra, StaticArrays, ADTypes, NonlinearSolve, MAT, Parameters#, QuadGK
 
 const MVec3 = MVector{3, Float64}
 const SVec3 = SVector{3, Float64}
@@ -73,7 +73,7 @@ function simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length,
     # Define the nonlinear problem
     prob = NonlinearProblem(res!, state_vec, param)
     # Solve the problem with TrustRegion method
-    sol = solve(prob, TrustRegion(autodiff=AutoFiniteDiff())) 
+    sol = solve(prob, TrustRegion(autodiff=AutoFiniteDiff()), show_trace=Val(false)) 
 
     iterations = sol.stats.nsteps  # Field name may vary; verify with `propertynames(sol)`
     state_vec = sol.u
@@ -129,9 +129,9 @@ function res!(res, state_vec, param)
     kite_pos, kite_vel, wind_vel, tether_length, settings, buffers, segments, return_result = param
     g = abs(settings.g_earth[3])
     Ls = tether_length / (segments + 1)
-    mj = settings.rho_tether * Ls
     drag_coeff = -0.5 * settings.rho * Ls * settings.d_tether * settings.cd_tether
     A = π/4 * (settings.d_tether/1000)^2
+    mj = settings.rho_tether * Ls * A
     E = settings.c_spring / A
 
     # Preallocate arrays
@@ -156,11 +156,12 @@ function res!(res, state_vec, param)
     # First element calculations
     FT[1, segments] = Tn * cosθ * cosφ # cos(elevation)cos(azimuth)
     FT[2, segments] = Tn * cosθ * sinφ # cos(elevation)sin(azimuth)
-    FT[3, segments] = Tn * sinθ        # sin(azimuth)
+    FT[3, segments] = Tn * sinθ        # sin(elevation)
 
     pj[1, segments] = Ls * cosθ * cosφ
     pj[2, segments] = Ls * cosθ * sinφ
     pj[3, segments] = Ls * sinθ
+
 
     # Velocity and acceleration calculations
     ω = cross(kite_pos / norm_p^2, kite_vel)
@@ -349,36 +350,47 @@ function init_quasistatic(kite_pos, tether_length; kite_vel = nothing, segments 
     end
 
     kite_dist = norm(kite_pos)
-    k_tether = settings.c_spring/tether_length
-
-    phi_init = atan(kite_pos[2],kite_pos[1])     
-
-    if kite_dist >= tether_length #straight tether
-        theta_init = atan(kite_pos[3],sqrt(kite_dist^2-kite_pos[3]^2))
-        tension = k_tether*(kite_dist-tether_length)
-
-    else # Approximate as parabola
-        tension = 10000      
-        #=  
-        function f!(res, coeff, param)
-            kite_pos, tether_length = param
-            sqrt_term = sqrt(kite_pos[1]^2 + kite_pos[2]^2)
-            integral, err = quadgk(x -> sqrt(1 + (2*coeff[1]*x + coeff[2])^2), 0, sqrt_term, rtol=1e-8)
-            res[1] = coeff[1]*sqrt_term^2 + coeff[2]*sqrt_term + coeff[3] - kite_pos[3]
-            res[2] = integral - tether_length    
-            res[3] = coeff[1]*sqrt_term + coeff[2]        
+        phi_init = atan(kite_pos[2],kite_pos[1])     
+    tension = 10#0.0002*settings.c_spring
+    function solve_catenary(kite_pos, tether_length, segments)  
+        hvec = kite_pos[1:2]    
+        h = norm(hvec)
+        v = kite_pos[3]
+    
+        # Function for nonlinear solver
+        function f!(res, coeff, param)    
+            tether_length, v, h = param  
+            res[] = sqrt(tether_length^2 - v^2) - (2 * sinh(coeff[] * h / 2) / coeff[])       
         end
-        param = (kite_pos, tether_length)
-        u0 = [1.0; 1.0; 1.0]
+    
+        u0 = [0.1]  # Initial guess as a scalar in an array
+    
+        # Define and solve nonlinear problem
+        param = (tether_length, v, h)
         prob = NonlinearProblem(f!, u0, param)
-        coeff = solve(prob, NewtonRaphson(autodiff=AutoFiniteDiff()), show_trace=Val(true)) 
-        xplot = LinRange(0, sqrt(kite_pos[1]^2 + kite_pos[2]^2), 300)
-        yplot = coeff[1].*xplot.^2 + coeff[1].*xplot
-        plt.plot(xplot, yplot)
-        plt.show() 
-        =#
-        theta_init = -2#atan(2*coeff[1])                  
+        coeff = solve(prob, NewtonRaphson(autodiff=AutoFiniteDiff()), show_trace=Val(false)) 
+        coeff_val = coeff[]  # Extract scalar value
+        # Generate catenary curve
+        X = LinRange(0, h, segments)
+        angle1 = atan(hvec[1], hvec[2])
+        XY = [sin(angle1) * X'; cos(angle1) * X']
+    
+        # Corrected computation for `x_min`
+        x_left = (1 / 2) * (log((tether_length + v) / (tether_length - v)) / coeff_val - h)
+        x_min = -x_left
+    
+        # Corrected computation for `bias`
+        bias = -cosh(x_left * coeff_val) / coeff_val
+    
+        # Compute z-coordinates of catenary
+        z_catenary = cosh.((X .- x_min) .* coeff_val) ./ coeff_val .+ bias
+        x_catenary = XY[1, :]
+        y_catenary = XY[2, :]    
+        return x_catenary, y_catenary, z_catenary
     end
+    x_catenary, y_catenary, z_catenary = solve_catenary(kite_pos, tether_length, segments)  
+    theta_init = atan(z_catenary[2], sqrt(x_catenary[2]^2 + y_catenary[2]^2))     
+
     state_vec = MVector{3}([theta_init, phi_init, tension])        
     
     return state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings
