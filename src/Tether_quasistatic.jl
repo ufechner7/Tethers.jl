@@ -397,8 +397,8 @@ function init_quasistatic(kite_pos, tether_length; kite_vel = nothing, segments 
         X = LinRange(0, h, segments)
         angle1 = atan(hvec[1], hvec[2])
         XY = [sin(angle1) * X'; cos(angle1) * X']
-        x_min - (1 / 2) * (log((tether_length + v) / (tether_length - v)) / coeff_val - h)
-        bias = -cosh(x_left * coeff_val) / coeff_val    
+        x_min = -(1 / 2) * (log((tether_length + v) / (tether_length - v)) / coeff_val - h)
+        bias = -cosh(-x_min * coeff_val) / coeff_val    
         # Compute z-coordinates of catenary
         z_catenary = cosh.((X .- x_min) .* coeff_val) ./ coeff_val .+ bias
         x_catenary = XY[1, :]
