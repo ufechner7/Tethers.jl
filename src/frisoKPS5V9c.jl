@@ -1,6 +1,4 @@
-#add Cl Cd polars, otgether with spline code plot if it works
-#rest lenghts defined from function 
-#angle beta added, angle between Zaxis and the origin-bridle in XZ plane
+#kite defined with setttings and settings cleaned up
 using Timers
 tic()
 using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, Parameters, ControlPlots
