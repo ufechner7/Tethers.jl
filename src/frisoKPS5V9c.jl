@@ -52,7 +52,7 @@ end
 # -----------------------------
 # Calculate Initial State
 # -----------------------------
-function calc_initial_state(se)
+function calc_initial_state(se)  ##MAKE VARIABLES LOWERCASe
     P1LOCATION = [se.l_totaltether*sin(se.beta) 0 se.l_totaltether*cos(se.beta)]
     POS0 = se.KITEPOS0 .+ P1LOCATION'
     POS0 = hcat(POS0, zeros(3, 1))
@@ -108,13 +108,13 @@ function model(se)
     eqs1 = vcat(D.(pos) .~ vel,
                 D.(vel) .~ acc)
     eqs2 = vcat(eqs1...)
-    eqs2 = vcat(eqs2, acc[:,6] .~ [0.0, 0.0, 0.0])
+    eqs2 = vcat(eqs2, acc[:,6] .~ [0.0, 0.0, 0.0])      #origin is six, make 6 not being hardcoded
     # -----------------------------
     # defining the connections and their respective rest lengths, unit spring constants, damping and masses
     # -----------------------------
                                        # connections   adding segment connections, from origin to bridle 
     conn = vcat(se.conn, [(6+i, 6+i+1) for i in 0:(se.tethersegments-2)]...)
-    conn = vcat(conn, [(6+se.tethersegments-1, 1)]) # final connection last tehter point to bridle point
+    conn = vcat(conn, [(6+se.tethersegments-1, 1)]) # final connection last tether point to bridle point
                                        # unit spring constants (K1 tether, K2 bridle, K3 kite)
     k_segments = [K2, K3, K2, K2, K3, K3, K2, K3, K3]
     k_segments = vcat(k_segments, [K1 for _ in 1:se.tethersegments]...)
@@ -132,7 +132,7 @@ function model(se)
 # Equations for Each Segment (Spring Forces, Drag, etc.)
 # -----------------------------
     for i in 1:se.segments  
-        local eqs = [
+        eqs = [
            segment[:, i]      ~ pos[:, conn[i][2]] - pos[:, conn[i][1]],
            norm1[i]           ~ norm(segment[:, i]),
            unit_vector[:, i]  ~ -segment[:, i] / norm1[i],
