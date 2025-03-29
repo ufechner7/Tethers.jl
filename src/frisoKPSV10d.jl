@@ -1,5 +1,7 @@
-# defining kite pos in function
-
+# define 'kite reference frame' and write down in typst.app_norm
+# figure out how AOA defined
+# assign L and D to it 
+# add different plotting ControlPlots
 using Timers
 tic()
 using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, Parameters, ControlPlots
