@@ -54,9 +54,10 @@ include("videoKPS5.jl")
     alpha_cd::Vector{Float64} = [-180.0, -170.0, -140.0, -90.0, -20.0, 0.0, 20.0, 90.0, 140.0, 170.0, 180.0]
     cd_list::Vector{Float64}  = [   0.5,    0.5,    0.5,   1.0,   0.2, 0.1,  0.2,  1.0,   0.5,   0.5,   0.5]
 end
-# ----------------------------
-# get kite points
- #-----------------------------
+
+# -----------------------------
+# Function to get kite points
+# -----------------------------
 function get_kite_points(se)
     KITEPOS0 =                         # KITE points  
     # P1 Bridle        P2                              P3                            P4                     P5
@@ -65,10 +66,31 @@ function get_kite_points(se)
     0.000     se.kite_height+se.bridle_height  se.kite_height+se.bridle_height   se.bridle_height          se.bridle_height]  
     KITEPOS0
 end
+
+# -----------------------------
+# Local Kite Reference Frame
+# -----------------------------
+function local_kite_reference_frame(P2, P3, P4, P5)
+    # Define the X, Y, Z axes based on the kite points
+    X = P2 - P3  # X axis is the vector from P3 to P2
+    Y = P4 - P5  # Y axis is the vector from P5 to P4
+    
+    # Cross product to get Z axis (cross product of X and Y)
+    Z = cross(X, Y)
+    
+    # Normalize the vectors to get unit vectors
+    e_x = X / norm(X)  # Unit vector along the X axis
+    e_y = Y / norm(Y)  # Unit vector along the Y axis
+    e_z = Z / norm(Z)  # Unit vector along the Z axis
+    
+    # Return the unit vectors
+    return e_x, e_y, e_z
+end
+
 # -----------------------------
 # Calculate Initial State
 # -----------------------------
-function calc_initial_state(se)  ##MAKE VARIABLES LOWERCASe
+function calc_initial_state(se)  
     p1location = [se.l_totaltether*sin(se.beta) 0 se.l_totaltether*cos(se.beta)]
     KITEPOS0 = get_kite_points(se)
     POS0 = KITEPOS0 .+ p1location'
@@ -78,26 +100,25 @@ function calc_initial_state(se)  ##MAKE VARIABLES LOWERCASe
         POS0 = hcat(POS0, extra_nodes...)
     end     
     VEL0 = zeros(3, se.points)
-    POS0, VEL0
+    
+    # Get the points P2, P3, P4, P5
+    P2 = POS0[:, 2]
+    P3 = POS0[:, 3]
+    P4 = POS0[:, 4]
+    P5 = POS0[:, 5]
+
+    # Get the local reference frame unit vectors (x', y', z')
+    e_x, e_y, e_z = local_kite_reference_frame(P2, P3, P4, P5)
+    
+    # Store these unit vectors in the Settings object (or as needed)
+    return POS0, VEL0, e_x, e_y, e_z
 end
-# -----------------------------
-# Calculate Rest Lengths
-# -----------------------------
-function calc_rest_lengths(se)
-    POS0, VEL0 = calc_initial_state(se)  
-    # Calculate lengths for the first 9 segments using conn
-    lengths = [norm(POS0[:,se.conn[i][2]] - POS0[:,se.conn[i][1]]) for i in 1:9]
-    # Calculate l10 separately, the tether lenghts l_tether
-    l10 = norm(POS0[:,1] - POS0[:,6])
-    # Add tether segment lengths
-    lengths = vcat(lengths, [(l10+se.v_ro*t)/se.tethersegments for _ in 1:se.tethersegments]...)
-    return lengths, l10
-end
+
 # -----------------------------
 # Define the Model
 # -----------------------------
 function model(se)
-    POS0, VEL0 = calc_initial_state(se)
+    POS0, VEL0, e_x, e_y, e_z  = calc_initial_state(se)
     rest_lengths, l_tether = calc_rest_lengths(se)
     # K unit spring constant (K1 tether, K2 bridle, K3 kite); C unit damping constant (C1 tether, C2 bridle, C3 kite) 
     @parameters K1=se.springconstant_tether K2=se.springconstant_bridle K3=se.springconstant_kite C1=se.damping_tether C2=se.rel_damping_bridle*se.damping_tether C3=se.rel_damping_kite*se.damping_tether
