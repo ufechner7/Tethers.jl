@@ -29,9 +29,9 @@ end
 # -----------------------------
 @with_kw mutable struct Settings @deftype Float64
     g_earth::Vector{Float64} = [0.0, 0.0, -9.81]         # gravitational acceleration [m/s²]
-    v_wind_tether::Vector{Float64} = [30, 0.0, 0.0]    # wind velocity [m/s]
+    v_wind_tether::Vector{Float64} = [15, 0.0, 0.0]      # wind velocity [m/s]
     rho::Float64 = 1.225                                 # air density [kg/m³]
-    duration::Float64 = 0.1                             # simulation duration [s]
+    duration::Float64 = 10                            # simulation duration [s]
     save::Bool = false                                   # save animation frames
     #kite
     m_kite::Float64 = 6.2                                # mass of kite [kg]
@@ -55,7 +55,7 @@ end
     rho_tether::Float64 = 724.0                          # density of tether [kg/m³]
     cd_tether::Float64 = 0.958                           # drag coefficient of tether
     d_tether::Float64 = 0.004                            # tether diameter [m]
-    beta::Float64 = pi/4                                # angle XZ plane, between origin and bridle point [rad]
+    beta::Float64 = pi/20                               # angle XZ plane, between origin and bridle point [rad]
     l_totaltether::Float64 = 10.0                        # tether length [m]
     tethersegments::Int64 = 6                            # number of tether segments [-]
     segments::Int64 = 9 + tethersegments                 # total segments [-]
@@ -72,13 +72,13 @@ end
 end
 
 # Function to compute apparent velocity in xz-plane and calculate Alpha1p
-function compute_alpha1p(v_a, e_y, e_x)
+function compute_alpha1p(v_a, e_z, e_x)
     # Calculate the angle Alpha1p
-    v_a_y = v_a ⋅ e_y  # Use the symbolic dot product
+    v_a_z = v_a ⋅ e_z  # Use the symbolic dot product
     v_a_x = v_a ⋅ e_x  # Use the symbolic dot product
     
     # Use atan for the symbolic computation
-    alpha1p = atan(v_a_y, v_a_x)
+    alpha1p = atan(v_a_z, v_a_x)
     return alpha1p
 end
 function xz_distance(p1, p2)
@@ -95,9 +95,7 @@ function get_kite_points(se)
     beta = se.beta  # Assuming Beta is stored in se.beta
     Y_r = [cos(beta) 0 sin(beta);
                  0    1       0;
-          -sin(beta) 0 cos(beta)]
-
-    
+          -sin(beta) 0 cos(beta)]    
     # Apply rotation to all points
     kitepos0rot =  Y_r * kitepos0 
     
@@ -133,7 +131,7 @@ function calc_initial_state(se)
 
     e_x, e_y, e_z = local_kite_reference_frame(P2, P3, P4, P5)
     
-    return POS0, VEL0, e_x, e_y, e_z
+    return POS0, VEL0#, e_x, e_y, e_z
 end
 
 # Calculate Rest Lengths
@@ -170,7 +168,7 @@ function create_reference_frame_equations(pos, e_x, e_y, e_z)
 end
 # Define the Model
 function model(se)
-    POS0, VEL0, e_x_init, e_y_init, e_z_init  = calc_initial_state(se)
+    POS0, VEL0 = calc_initial_state(se)
     rest_lengths, l_tether = calc_rest_lengths(se)
     @parameters K1=se.springconstant_tether K2=se.springconstant_bridle K3=se.springconstant_kite C1=se.damping_tether C2=se.rel_damping_bridle*se.damping_tether C3=se.rel_damping_kite*se.damping_tether
     @parameters m_kite=se.m_kite m_kcu=se.m_kcu rho_tether=se.rho_tether 
@@ -194,9 +192,9 @@ function model(se)
     @variables drag_force(t)[1:3, 1:se.segments]
     @variables total_force(t)[1:3, 1:se.points]
     # local kite reference frame
-    @variables e_x(t)[1:3] = e_x_init
-    @variables e_y(t)[1:3] = e_y_init
-    @variables e_z(t)[1:3] = e_z_init
+    @variables e_x(t)[1:3] # = e_x_init
+    @variables e_y(t)[1:3] # = e_y_init
+    @variables e_z(t)[1:3] # = e_z_init
     @variables alpha1p(t)[1:4]  
 
     eqs1 = vcat(D.(pos) .~ vel,
@@ -264,7 +262,7 @@ function model(se)
             push!(eqs, total_force[:, i] ~ force + D)
         elseif i in 2:5 #the kite points that get Aero Forces
             v_a = se.v_wind_tether - vel[:, i]  # Apparent wind velocity
-            alpha1p_i = compute_alpha1p(v_a, e_y, e_x)  # Calculate Alpha1p at this time step
+            alpha1p_i = compute_alpha1p(v_a, e_z, e_x)  # Calculate Alpha1p at this time step
             eqs2 = vcat(eqs2, alpha1p[i-1] ~ alpha1p_i)  # Add the equation for Alpha1p for each of 4 kite points (first bering bridle so i-1)   
             # -----------------------------
             # getting Cl and Cd
