@@ -1,12 +1,31 @@
-#trying to make 1p model alpha work to give a L and D
+# trying to make 1p model alpha work to give a L and D
 
 using Timers
 using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, Parameters, ControlPlots
+using ModelingToolkit: Symbolics, @register_symbolic
 using Dierckx
 using ModelingToolkit: t_nounits as t, D_nounits as D
 toc()
 include("videoKPS5.jl")
+# -----------------------------
+# Interpolating polars using Dierckx
+# -----------------------------
+alpha_cl= [-180.0, -160.0, -90.0, -20.0, -10.0,  -5.0,  0.0, 20.0, 40.0, 90.0, 160.0, 180.0]
+cl_list = [   0.0,    0.5,   0.0,  0.08, 0.125,  0.15,  0.2,  1.0,  1.0,  0.0,  -0.5,   0.0]
+alpha_cd = [-180.0, -170.0, -140.0, -90.0, -20.0, 0.0, 20.0, 90.0, 140.0, 170.0, 180.0]
+cd_list = [   0.5,    0.5,    0.5,   1.0,   0.2, 0.1,  0.2,  1.0,   0.5,   0.5,   0.5]
+function cl_interp(alpha)
+    cl_spline = Spline1D(alpha_cl, cl_list)
+    return cl_spline(alpha)
+end
+function cd_interp(alpha)
+    cd_spline = Spline1D(alpha_cd, cd_list)
+    return cd_spline(alpha)
+end
 
+@register_symbolic cl_interp(alpha)
+@register_symbolic cd_interp(alpha)
+# -----------------------------
 @with_kw mutable struct Settings @deftype Float64
     g_earth::Vector{Float64} = [0.0, 0.0, -9.81]         # gravitational acceleration [m/s²]
     v_wind_tether::Vector{Float64} = [15, 15, 15]    # wind velocity [m/s]
@@ -167,7 +186,7 @@ function model(se)
     @variables e_x(t)[1:3] = e_x_init
     @variables e_y(t)[1:3] = e_y_init
     @variables e_z(t)[1:3] = e_z_init
-    @variables alpha1p(t)[1:4] # Declare Alpha1p variable
+    @variables alpha1p(t)[1:4]  
 
     eqs1 = vcat(D.(pos) .~ vel,
                 D.(vel) .~ acc)
@@ -210,29 +229,12 @@ function model(se)
         ]
         eqs2 = vcat(eqs2, reduce(vcat, eqs))
     end
-    # defining 1P angle of attack
-    for i in 2:5  
-        v_a = se.v_wind_tether - vel[:, i]  # Apparent wind velocity
-        alpha1p_i = compute_alpha1p(v_a, e_y, e_x)  # Calculate Alpha1p at this timestep
-        eqs2 = vcat(eqs2, alpha1p[i-1] ~ alpha1p_i)  # Add the equation for Alpha1p
-    end
     # -----------------------------
     # Reference Frame
     # -----------------------------
     ref_frame_eqs = create_reference_frame_equations(pos, e_x, e_y, e_z)
     eqs2 = vcat(eqs2, ref_frame_eqs)
-    # -----------------------------
-    # getting Cl and Cd
-    # -----------------------------
-    alpha_cl=se.alpha_cl
-    cl_list = se.cl_list  
-    cl_spline = Spline1D(alpha_cl, cl_list)
-    Cl = cl_spline(se.alpha)
-    alpha_cd = se.alpha_cd
-    cd_list = se.cd_list
-    cd_spline = Spline1D(alpha_cd, cd_list)
-    Cd = cd_spline(se.alpha)
-    # -----------------------------
+
     # Force Balance at Each Point
     # -----------------------------
     for i in 1:se.points  
@@ -249,7 +251,16 @@ function model(se)
             Dz_kcu = 0.5*rho*kcu_cd *area_kcu*(v_app_point[3, i]*v_app_point[3, i])
             D = [Dx_kcu, Dy_kcu, Dz_kcu]
             push!(eqs, total_force[:, i] ~ force + D)
-        elseif i in 2:5
+        elseif i in 2:5 #the kite points that get Aero Forces
+            v_a = se.v_wind_tether - vel[:, i]  # Apparent wind velocity
+            alpha1p_i = compute_alpha1p(v_a, e_y, e_x)  # Calculate Alpha1p at this time step
+            eqs2 = vcat(eqs2, alpha1p[i-1] ~ alpha1p_i)  # Add the equation for Alpha1p for each of 4 kite points (first bering bridle so i-1)   
+            # -----------------------------
+            # getting Cl and Cd
+            # -----------------------------
+            Cl = cl_interp(alpha1p_i)             # make outside,loop\
+            Cd = cd_interp(alpha1p_i)
+                    
             L_perpoint=(1/4)*0.5*rho*Cl*S*(v_app_point[1, i]*v_app_point[1, i] + v_app_point[2, i]*v_app_point[2, i] + v_app_point[3, i]*v_app_point[3, i])
             L = L_perpoint*(e_z)
             Dx_kite = (1/4)*0.5*rho*Cd*S*(v_app_point[1, i]*v_app_point[1, i])
@@ -276,7 +287,7 @@ function simulate(se, simple_sys, pos, vel, alpha1p; prn=false)
     tspan = (0.0, se.duration)
     ts = 0:dt:se.duration
     prob = ODEProblem(simple_sys, nothing, tspan)
-    elapsed_time = @elapsed sol = solve(prob, Rodas5(); dt=dt, abstol=tol, reltol=tol, saveat=ts)
+    elapsed_time = @elapsed sol = solve(prob, Rodas5(autodiff=false); dt=dt, abstol=tol, reltol=tol, saveat=ts)
 
     # Debugging: Print the solution
     if prn
