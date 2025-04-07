@@ -1,31 +1,47 @@
 using LaTeXStrings
 include("../src/Tether_quasistatic.jl")
 
-
 function main()
     avg_el = deg2rad(70)
     cone_ang = deg2rad(10)
     traj_dist = 500
     gamma = LinRange(0, 2*pi, 20)
+    gamma_dot = 0.05
 
     traj_x = traj_dist*sin(cone_ang).*cos.(gamma)
     traj_y = traj_dist*sin(cone_ang).*sin.(gamma)
     traj_z = traj_dist*cos(cone_ang) .+ 0.0.*gamma
     traj   = [traj_x'; traj_y'; traj_z']
 
+    vel_x = traj_dist*sin(cone_ang).*-sin.(gamma)*gamma_dot
+    vel_y = traj_dist*sin(cone_ang).*cos.(gamma)*gamma_dot
+    vel_z = 0.0.*gamma*gamma_dot
+    vel   = [vel_x'; vel_y'; vel_z']
+
+    acc_x = traj_dist*sin(cone_ang).*-cos.(gamma)*gamma_dot # + terms with gamma_ddot = 0
+    acc_y = traj_dist*sin(cone_ang).*-sin.(gamma)*gamma_dot # + terms with gamma_ddot = 0
+    acc_z = 0.0.*gamma*gamma_dot^2 # + terms with gamma_ddot = 0
+    acc   = [acc_x'; acc_y'; acc_z']
+
+
+
+
     rot_mat = [1 0 0; 0 cos(avg_el) -sin(avg_el); 0 sin(avg_el) cos(avg_el)] 
 
     for ii = 1:size(traj)[2]
         traj[:,ii] .= rot_mat*traj[:,ii]
+        vel[:,ii] .= rot_mat*vel[:,ii]
+        acc[:,ii] .= rot_mat*acc[:,ii]
     end
     
     # Initial position gamma = 0
     kite_pos = MVector{3}(traj[:, 1])
+    kite_vel = MVector{3}(vel[:, 1])
     
     # Initialize model
-    tether_length = 1.05*norm(kite_pos)
+    tether_length = norm(kite_pos)
     segments = 20
-    state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings = init_quasistatic(kite_pos, tether_length, segments = segments)
+    state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings = init_quasistatic(kite_pos, tether_length, kite_vel = kite_vel, segments = segments)
     state_vec, tether_pos, Ft_ground, Ft_kite, p0 =  simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings)
     tether_pos = hcat(p0, tether_pos, [0; 0; 0])
 
@@ -44,6 +60,7 @@ function main()
     
     for ii = 1:length(gamma)
         kite_pos .= MVector{3}(traj[:, ii])
+        kite_vel = MVector{3}(vel[:, ii])
         tether_length = 1.05*norm(kite_pos)
         state_vec, tether_pos, Ft_ground, Ft_kite, p0 = simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings)
         state_vec .= state_vec
