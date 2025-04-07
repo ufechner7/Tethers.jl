@@ -1,9 +1,5 @@
 include("../src/Tether_quasistatic.jl")
 
-# Read the initial conditions from the .mat file
-# state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings
-#_, kite_pos, _, _, tether_length, settings = get_initial_conditions("test/data/input_basic_test.mat")
-#state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings = get_initial_conditions("test/data/input_basic_test.mat")
 # Set initial conditions
 kite_pos = MVector{3}([100.0, 100, 800])
 tether_length = norm(kite_pos)*1.05
