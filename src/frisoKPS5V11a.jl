@@ -261,59 +261,36 @@ function model(se)
             D = [Dx_kcu, Dy_kcu, Dz_kcu]
             push!(eqs, total_force[:, i] ~ force + D)
         elseif i in 2:5 #the kite points that get Aero Forces
-            v_a = se.v_wind_tether - vel[:, i]  # Apparent wind velocity
-            alpha1p_i = compute_alpha1p(v_a, e_z, e_x)  # Calculate Alpha1p at this time step
+            v_a = se.v_wind_tether - vel[:, i]           # Apparent wind velocity
+            v_app_mag_squared = v_app_point[1, i]^2 + v_app_point[2, i]^2 + v_app_point[3, i]^2
+            alpha1p_i = compute_alpha1p(v_a, e_z, e_x)   # Calculate Alpha1p at this time step
             eqs2 = vcat(eqs2, alpha1p[i-1] ~ alpha1p_i)  # Add the equation for Alpha1p for each of 4 kite points (first bering bridle so i-1)   
-            # -----------------------------
             # getting Cl and Cd
-            # -----------------------------
             Cl = cl_interp(alpha1p_i)            
             Cd = cd_interp(alpha1p_i)
-            # Calculate magnitude of apparent velocity squared
-            v_app_mag_squared = v_app_point[1, i]^2 + v_app_point[2, i]^2 + v_app_point[3, i]^2
-            # Lift per point
-            L_perpoint = (1/4) * 0.5 * rho * Cl * S * (v_app_mag_squared)
-            # Handle cross product component-wise to avoid symbolic issues
-            cross_x = v_app_point[2, i] * e_y[3] - v_app_point[3, i] * e_y[2]
-            cross_y = v_app_point[3, i] * e_y[1] - v_app_point[1, i] * e_y[3]
-            cross_z = v_app_point[1, i] * e_y[2] - v_app_point[2, i] * e_y[1]
-            cross_vapp_X_e_y = [cross_x, cross_y, cross_z]
 
-            # Normalize the cross product to get the unit vector in the direction of the lift
-            normcross_vapp_X_e_y = sqrt(cross_x^2 + cross_y^2 + cross_z^2)
-                # Create lift direction components
-            L_direction_x = cross_x / normcross_vapp_X_e_y
-            L_direction_y = cross_y / normcross_vapp_X_e_y
-            L_direction_z = cross_z / normcross_vapp_X_e_y
-            
-            # Final lift force vector components
-            L_x = L_perpoint * L_direction_x
-            L_y = L_perpoint * L_direction_y
-            L_z = L_perpoint * L_direction_z
+            # Lift calculation
+            L_perpoint = (1/4) * 0.5 * rho * Cl * S * (v_app_mag_squared)
+            # Cross product and normalization
+            cross_vapp_X_e_y = cross(v_app_point[:, i], e_y)
+            normcross_vapp_X_e_y = norm(cross_vapp_X_e_y)
+            L_direction = cross_vapp_X_e_y / normcross_vapp_X_e_y
+            # Final lift force vector
+            L = L_perpoint * L_direction
+
             # Drag calculation
             D_perpoint = (1/4) * 0.5 * rho * Cd * S * v_app_mag_squared
-            
-            # Calculate norm of v_app_point manually
-            v_app_norm = sqrt(v_app_point[1, i]^2 + v_app_point[2, i]^2 + v_app_point[3, i]^2)
-            
             # Create drag direction components
-            D_direction_x = v_app_point[1, i] / v_app_norm
-            D_direction_y = v_app_point[2, i] / v_app_norm
-            D_direction_z = v_app_point[3, i] / v_app_norm
-            
+            D_direction = [v_app_point[1, i] / norm(v_app_point[:, i]), v_app_point[2, i] / norm(v_app_point[:, i]), v_app_point[3, i] / norm(v_app_point[:, i])]
             # Final drag force vector components
-            D_x = D_perpoint * D_direction_x
-            D_y = D_perpoint * D_direction_y
-            D_z = D_perpoint * D_direction_z
+            D = D_perpoint * D_direction
             
             # Total aerodynamic force
-            Fa_x = L_x + D_x
-            Fa_y = L_y + D_y
-            Fa_z = L_z + D_z
+            Fa = [L[1]+ D[1], L[2]+ D[2], L[3]+ D[3]]
             
-            push!(eqs, total_force[1, i] ~ force[1] + Fa_x)
-            push!(eqs, total_force[2, i] ~ force[2] + Fa_y)
-            push!(eqs, total_force[3, i] ~ force[3] + Fa_z)
+            push!(eqs, total_force[1, i] ~ force[1] + Fa[1])
+            push!(eqs, total_force[2, i] ~ force[2] + Fa[2])
+            push!(eqs, total_force[3, i] ~ force[3] + Fa[3])
         elseif i != 6                      
             push!(eqs, total_force[:, i] ~ force)
         end
