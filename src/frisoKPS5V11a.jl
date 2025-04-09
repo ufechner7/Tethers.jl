@@ -1,7 +1,9 @@
 # trying to plot AOA  over t
 # initial kite position defined wrt beta instead of global axes system (in line of tether)
-
+# Different bridle line added, mass Distribution more accurate, and own bridle drag added, 'kite tetherdrag' removed
+# accurate kite dimensions added
 using Timers
+tic()
 using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, Parameters, ControlPlots
 using ModelingToolkit: Symbolics, @register_symbolic
 using Dierckx
@@ -29,17 +31,23 @@ end
 # -----------------------------
 @with_kw mutable struct Settings @deftype Float64
     g_earth::Vector{Float64} = [0.0, 0.0, -9.81]         # gravitational acceleration [m/s²]
-    v_wind_tether::Vector{Float64} = [15, 0.0, 0.0]      # wind velocity [m/s]
+    v_wind_tether::Vector{Float64} = [20, 0.0, 0.0]      # wind velocity [m/s]
     rho::Float64 = 1.225                                 # air density [kg/m³]
-    duration::Float64 = 10                            # simulation duration [s]
+    duration::Float64 = 10                           # simulation duration [s]
     save::Bool = false                                   # save animation frames
     #kite
-    m_kite::Float64 = 6.2                                # mass of kite [kg]
-    S::Float64 = 7.0                                     # surface area [m²]
-    kite_width = 4                                       # width of kite [m]
-    kite_height = 1.0                                    # height of kite [m]
-    bridle_height = 2.0                                  # height of bridle [m]
-    chord_length = 2.0                                  # chord length [m]
+    m_kite::Float64 = 10.58                               # mass of kite [kg]
+    S::Float64 = 20.36                                      # surface area [m²]
+    kite_width::Float64 =8.16                                      # width of kite [m]
+    kite_height::Float64 =3.15                                    # height of kite [m]
+    chord_length::Float64 =2.0                                  # chord length [m]
+    #KCU + bridle
+    bridle_height = 4.9                                  # height of bridle [m]
+    d_bridleline::Float64 = 0.00375                                     # bridle line diameter [mm]
+    l_bridle::Float64 = 33.4                           # sum of the lengths of the bridle lines [m]
+    kcu_cd::Float64 = 0.47                               # KCU drag coefficient
+    kcu_diameter::Float64 = 0.38                         # KCU diameter [m]
+    m_kcu::Float64 = 11                                 # mass of KCU  (at bridle point)[kg]
     conn::Vector{Tuple{Int, Int}} = [(1,2), (2,3),
     (3,1), (1,4), (2,4), (3,4), (1,5), (2,5), (3,5)]    # connections between KITE points  
     # spring constants
@@ -55,15 +63,11 @@ end
     rho_tether::Float64 = 724.0                          # density of tether [kg/m³]
     cd_tether::Float64 = 0.958                           # drag coefficient of tether
     d_tether::Float64 = 0.004                            # tether diameter [m]
-    beta::Float64 = pi/20                               # angle XZ plane, between origin and bridle point [rad]
-    l_totaltether::Float64 = 10.0                        # tether length [m]
-    tethersegments::Int64 = 6                            # number of tether segments [-]
+    beta::Float64 = pi/20      #change this name                         # angle XZ plane, between origin and bridle point [rad]
+    l_totaltether::Float64 = 40.0                        # tether length [m]
+    tethersegments::Int64 = 14                            # number of tether segments [-]
     segments::Int64 = 9 + tethersegments                 # total segments [-]
     points::Int64 = 5 + tethersegments                   # total points [-]
-    #KCU
-    kcu_cd::Float64 = 0.47                               # KCU drag coefficient
-    kcu_diameter::Float64 = 0.38                         # KCU diameter [m]
-    m_kcu::Float64 = 8.4                                 # mass of KCU  (at bridle point)[kg]
     #polars
     alpha_cl::Vector{Float64} = [-180.0, -160.0, -90.0, -20.0, -10.0,  -5.0,  0.0, 20.0, 40.0, 90.0, 160.0, 180.0]
     cl_list::Vector{Float64}  = [   0.0,    0.5,   0.0,  0.08, 0.125,  0.15,  0.2,  1.0,  1.0,  0.0,  -0.5,   0.0]
@@ -214,28 +218,58 @@ function model(se)
     c_segments = [C2, C3, C2, C2, C3, C3, C2, C3, C3]
     c_segments = vcat(c_segments, [C1 for _ in 1:se.tethersegments]...)
                             # masses
-    mass_tether = (d_tether^2)*pi*rho_tether*l_tether
+    mass_bridlelines = ((se.d_bridleline/2)^2)*pi*rho_tether*se.l_bridle #total mass entire bridle 
+    mass_halfbridleline = mass_bridlelines/8 # half the connection of bridle line to kite (to assign to each kitepoint) so the other 4 halves get assigned to bridlepoint 
+    mass_tether = ((d_tether/2)^2)*pi*rho_tether*l_tether
     mass_tetherpoints = mass_tether/(se.tethersegments+1)
-    m_kitepoints = se.m_kite/4
-    PointMasses = [se.m_kcu+mass_tetherpoints, m_kitepoints, m_kitepoints, m_kitepoints, m_kitepoints]
+    mass_bridlepoint = 4*mass_halfbridleline + se.m_kcu + mass_tetherpoints # 4 bridle connections, kcu and tether
+    m_kitepoints = (se.m_kite/4) + mass_halfbridleline 
+    PointMasses = [mass_bridlepoint, m_kitepoints, m_kitepoints, m_kitepoints, m_kitepoints]
     PointMasses = vcat(PointMasses, [mass_tetherpoints for _ in 1:se.tethersegments]...)
     # -----------------------------
     # Equations for Each Segment (Spring Forces, Drag, etc.)
     # -----------------------------
-    for i in 1:se.segments  
+    # for i in 1:se.segments  
+    #     eqs = [
+    #     segment[:, i]      ~ pos[:, conn[i][2]] - pos[:, conn[i][1]],
+    #     norm1[i]           ~ norm(segment[:, i]),
+    #     unit_vector[:, i]  ~ -segment[:, i] / norm1[i],
+    #     rel_vel[:, i]      ~ vel[:, conn[i][2]] - vel[:, conn[i][1]],
+    #     spring_vel[i]      ~ -unit_vector[:, i] ⋅ rel_vel[:, i],
+    #     k_spring[i]        ~ (k_segments[i]/rest_lengths[i]) * (0.1 + 0.9*(norm1[i] > rest_lengths[i])),
+    #     spring_force[:, i] ~ (k_spring[i]*(norm1[i] - rest_lengths[i]) + c_segments[i] * spring_vel[i]) * unit_vector[:, i],
+    #     v_apparent[:, i]   ~ se.v_wind_tether .- (vel[:, conn[i][1]] + vel[:, conn[i][2]]) / 2,
+    #     v_app_perp[:, i]   ~ v_apparent[:, i] - (v_apparent[:, i] ⋅ unit_vector[:, i]) .* unit_vector[:, i],
+    #     norm_v_app[i]      ~ norm(v_app_perp[:, i]),
+    #     if i > 9 # tether segments
+    #         half_drag_force[:, i] ~ 0.25 * rho * cd_tether * norm_v_app[i] * (rest_lengths[i]*d_tether) * v_app_perp[:, i]
+    #     elseif i in [1, 3, 4, 7] # bridle lines
+    #         half_drag_force[:, i] ~ 0.25 * rho * cd_tether * norm_v_app[i] * (rest_lengths[i]*se.d_bridleline) * v_app_perp[:, i]
+    #     else # kite
+    #         half_drag_force[:, i] ~ 0.0
+    #     ]
+    #     eqs2 = vcat(eqs2, reduce(vcat, eqs))
+    # end
+    for i in 1:se.segments
         eqs = [
-        segment[:, i]      ~ pos[:, conn[i][2]] - pos[:, conn[i][1]],
-        norm1[i]           ~ norm(segment[:, i]),
-        unit_vector[:, i]  ~ -segment[:, i] / norm1[i],
-        rel_vel[:, i]      ~ vel[:, conn[i][2]] - vel[:, conn[i][1]],
-        spring_vel[i]      ~ -unit_vector[:, i] ⋅ rel_vel[:, i],
-        k_spring[i]        ~ (k_segments[i]/rest_lengths[i]) * (0.1 + 0.9*(norm1[i] > rest_lengths[i])),
-        spring_force[:, i] ~ (k_spring[i]*(norm1[i] - rest_lengths[i]) + c_segments[i] * spring_vel[i]) * unit_vector[:, i],
-        v_apparent[:, i]   ~ se.v_wind_tether .- (vel[:, conn[i][1]] + vel[:, conn[i][2]]) / 2,
-        v_app_perp[:, i]   ~ v_apparent[:, i] - (v_apparent[:, i] ⋅ unit_vector[:, i]) .* unit_vector[:, i],
-        norm_v_app[i]      ~ norm(v_app_perp[:, i]),
-        half_drag_force[:, i] ~ 0.25 * rho * cd_tether * norm_v_app[i] * (rest_lengths[i]*d_tether) * v_app_perp[:, i]
+            segment[:, i]      ~ pos[:, conn[i][2]] - pos[:, conn[i][1]],
+            norm1[i]           ~ norm(segment[:, i]),
+            unit_vector[:, i]  ~ -segment[:, i] / norm1[i],
+            rel_vel[:, i]      ~ vel[:, conn[i][2]] - vel[:, conn[i][1]],
+            spring_vel[i]      ~ -unit_vector[:, i] ⋅ rel_vel[:, i],
+            k_spring[i]        ~ (k_segments[i]/rest_lengths[i]) * (0.1 + 0.9*(norm1[i] > rest_lengths[i])),
+            spring_force[:, i] ~ (k_spring[i]*(norm1[i] - rest_lengths[i]) + c_segments[i] * spring_vel[i]) * unit_vector[:, i],
+            v_apparent[:, i]   ~ se.v_wind_tether .- (vel[:, conn[i][1]] + vel[:, conn[i][2]]) / 2,
+            v_app_perp[:, i]   ~ v_apparent[:, i] - (v_apparent[:, i] ⋅ unit_vector[:, i]) .* unit_vector[:, i],
+            norm_v_app[i]      ~ norm(v_app_perp[:, i])
         ]
+        if i > 9 # tether segments
+            push!(eqs, half_drag_force[:, i] ~ 0.25 * rho * cd_tether * norm_v_app[i] * (rest_lengths[i]*d_tether) * v_app_perp[:, i])
+        elseif i in [1, 3, 4, 7] # bridle lines, try to find Cd_bridlelines later
+            push!(eqs, half_drag_force[:, i] ~ 0.25 * rho * cd_tether * norm_v_app[i] * (rest_lengths[i]*se.d_bridleline) * v_app_perp[:, i])
+        else # kite
+            push!(eqs, half_drag_force[:, i] ~ zeros(3))
+        end
         eqs2 = vcat(eqs2, reduce(vcat, eqs))
     end
     # -----------------------------
