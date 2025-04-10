@@ -1,36 +1,19 @@
-# verifying angle to stab
-# Beta elevation angle Changed
+# average AOA is used, so now only 1 value, not 4, making editable 
 using Timers
 tic()
 using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, Parameters, ControlPlots
 using ModelingToolkit: Symbolics, @register_symbolic
+using OrdinaryDiffEqCore
 using Dierckx
 using ModelingToolkit: t_nounits as t, D_nounits as D
 toc()
-include("videoKPS5.jl")
-# -----------------------------
-# Interpolating polars using Dierckx
-# -----------------------------
-alpha_cl= [-180.0, -160.0, -90.0, -20.0, -10.0,  -5.0,  0.0, 20.0, 40.0, 90.0, 160.0, 180.0]
-cl_list = [   0.0,    0.5,   0.0,  0.08, 0.125,  0.15,  0.2,  1.0,  1.0,  0.0,  -0.5,   0.0]
-alpha_cd = [-180.0, -170.0, -140.0, -90.0, -20.0, 0.0, 20.0, 90.0, 140.0, 170.0, 180.0]
-cd_list = [   0.5,    0.5,    0.5,   1.0,   0.2, 0.1,  0.2,  1.0,   0.5,   0.5,   0.5] 
-function cl_interp(alpha)
-    cl_spline = Spline1D(alpha_cl, cl_list)
-    return cl_spline(alpha)
-end
-function cd_interp(alpha)
-    cd_spline = Spline1D(alpha_cd, cd_list)
-    return cd_spline(alpha)
-end
-@register_symbolic cl_interp(alpha)
-@register_symbolic cd_interp(alpha)
-# -----------------------------
-@with_kw mutable struct Settings @deftype Float64
+@with_kw mutable struct Settings2 @deftype Float64
     g_earth::Vector{Float64} = [0.0, 0.0, -9.81]         # gravitational acceleration [m/s²]
     v_wind_tether::Vector{Float64} = [13.5, 0.0, 0.0]      # wind velocity [m/s]
     rho::Float64 = 1.225                                 # air density [kg/m³]
-    duration::Float64 = 0.01                           # simulation duration [s]
+    duration::Float64 = 1                          # simulation duration [s]
+    dt = 0.05                                          # time step [s]
+    tol = 1e-6                                         # tolerance for the solver
     save::Bool = false                                   # save animation frames
     # kite
     m_kite::Float64 = 10.58                               # mass of kite [kg]
@@ -66,7 +49,78 @@ end
     segments::Int64 = 9 + tethersegments                 # total segments [-]
     points::Int64 = 5 + tethersegments                   # total points [-]
 end
+@with_kw mutable struct KPS5
+    "Reference to the settings2 struct"
+    set::Settings2 = Settings2()
+    sys::Union{ModelingToolkit.ODESystem, Nothing} = nothing
+    t_0::Float64 = 0.0
+    iter::Int64 = 0
+    prob::Union{OrdinaryDiffEqCore.ODEProblem, Nothing} = nothing
+    integrator::Union{OrdinaryDiffEqCore.ODEIntegrator, Nothing} = nothing
+    get_state::Function            = () -> nothing
+end
 
+function init_sim!(s::KPS5)
+    pos, vel = calc_initial_state(s)
+    simple_sys,  pos, vel, conn, e_x, e_y, e_z, v_app_point, alpha1p  = model(s, pos, vel)
+    s.sys = simple_sys
+    # sys, inputs = model(s, pos, vel)
+    # (s.simple_sys, _) = structural_simplify(sys, (inputs, []); simplify=true)
+    tspan = (0.0, s.set.duration)
+    s.prob = ODEProblem(simple_sys, nothing, tspan)
+    #s.prob = ODEProblem(s.simple_sys, nothing, tspan; fully_determined=true)
+    s.integrator = OrdinaryDiffEqCore.init(s.prob, Rodas5(autodiff=false); s.set.dt, abstol=s.set.tol, save_on=false)
+    #s.integrator = OrdinaryDiffEqCore.init(s.prob, solver; dt, abstol=s.set.abs_tol, reltol=s.set.rel_tol, save_on=false)
+end
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Interpolating polars using Dierckx
+# -----------------------------
+alpha_cl= [-180.0, -160.0, -90.0, -20.0, -10.0,  -5.0,  0.0, 20.0, 40.0, 90.0, 160.0, 180.0]
+cl_list = [   0.0,    0.5,   0.0,  0.08, 0.125,  0.15,  0.2,  1.0,  1.0,  0.0,  -0.5,   0.0]
+alpha_cd = [-180.0, -170.0, -140.0, -90.0, -20.0, 0.0, 20.0, 90.0, 140.0, 170.0, 180.0]
+cd_list = [   0.5,    0.5,    0.5,   1.0,   0.2, 0.1,  0.2,  1.0,   0.5,   0.5,   0.5] 
+function cl_interp(alpha)
+    cl_spline = Spline1D(alpha_cl, cl_list)
+    return cl_spline(alpha)
+end
+function cd_interp(alpha)
+    cd_spline = Spline1D(alpha_cd, cd_list)
+    return cd_spline(alpha)
+end
+@register_symbolic cl_interp(alpha)
+@register_symbolic cd_interp(alpha)
+# ----------------------------------------------------------------------------------------------------------------------------------------------------
+# Calculate Initial State
+# ------------------------------
+function calc_initial_state(s)  
+    p1location = [s.set.l_totaltether*cos(s.set.beta) 0 s.set.l_totaltether*sin(s.set.beta)]
+    kitepos0rot = get_kite_points(s)
+    POS0 = kitepos0rot .+ p1location'
+    POS0 = hcat(POS0, zeros(3, 1))
+    if s.set.tethersegments > 1
+        extra_nodes = [POS0[:,6] + (POS0[:,1] - POS0[:,6]) * i / s.set.tethersegments for i in 1:(s.set.tethersegments-1)]
+        POS0 = hcat(POS0, extra_nodes...)
+    end     
+    VEL0 = zeros(3, s.set.points)
+    return POS0, VEL0
+end
+function get_kite_points(s)
+    # Original kite points in local reference frame
+    kitepos0 =                         # KITE points  
+    # P1 Bridle        P2                                    P3                                  P4                              P5
+    [0.000         s.set.chord_length/2               -s.set.chord_length/2                       0                              0;
+    0.000               0                                    0                                -s.set.kite_width/2           s.set.kite_width/2;
+    0.000     s.set.kite_height+s.set.bridle_height    s.set.kite_height+s.set.bridle_height   s.set.bridle_height          s.set.bridle_height]
+
+    beta = s.set.beta  
+    Y_r = [sin(beta) 0 cos(beta);
+                 0    1       0;
+          -cos(beta) 0 sin(beta)]    
+    # Apply rotation to all points
+    kitepos0rot =  Y_r * kitepos0 
+    
+    return kitepos0rot
+end
 # Function to compute apparent velocity in xz-plane and calculate Alpha1p
 function compute_alpha1p(v_a, e_z, e_x)
     # Calculate the angle Alpha1p
@@ -76,26 +130,6 @@ function compute_alpha1p(v_a, e_z, e_x)
     # Use atan for the symbolic computation
     alpha1p =rad2deg.(atan(v_a_z, v_a_x))
     return alpha1p
-end
-function xz_distance(p1, p2)
-    return sqrt((p2[1] - p1[1])^2 + (p2[3] - p1[3])^2)
-end
-function get_kite_points(se)
-    # Original kite points in local reference frame
-    kitepos0 =                         # KITE points  
-    # P1 Bridle        P2                              P3                            P4                            P5
-    [0.000         se.chord_length/2             -se.chord_length/2                  0                              0;
-    0.000               0                               0                        -se.kite_width/2           se.kite_width/2;
-    0.000     se.kite_height+se.bridle_height  se.kite_height+se.bridle_height   se.bridle_height          se.bridle_height]
-
-    beta = se.beta  # Assuming Beta is stored in se.beta
-    Y_r = [sin(beta) 0 cos(beta);
-                 0    1       0;
-          -cos(beta) 0 sin(beta)]    
-    # Apply rotation to all points
-    kitepos0rot =  Y_r * kitepos0 
-    
-    return kitepos0rot
 end
 # Local Kite Reference Frame
 function local_kite_reference_frame(P2, P3, P4, P5)
@@ -108,26 +142,12 @@ function local_kite_reference_frame(P2, P3, P4, P5)
     return e_x, e_y, e_z
 end
 
-# Calculate Initial State
-function calc_initial_state(se)  
-    p1location = [se.l_totaltether*cos(se.beta) 0 se.l_totaltether*sin(se.beta)]
-    kitepos0rot = get_kite_points(se)
-    POS0 = kitepos0rot .+ p1location'
-    POS0 = hcat(POS0, zeros(3, 1))
-    if se.tethersegments > 1
-        extra_nodes = [POS0[:,6] + (POS0[:,1] - POS0[:,6]) * i / se.tethersegments for i in 1:(se.tethersegments-1)]
-        POS0 = hcat(POS0, extra_nodes...)
-    end     
-    VEL0 = zeros(3, se.points)
-    return POS0, VEL0
-end
-
 # Calculate Rest Lengths
-function calc_rest_lengths(se)
-    POS0, VEL0  = calc_initial_state(se)  
-    lengths = [norm(POS0[:,se.conn[i][2]] - POS0[:,se.conn[i][1]]) for i in 1:9]
+function calc_rest_lengths(s)
+    POS0, VEL0  = calc_initial_state(s)  
+    lengths = [norm(POS0[:,s.set.conn[i][2]] - POS0[:,s.set.conn[i][1]]) for i in 1:9]
     l10 = norm(POS0[:,1] - POS0[:,6])
-    lengths = vcat(lengths, [(l10+se.v_ro*t)/se.tethersegments for _ in 1:se.tethersegments]...)
+    lengths = vcat(lengths, [(l10+s.set.v_ro*t)/s.set.tethersegments for _ in 1:s.set.tethersegments]...)
     return lengths, l10
 end
 # Define a function to create reference frame update equations
@@ -154,31 +174,37 @@ function create_reference_frame_equations(pos, e_x, e_y, e_z)
     ]  
     return ref_frame_eqs
 end
-# Define the Model
-function model(se)
-    POS0, VEL0 = calc_initial_state(se)
-    rest_lengths, l_tether = calc_rest_lengths(se)
-    @parameters K1=se.springconstant_tether K2=se.springconstant_bridle K3=se.springconstant_kite C1=se.damping_tether C2=se.rel_damping_bridle*se.damping_tether C3=se.rel_damping_kite*se.damping_tether
-    @parameters m_kite=se.m_kite m_kcu=se.m_kcu rho_tether=se.rho_tether 
-    @parameters rho=se.rho cd_tether=se.cd_tether d_tether=se.d_tether S=se.S 
-    @parameters kcu_cd=se.kcu_cd kcu_diameter=se.kcu_diameter
-    @variables pos(t)[1:3, 1:se.points] = POS0
-    @variables vel(t)[1:3, 1:se.points] = VEL0
-    @variables acc(t)[1:3, 1:se.points]
-    @variables v_app_point(t)[1:3, 1:se.points]
-    @variables segment(t)[1:3, 1:se.segments]
-    @variables unit_vector(t)[1:3, 1:se.segments]
-    @variables norm1(t)[1:se.segments]
-    @variables rel_vel(t)[1:3, 1:se.segments]
-    @variables spring_vel(t)[1:se.segments]
-    @variables k_spring(t)[1:se.segments]
-    @variables spring_force(t)[1:3, 1:se.segments]
-    @variables v_apparent(t)[1:3, 1:se.segments]
-    @variables v_app_perp(t)[1:3, 1:se.segments]
-    @variables norm_v_app(t)[1:se.segments]
-    @variables half_drag_force(t)[1:3, 1:se.segments]
-    @variables drag_force(t)[1:3, 1:se.segments]
-    @variables total_force(t)[1:3, 1:se.points]
+#Define the Model
+#added
+#the pos,vel part 
+#
+function model(s, pos, vel)
+    #POS0, VEL0 = calc_initial_state(s)
+    #added
+    POS0, VEL0 = pos, vel
+    #
+    rest_lengths, l_tether = calc_rest_lengths(s)
+    @parameters K1=s.set.springconstant_tether K2=s.set.springconstant_bridle K3=s.set.springconstant_kite C1=s.set.damping_tether C2=s.set.rel_damping_bridle*s.set.damping_tether C3=s.set.rel_damping_kite*s.set.damping_tether
+    @parameters m_kite=s.set.m_kite m_kcu=s.set.m_kcu rho_tether=s.set.rho_tether 
+    @parameters rho=s.set.rho cd_tether=s.set.cd_tether d_tether=s.set.d_tether S=s.set.S 
+    @parameters kcu_cd=s.set.kcu_cd kcu_diameter=s.set.kcu_diameter
+    @variables pos(t)[1:3, 1:s.set.points] = POS0
+    @variables vel(t)[1:3, 1:s.set.points] = VEL0
+    @variables acc(t)[1:3, 1:s.set.points]
+    @variables v_app_point(t)[1:3, 1:s.set.points]
+    @variables segment(t)[1:3, 1:s.set.segments]
+    @variables unit_vector(t)[1:3, 1:s.set.segments]
+    @variables norm1(t)[1:s.set.segments]
+    @variables rel_vel(t)[1:3, 1:s.set.segments]
+    @variables spring_vel(t)[1:s.set.segments]
+    @variables k_spring(t)[1:s.set.segments]
+    @variables spring_force(t)[1:3, 1:s.set.segments]
+    @variables v_apparent(t)[1:3, 1:s.set.segments]
+    @variables v_app_perp(t)[1:3, 1:s.set.segments]
+    @variables norm_v_app(t)[1:s.set.segments]
+    @variables half_drag_force(t)[1:3, 1:s.set.segments]
+    @variables drag_force(t)[1:3, 1:s.set.segments]
+    @variables total_force(t)[1:3, 1:s.set.points]
     # local kite reference frame
     @variables e_x(t)[1:3]
     @variables e_y(t)[1:3]
@@ -193,27 +219,27 @@ function model(se)
     # defining the connections and their respective rest lengths, unit spring constants, damping and masses
     # -----------------------------
                             # connections   adding segment connections, from origin to bridle 
-    conn = vcat(se.conn, [(6+i, 6+i+1) for i in 0:(se.tethersegments-2)]...)
-    conn = vcat(conn, [(6+se.tethersegments-1, 1)]) # final connection last tether point to bridle point
+    conn = vcat(s.set.conn, [(6+i, 6+i+1) for i in 0:(s.set.tethersegments-2)]...)
+    conn = vcat(conn, [(6+s.set.tethersegments-1, 1)]) # final connection last tether point to bridle point
                             # unit spring constants (K1 tether, K2 bridle, K3 kite)
     k_segments = [K2, K3, K2, K2, K3, K3, K2, K3, K3]
-    k_segments = vcat(k_segments, [K1 for _ in 1:se.tethersegments]...)
+    k_segments = vcat(k_segments, [K1 for _ in 1:s.set.tethersegments]...)
                             # unit damping constants (C1 tether, C2 bridle, C3 kite)
     c_segments = [C2, C3, C2, C2, C3, C3, C2, C3, C3]
-    c_segments = vcat(c_segments, [C1 for _ in 1:se.tethersegments]...)
+    c_segments = vcat(c_segments, [C1 for _ in 1:s.set.tethersegments]...)
                             # masses
-    mass_bridlelines = ((se.d_bridleline/2)^2)*pi*rho_tether*se.l_bridle #total mass entire bridle 
+    mass_bridlelines = ((s.set.d_bridleline/2)^2)*pi*rho_tether*s.set.l_bridle #total mass entire bridle 
     mass_halfbridleline = mass_bridlelines/8 # half the connection of bridle line to kite (to assign to each kitepoint) so the other 4 halves get assigned to bridlepoint 
     mass_tether = ((d_tether/2)^2)*pi*rho_tether*l_tether
-    mass_tetherpoints = mass_tether/(se.tethersegments+1)
-    mass_bridlepoint = 4*mass_halfbridleline + se.m_kcu + mass_tetherpoints # 4 bridle connections, kcu and tether
-    m_kitepoints = (se.m_kite/4) + mass_halfbridleline 
+    mass_tetherpoints = mass_tether/(s.set.tethersegments+1)
+    mass_bridlepoint = 4*mass_halfbridleline + s.set.m_kcu + mass_tetherpoints # 4 bridle connections, kcu and tether
+    m_kitepoints = (s.set.m_kite/4) + mass_halfbridleline 
     PointMasses = [mass_bridlepoint, m_kitepoints, m_kitepoints, m_kitepoints, m_kitepoints]
-    PointMasses = vcat(PointMasses, [mass_tetherpoints for _ in 1:se.tethersegments]...)
+    PointMasses = vcat(PointMasses, [mass_tetherpoints for _ in 1:s.set.tethersegments]...)
     # -----------------------------
     # Equations for Each Segment (Spring Forces, Drag, etc.)
     # -----------------------------
-    for i in 1:se.segments
+    for i in 1:s.set.segments
         eqs = [
             segment[:, i]      ~ pos[:, conn[i][2]] - pos[:, conn[i][1]],
             norm1[i]           ~ norm(segment[:, i]),
@@ -222,14 +248,14 @@ function model(se)
             spring_vel[i]      ~ -unit_vector[:, i] ⋅ rel_vel[:, i],
             k_spring[i]        ~ (k_segments[i]/rest_lengths[i]) * (0.1 + 0.9*(norm1[i] > rest_lengths[i])),
             spring_force[:, i] ~ (k_spring[i]*(norm1[i] - rest_lengths[i]) + c_segments[i] * spring_vel[i]) * unit_vector[:, i],
-            v_apparent[:, i]   ~ se.v_wind_tether .- (vel[:, conn[i][1]] + vel[:, conn[i][2]]) / 2,
+            v_apparent[:, i]   ~ s.set.v_wind_tether .- (vel[:, conn[i][1]] + vel[:, conn[i][2]]) / 2,
             v_app_perp[:, i]   ~ v_apparent[:, i] - (v_apparent[:, i] ⋅ unit_vector[:, i]) .* unit_vector[:, i],
             norm_v_app[i]      ~ norm(v_app_perp[:, i])
         ]
         if i > 9 # tether segments
             push!(eqs, half_drag_force[:, i] ~ 0.25 * rho * cd_tether * norm_v_app[i] * (rest_lengths[i]*d_tether) * v_app_perp[:, i])
         elseif i in [1, 3, 4, 7] # bridle lines, try to find Cd_bridlelines later
-            push!(eqs, half_drag_force[:, i] ~ 0.25 * rho * cd_tether * norm_v_app[i] * (rest_lengths[i]*se.d_bridleline) * v_app_perp[:, i])
+            push!(eqs, half_drag_force[:, i] ~ 0.25 * rho * cd_tether * norm_v_app[i] * (rest_lengths[i]*s.set.d_bridleline) * v_app_perp[:, i])
         else # kite
             push!(eqs, half_drag_force[:, i] ~ zeros(3))
         end
@@ -243,13 +269,13 @@ function model(se)
 
     # Force Balance at Each Point
     # -----------------------------
-    for i in 1:se.points  
+    for i in 1:s.set.points  
         eqs = []  
-        force = sum([spring_force[:, j] for j in 1:se.segments if conn[j][2] == i]; init=zeros(3)) -
-                sum([spring_force[:, j] for j in 1:se.segments if conn[j][1] == i]; init=zeros(3)) +
-                sum([half_drag_force[:, j] for j in 1:se.segments if conn[j][1] == i]; init=zeros(3)) +
-                sum([half_drag_force[:, j] for j in 1:se.segments if conn[j][2] == i]; init=zeros(3))
-        v_app_point[:, i] ~ se.v_wind_tether - vel[:, i]
+        force = sum([spring_force[:, j] for j in 1:s.set.segments if conn[j][2] == i]; init=zeros(3)) -
+                sum([spring_force[:, j] for j in 1:s.set.segments if conn[j][1] == i]; init=zeros(3)) +
+                sum([half_drag_force[:, j] for j in 1:s.set.segments if conn[j][1] == i]; init=zeros(3)) +
+                sum([half_drag_force[:, j] for j in 1:s.set.segments if conn[j][2] == i]; init=zeros(3))
+        v_app_point[:, i] ~ s.set.v_wind_tether - vel[:, i]
         if i == 1                                    #KCU drag at bridle point
             area_kcu = pi * ((kcu_diameter / 2) ^ 2)
             Dx_kcu = 0.5*rho*kcu_cd *area_kcu*(v_app_point[1, i]*v_app_point[1, i])
@@ -258,7 +284,7 @@ function model(se)
             D = [Dx_kcu, Dy_kcu, Dz_kcu]
             push!(eqs, total_force[:, i] ~ force + D)
         elseif i in 2:5 #the kite points that get Aero Forces
-            v_a = se.v_wind_tether - vel[:, i]           # Apparent wind velocity
+            v_a = s.set.v_wind_tether - vel[:, i]           # Appas.set.t wind velocity
             v_app_mag_squared = v_app_point[1, i]^2 + v_app_point[2, i]^2 + v_app_point[3, i]^2
             alpha1p_i = compute_alpha1p(v_a, e_z, e_x)   # Calculate Alpha1p at this time step
             eqs2 = vcat(eqs2, alpha1p[i-1] ~ alpha1p_i)  # Add the equation for Alpha1p for each of 4 kite points (first bering bridle so i-1)   
@@ -290,157 +316,208 @@ function model(se)
         elseif i != 6                      
             push!(eqs, total_force[:, i] ~ force)
         end
-        push!(eqs, acc[:, i] ~ se.g_earth + total_force[:, i] / PointMasses[i])
+        push!(eqs, acc[:, i] ~ s.set.g_earth + total_force[:, i] / PointMasses[i])
         eqs2 = vcat(eqs2, reduce(vcat, eqs))
-        eqs2 = vcat(eqs2, v_app_point[:, i] ~ se.v_wind_tether - vel[:, i])
+        eqs2 = vcat(eqs2, v_app_point[:, i] ~ s.set.v_wind_tether - vel[:, i])
     end
     @named sys = ODESystem(reduce(vcat, Symbolics.scalarize.(eqs2)), t)
     simple_sys = structural_simplify(sys) 
     simple_sys, pos, vel, conn, e_x, e_y, e_z, v_app_point, alpha1p 
+
+    #
 end
+
+# next step function
+# function init_sim!()
+function next_step!(s::KPS5; dt=s.set.dt)
+    s.t_0 = s.integrator.t
+    steptime = @elapsed OrdinaryDiffEqCore.step!(s.integrator, dt, true)
+    # if !successful_retcode(s.integrator.sol)
+    #     println("Return code for solution: ", s.integrator.sol.retcode)
+    # end
+    # @assert successful_retcode(s.integrator.sol)
+    s.iter += 1
+    s.integrator.t, steptime
+end
+
 # -----------------------------
 # Simulation Function
 # -----------------------------
-function simulate(se, simple_sys, pos, vel, alpha1p; prn=false)
-    dt = 0.02
-    tol = 1e-6
-    tspan = (0.0, se.duration)
-    ts = 0:dt:se.duration
-    prob = ODEProblem(simple_sys, nothing, tspan)
-    elapsed_time = @elapsed sol = solve(prob, Rodas5(autodiff=false); dt=dt, abstol=tol, reltol=tol, saveat=ts)
+function generate_getters!(s)
+    sys = s.sys
+    c=collect
+    get_state = ModelingToolkit.getu(sys, 
+        [c(sys.pos)]
+    )
 
-    # Debugging: Print the solution
-    if prn
-        println("Solution (sol):")
-        #println(sol)
-        # Debugging: Print positions and velocities at specific time steps
-        for (i, t_val) in enumerate(ts)
-            if i % 10 == 1  # Print every 10th time step
-                println("\nTime = $t_val")
-                println("Positions (pos):")
-                println(sol[pos, i])
-                println("Velocities (vel):")
-                println(sol[vel, i])
-            end
-        end
-    end
-    sol, elapsed_time
+    s.get_state = (integ) -> get_state(integ)
+    return nothing
 end
-# -----------------------------
-# Plotting Function (for animation)
-# -----------------------------
-function play(se, sol, pos, conn)
-    pos_sol = sol[pos, :]
-    X, Z = [], [] 
-    for i in 1:length(pos_sol)
-        x, z = [], []  # Renamed from x, y to y, z
-        for j in 1:se.points
-            push!(x, pos_sol[i][1, j])  # Extract y-coordinate for point j at time step i
-            push!(z, pos_sol[i][3, j])  # Extract z-coordinate for point j at time step i
-        end
-        push!(X, x)
-        push!(Z, z)
-    end
-    lines, sc = nothing, nothing
-    #zlim = (minimum(vcat(Z...)) - 2, maximum(vcat(Z...)) + 2)  # Renamed from ylim to zlim
-    #xlim = (minimum(vcat(X...)) - 2, maximum(vcat(X...)) + 2)  # Renamed from xlim to ylim
-    zlim = (0,17.5)
-    xlim = (0,17.5)
 
-    for i in 1:length(X)
-        x = X[i]
-        z = Z[i]
-        lines, sc = plot_kite(x, z, xlim, zlim, lines, sc, conn)  # Changed order of arguments if needed
-        plt.pause(0.01)
-        plt.show(block=false)
+function simulate(s)
+    # global sol
+    global u 
+    dt = s.set.dt
+    tol = s.set.tol
+    tspan = (0.0, dt)
+    time_range = 0:dt:s.set.duration-dt
+    steps = length(time_range)
+    iter = 0
+    for i in 1:steps
+        next_step!(s; dt=s.set.dt)
+        # sol = s.integrator.sol
+        u = s.get_state(s.integrator)
+        x = u[1][1, :]
+        y = u[1][2, :]
+        z = u[1][3, :]
+        iter += s.iter
     end
-    nothing
+    println("iter: $iter", " steps: $steps")
+    return nothing
 end
-# -----------------------------
-# Plotting Function for polars
-# -----------------------------
-function plotpolars(alpha_cl, cl_list, alpha_cd, cd_list)
-    # Create a figure with two subplots
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
-    # Create the splines
-    cl_spline = Spline1D(alpha_cl, cl_list)
-    cd_spline = Spline1D(alpha_cd, cd_list)
-    # Create dense x-axis for smooth spline curves
-    alpha_cl_dense = range(0, 45, length=200)
-    alpha_cd_dense = range(0, 45, length=200)
-    # Evaluate splines at dense points
-    cl_values = [cl_spline(a) for a in alpha_cl_dense]
-    cd_values = [cd_spline(a) for a in alpha_cd_dense]
-    # Plot Cl vs Alpha - both original points and spline
-    #ax1.plot(alpha_cl, cl_list, "o", markersize=6, label="Data points")  
-    ax1.plot(alpha_cl_dense, cl_values, "-", label="Spline interpolation")
-    ax1.set_xlabel("Alpha (degrees)")
-    ax1.set_ylabel("Cl")
-    ax1.set_title("Cl vs Alpha")
-    ax1.grid(true)
-    ax1.legend()
-    # Plot Cd vs Alpha - both original points and spline
-    #ax2.plot(alpha_cd, cd_list, "o", markersize=6, label="Data points")
-    ax2.plot(alpha_cd_dense, cd_values, "-", label="Spline interpolation")
-    ax2.set_xlabel("Alpha (degrees)")
-    ax2.set_ylabel("Cd")
-    ax2.set_title("Cd vs Alpha")
-    ax2.grid(true)
-    ax2.legend()
-    plt.tight_layout()
-    plt.show()
-    return fig
-end
-# -----------------------------
-# plotting AOA over time
-# -----------------------------
-function plot_alpha1p_control(sol, alpha1p)
-    # Extract time values
-    time = sol.t
+# function simulates(s, simple_sys, pos, vel, alpha1p; prn=false)
+#     dt = 0.02
+#     tol = 1e-6
+#     tspan = (0.0, s.set.duration)
+#     ts = 0:dt:s.set.duration
+#     prob = ODEProblem(simple_sys, nothing, tspan)
+#     elapsed_time = @elapsed sol = solve(prob, Rodas5(autodiff=false); dt=dt, abstol=tol, reltol=tol, saveat=ts)
+
+#     # Debugging: Print the solution
+#     # if prn
+#     #     println("Solution (sol):")
+#     #     #println(sol)
+#     #     # Debugging: Print positions and velocities at specific time steps
+#     #     for (i, t_val) in enumerate(ts)
+#     #         if i % 10 == 1  # Print every 10th time step
+#     #             println("\nTime = $t_val")
+#     #             println("Positions (pos):")
+#     #             println(sol[pos, i])
+#     #             println("Velocities (vel):")
+#     #             println(sol[vel, i])
+#     #         end
+#     #     end
+#     end
+#     sol, elapsed_time
+# end
+# # -----------------------------
+# # Plotting Function (for animation)
+# # -----------------------------
+# function play(s, sol, pos, conn)
+#     pos_sol = sol[pos, :]
+#     X, Z = [], [] 
+#     for i in 1:length(pos_sol)
+#         x, z = [], []  # Renamed from x, y to y, z
+#         for j in 1:s.set.points
+#             push!(x, pos_sol[i][1, j])  # Extract y-coordinate for point j at time step i
+#             push!(z, pos_sol[i][3, j])  # Extract z-coordinate for point j at time step i
+#         end
+#         push!(X, x)
+#         push!(Z, z)
+#     end
+#     lines, sc = nothing, nothing
+#     #zlim = (minimum(vcat(Z...)) - 2, maximum(vcat(Z...)) + 2)  # Renamed from ylim to zlim
+#     #xlim = (minimum(vcat(X...)) - 2, maximum(vcat(X...)) + 2)  # Renamed from xlim to ylim
+#     zlim = (0,17.5)
+#     xlim = (0,17.5)
+
+#     for i in 1:length(X)
+#         x = X[i]
+#         z = Z[i]
+#         lines, sc = plot_kite(x, z, xlim, zlim, lines, sc, conn)  # Changed order of arguments if needed
+#         plt.pause(0.01)
+#         plt.show(block=false)
+#     end
+#     nothing
+# end
+# # -----------------------------
+# # Plotting Function for polars
+# # -----------------------------
+# function plotpolars(alpha_cl, cl_list, alpha_cd, cd_list)
+#     # Create a figure with two subplots
+#     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+#     # Create the splines
+#     cl_spline = Spline1D(alpha_cl, cl_list)
+#     cd_spline = Spline1D(alpha_cd, cd_list)
+#     # Create dense x-axis for smooth spline curves
+#     alpha_cl_dense = range(0, 45, length=200)
+#     alpha_cd_dense = range(0, 45, length=200)
+#     # Evaluate splines at dense points
+#     cl_values = [cl_spline(a) for a in alpha_cl_dense]
+#     cd_values = [cd_spline(a) for a in alpha_cd_dense]
+#     # Plot Cl vs Alpha - both original points and spline
+#     #ax1.plot(alpha_cl, cl_list, "o", markersize=6, label="Data points")  
+#     ax1.plot(alpha_cl_dense, cl_values, "-", label="Spline interpolation")
+#     ax1.set_xlabel("Alpha (degrees)")
+#     ax1.set_ylabel("Cl")
+#     ax1.set_title("Cl vs Alpha")
+#     ax1.grid(true)
+#     ax1.legend()
+#     # Plot Cd vs Alpha - both original points and spline
+#     #ax2.plot(alpha_cd, cd_list, "o", markersize=6, label="Data points")
+#     ax2.plot(alpha_cd_dense, cd_values, "-", label="Spline interpolation")
+#     ax2.set_xlabel("Alpha (degrees)")
+#     ax2.set_ylabel("Cd")
+#     ax2.set_title("Cd vs Alpha")
+#     ax2.grid(true)
+#     ax2.legend()
+#     plt.tight_layout()
+#     plt.show()
+#     return fig
+# end
+# # -----------------------------
+# # plotting AOA over time
+# # -----------------------------
+# function plot_alpha1p_control(sol, alpha1p)
+#     # Extract time values
+#     time = sol.t
     
-    # Extract alpha1p values for all 4 points
-    alpha1p_values = [sol[alpha1p[i], :] for i in 1:4]
+#     # Extract alpha1p values for all 4 points
+#     alpha1p_values = [sol[alpha1p[i], :] for i in 1:4]
     
-    # Create a figure
-    fig = plt.figure(figsize=(10, 6))
-    ax = fig.add_subplot(111)
+#     # Create a figure
+#     fig = plt.figure(figsize=(10, 6))
+#     ax = fig.add_subplot(111)
     
-    # Plot each alpha1p value
-    ax.plot(time, alpha1p_values[1], label="Kite Point 1")
-    ax.plot(time, alpha1p_values[2], label="Kite Point 2")
-    ax.plot(time, alpha1p_values[3], label="Kite Point 3")
-    ax.plot(time, alpha1p_values[4], label="Kite Point 4")
+#     # Plot each alpha1p value
+#     ax.plot(time, alpha1p_values[1], label="Kite Point 1")
+#     ax.plot(time, alpha1p_values[2], label="Kite Point 2")
+#     ax.plot(time, alpha1p_values[3], label="Kite Point 3")
+#     ax.plot(time, alpha1p_values[4], label="Kite Point 4")
     
-    # Add labels and title
-    ax.set_xlabel("Time (s)")
-    ax.set_ylabel("Angle of Attack (deg)")
-    ax.set_title("Angle of Attack over Time")
-    ax.legend()
-    ax.grid(true)
+#     # Add labels and title
+#     ax.set_xlabel("Time (s)")
+#     ax.set_ylabel("Angle of Attack (deg)")
+#     ax.set_title("Angle of Attack over Time")
+#     ax.legend()
+#     ax.grid(true)
     
-    # Display the plot
-    plt.tight_layout()
-    plt.show()
+#     # Display the plot
+#     plt.tight_layout()
+#     plt.show()
     
-    # Save the figure if needed
-    plt.savefig("alpha1p_over_time.png")
+#     # Save the figure if needed
+#     plt.savefig("alpha1p_over_time.png")
     
-    return fig
-end
+#     return fig
+# end
 # Main function to run the simulation
 function main()
-    se = Settings()
-    simple_sys, pos, vel, conn, e_x, e_y, e_z, v_app_point, alpha1p = model(se)
-    sol, elapsed_time = simulate(se, simple_sys, pos, vel, alpha1p; prn=true)
+    set = Settings2()
+    s = KPS5(set=set)
+    init_sim!(s)
+    generate_getters!(s)
+    #simple_sys, pos, vel, conn, e_x, e_y, e_z, v_app_point, alpha1p = model(set)
+    simulate(s)
     
-    println("Alpha1p over time:")
-    for i in 1:length(sol.t)
-        println("t = $(sol.t[i]): Alpha1p = $(sol[alpha1p, i])")
-    end
-    plot_alpha1p_control(sol, alpha1p)
+    # println("Alpha1p over time:")
+    # for i in 1:length(sol.t)
+    #     println("t = $(sol.t[i]): Alpha1p = $(sol[alpha1p, i])")
+    # end
+    #plot_alpha1p_control(sol, alpha1p)
     #plotpolars(alpha_cl, cl_list, alpha_cd, cd_list)
-    play(se, sol, pos, conn)
-    println("Elapsed time: $(elapsed_time) s, speed: $(round(se.duration/elapsed_time)) times real-time")
+    #play(s, sol, pos, conn)
+    #println("Elapsed time: $(elapsed_time) s, speed: $(round(s.set.duration/elapsed_time)) times real-time")
 end
 
 main()

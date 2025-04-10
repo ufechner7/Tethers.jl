@@ -40,7 +40,7 @@ if test -f "bin/kps-image-${julia_major}.so"; then
     elif [[ $HOSTNAME == "ufryzen" ]]; then
         julia -J  bin/kps-image-${julia_major}.so --project -i -q -t 16 $GCT $EX
     else
-        julia -J  bin/kps-image-${julia_major}.so --project -i -q -t 8 $GCT $EX
+        julia -J  bin/kps-image-${julia_major}.so --project -i -q -t 8 $GCT
     fi
 else
     if [[ $HOSTNAME == "ufryzen" ]]; then
