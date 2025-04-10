@@ -6,6 +6,7 @@ using ModelingToolkit: Symbolics, @register_symbolic
 using OrdinaryDiffEqCore
 using Dierckx
 using ModelingToolkit: t_nounits as t, D_nounits as D
+using KiteUtils
 toc()
 @with_kw mutable struct Settings2 @deftype Float64
     g_earth::Vector{Float64} = [0.0, 0.0, -9.81]         # gravitational acceleration [m/s²]
@@ -354,7 +355,7 @@ function generate_getters!(s)
     return nothing
 end
 
-function simulate(s)
+function simulate(s, logger)
     # global sol
     global u 
     dt = s.set.dt
@@ -362,6 +363,7 @@ function simulate(s)
     tspan = (0.0, dt)
     time_range = 0:dt:s.set.duration-dt
     steps = length(time_range)
+    sys_state = SysState{s.set.points}()
     iter = 0
     for i in 1:steps
         next_step!(s; dt=s.set.dt)
@@ -371,6 +373,10 @@ function simulate(s)
         y = u[1][2, :]
         z = u[1][3, :]
         iter += s.iter
+        sys_state.X .= x
+        sys_state.Y .= y
+        sys_state.Z .= z
+        log!(logger, sys_state)
     end
     println("iter: $iter", " steps: $steps")
     return nothing
@@ -503,12 +509,19 @@ end
 # end
 # Main function to run the simulation
 function main()
+    global logger,lg
     set = Settings2()
     s = KPS5(set=set)
+    time_range = 0:set.dt:set.duration-set.dt
+    steps = length(time_range)
+    logger = Logger(set.points, steps)
     init_sim!(s)
     generate_getters!(s)
     #simple_sys, pos, vel, conn, e_x, e_y, e_z, v_app_point, alpha1p = model(set)
-    simulate(s)
+    simulate(s, logger)
+    save_log(logger, "tmp")
+    lg = load_log("tmp")
+
     
     # println("Alpha1p over time:")
     # for i in 1:length(sol.t)
