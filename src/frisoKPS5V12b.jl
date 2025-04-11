@@ -378,55 +378,6 @@ function generate_getters!(s)
     s.get_state = (integ) -> get_state(integ)
     return nothing
 end
-# -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# Plotting Function (for animation)
-# -----------------------------
-# function play(s, sol, pos, conn)
-#     # pos_sol = sol[pos, :]
-#     # X, Z = [], [] 
-#     # for i in 1:length(pos_sol)
-#     #     x, z = [], []  # Renamed from x, y to y, z
-#     #     for j in 1:s.set.points
-#     #         push!(x, pos_sol[i][1, j])  # Extract y-coordinate for point j at time step i
-#     #         push!(z, pos_sol[i][3, j])  # Extract z-coordinate for point j at time step i
-#     #     end
-#     #     push!(X, x)
-#     #     push!(Z, z)
-#     # end
-#     # lines, sc = nothing, nothing
-#     # #zlim = (minimum(vcat(Z...)) - 2, maximum(vcat(Z...)) + 2)  # Renamed from ylim to zlim
-#     # #xlim = (minimum(vcat(X...)) - 2, maximum(vcat(X...)) + 2)  # Renamed from xlim to ylim
-#     # zlim = (0,17.5)
-#     # xlim = (0,17.5)
-
-#     # for i in 1:length(X)
-#     #     x = X[i]
-#     #     z = Z[i]
-#     #     lines, sc = plot_kite(x, z, xlim, zlim, lines, sc, conn)  # Changed order of arguments if needed
-#     #     plt.pause(0.01)
-#     #     plt.show(block=false)
-#     # end
-#     # nothing
-
-
-#     for t in 0:set.dt:set.duration-set.dt                         # Define points for triangle    
-#         points = [
-#             [t, 0, 2.0],           # top
-#             [t-0.5, 0, 1.0],       # bottom left
-#             [t+0.5, 0, 1.0]        # bottom right
-#             ]
-#         # Define segments to connect points
-#         segments = [
-#             [1, 2],  # top to bottom left
-#             [2, 3],  # bottom left to right
-#             [3, 1]   # bottom right to top
-#         ]
-#         # Plot the triangle
-#         plot2d(points, segments, t; zoom=false, xlim=(0, 5), ylim=(0, 3))
-#         sleep(0.05)
-#     end
-# end
-
 function play(s, lg)
     sl = lg.syslog
     segments = Vector{Int64}[]
@@ -456,9 +407,6 @@ function play(s, lg)
         x_min, x_max = 0, 10
         z_min, z_max = 0, 20
         t = s.set.dt * (step-1)
-        println("points = ", points)
-        println("segments = ", segments)
-        println("t = ", t)
         # Plot the kite system at this time step
         plot2d(points, segments, t;
                zoom = false,
