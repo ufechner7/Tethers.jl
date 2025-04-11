@@ -1,4 +1,6 @@
-# average AOA is used, so now only 1 value, not 4, making editable 
+# average AOA is used, so now only 1 value, not 4, making editable
+# clean up code
+# make actual plot look what Uwe has sent 
 using Timers
 tic()
 using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, Parameters, ControlPlots
@@ -7,12 +9,16 @@ using OrdinaryDiffEqCore
 using Dierckx
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using KiteUtils
+include("plots.jl")
 toc()
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
+# settings
+# ---------
 @with_kw mutable struct Settings2 @deftype Float64
     g_earth::Vector{Float64} = [0.0, 0.0, -9.81]         # gravitational acceleration [m/s²]
     v_wind_tether::Vector{Float64} = [13.5, 0.0, 0.0]      # wind velocity [m/s]
     rho::Float64 = 1.225                                 # air density [kg/m³]
-    duration::Float64 = 1                          # simulation duration [s]
+    duration::Float64 = 10                          # simulation duration [s]
     dt = 0.05                                          # time step [s]
     tol = 1e-6                                         # tolerance for the solver
     save::Bool = false                                   # save animation frames
@@ -60,19 +66,6 @@ end
     integrator::Union{OrdinaryDiffEqCore.ODEIntegrator, Nothing} = nothing
     get_state::Function            = () -> nothing
 end
-
-function init_sim!(s::KPS5)
-    pos, vel = calc_initial_state(s)
-    simple_sys,  pos, vel, conn, e_x, e_y, e_z, v_app_point, alpha1p  = model(s, pos, vel)
-    s.sys = simple_sys
-    # sys, inputs = model(s, pos, vel)
-    # (s.simple_sys, _) = structural_simplify(sys, (inputs, []); simplify=true)
-    tspan = (0.0, s.set.duration)
-    s.prob = ODEProblem(simple_sys, nothing, tspan)
-    #s.prob = ODEProblem(s.simple_sys, nothing, tspan; fully_determined=true)
-    s.integrator = OrdinaryDiffEqCore.init(s.prob, Rodas5(autodiff=false); s.set.dt, abstol=s.set.tol, save_on=false)
-    #s.integrator = OrdinaryDiffEqCore.init(s.prob, solver; dt, abstol=s.set.abs_tol, reltol=s.set.rel_tol, save_on=false)
-end
 # ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Interpolating polars using Dierckx
 # -----------------------------
@@ -90,7 +83,22 @@ function cd_interp(alpha)
 end
 @register_symbolic cl_interp(alpha)
 @register_symbolic cd_interp(alpha)
-# ----------------------------------------------------------------------------------------------------------------------------------------------------
+# -----------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Initialize the simulation
+# -----------------------------------------
+function init_sim!(s::KPS5)
+    pos, vel = calc_initial_state(s)
+    simple_sys,  pos, vel, conn, e_x, e_y, e_z, v_app_point, alpha1p  = model(s, pos, vel)
+    s.sys = simple_sys
+    # sys, inputs = model(s, pos, vel)
+    # (s.simple_sys, _) = structural_simplify(sys, (inputs, []); simplify=true)
+    tspan = (0.0, s.set.duration)
+    s.prob = ODEProblem(simple_sys, nothing, tspan)
+    #s.prob = ODEProblem(s.simple_sys, nothing, tspan; fully_determined=true)
+    s.integrator = OrdinaryDiffEqCore.init(s.prob, Rodas5(autodiff=false); s.set.dt, abstol=s.set.tol, save_on=false)
+    #s.integrator = OrdinaryDiffEqCore.init(s.prob, solver; dt, abstol=s.set.abs_tol, reltol=s.set.rel_tol, save_on=false)
+end
+# ------------------------------
 # Calculate Initial State
 # ------------------------------
 function calc_initial_state(s)  
@@ -105,6 +113,9 @@ function calc_initial_state(s)
     VEL0 = zeros(3, s.set.points)
     return POS0, VEL0
 end
+# -----------------------------------------------------
+# initializing kite points
+# -----------------------------------------------------
 function get_kite_points(s)
     # Original kite points in local reference frame
     kitepos0 =                         # KITE points  
@@ -122,36 +133,9 @@ function get_kite_points(s)
     
     return kitepos0rot
 end
-# Function to compute apparent velocity in xz-plane and calculate Alpha1p
-function compute_alpha1p(v_a, e_z, e_x)
-    # Calculate the angle Alpha1p
-    v_a_z = v_a ⋅ e_z  # Use the symbolic dot product
-    v_a_x = v_a ⋅ e_x  # Use the symbolic dot product
-    
-    # Use atan for the symbolic computation
-    alpha1p =rad2deg.(atan(v_a_z, v_a_x))
-    return alpha1p
-end
-# Local Kite Reference Frame
-function local_kite_reference_frame(P2, P3, P4, P5)
-    X = P2 - P3  # X axis is the vector from P3 to P2
-    Y = P5 - P4  # Y axis is the vector from P4 to P5
-    Z = cross(X, Y)  # Cross product to get Z axis
-    e_x = X / norm(X)  # Unit vector along the X axis
-    e_y = Y / norm(Y)  # Unit vector along the Y axis
-    e_z = Z / norm(Z)  # Unit vector along the Z axis
-    return e_x, e_y, e_z
-end
-
-# Calculate Rest Lengths
-function calc_rest_lengths(s)
-    POS0, VEL0  = calc_initial_state(s)  
-    lengths = [norm(POS0[:,s.set.conn[i][2]] - POS0[:,s.set.conn[i][1]]) for i in 1:9]
-    l10 = norm(POS0[:,1] - POS0[:,6])
-    lengths = vcat(lengths, [(l10+s.set.v_ro*t)/s.set.tethersegments for _ in 1:s.set.tethersegments]...)
-    return lengths, l10
-end
+# -------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Define a function to create reference frame update equations
+# ---------------------------------------------------------------
 function create_reference_frame_equations(pos, e_x, e_y, e_z)
     # Calculate vectors for the reference frame
     X = pos[:, 2] - pos[:, 3]  # Vector from P3 to P2
@@ -175,15 +159,33 @@ function create_reference_frame_equations(pos, e_x, e_y, e_z)
     ]  
     return ref_frame_eqs
 end
+# --------------------------------------------------------------------------
+# computing angle of attack
+# --------------------------------------------------------------------------
+function compute_alpha1p(v_a, e_z, e_x)
+    # Calculate the angle Alpha1p
+    v_a_z = v_a ⋅ e_z  # Use the symbolic dot product
+    v_a_x = v_a ⋅ e_x  # Use the symbolic dot product
+    
+    # Use atan for the symbolic computation
+    alpha1p =rad2deg.(atan(v_a_z, v_a_x))
+    return alpha1p
+end
+# ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Calculate Rest Lengths
+# ---------------------------
+function calc_rest_lengths(s)
+    POS0, VEL0  = calc_initial_state(s)  
+    lengths = [norm(POS0[:,s.set.conn[i][2]] - POS0[:,s.set.conn[i][1]]) for i in 1:9]
+    l10 = norm(POS0[:,1] - POS0[:,6])
+    lengths = vcat(lengths, [(l10+s.set.v_ro*t)/s.set.tethersegments for _ in 1:s.set.tethersegments]...)
+    return lengths, l10
+end
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #Define the Model
-#added
-#the pos,vel part 
-#
+# -----------------------------------------------
 function model(s, pos, vel)
-    #POS0, VEL0 = calc_initial_state(s)
-    #added
     POS0, VEL0 = pos, vel
-    #
     rest_lengths, l_tether = calc_rest_lengths(s)
     @parameters K1=s.set.springconstant_tether K2=s.set.springconstant_bridle K3=s.set.springconstant_kite C1=s.set.damping_tether C2=s.set.rel_damping_bridle*s.set.damping_tether C3=s.set.rel_damping_kite*s.set.damping_tether
     @parameters m_kite=s.set.m_kite m_kcu=s.set.m_kcu rho_tether=s.set.rho_tether 
@@ -267,7 +269,7 @@ function model(s, pos, vel)
     # -----------------------------
     ref_frame_eqs = create_reference_frame_equations(pos, e_x, e_y, e_z)
     eqs2 = vcat(eqs2, ref_frame_eqs)
-
+    # -----------------------------
     # Force Balance at Each Point
     # -----------------------------
     for i in 1:s.set.points  
@@ -324,46 +326,25 @@ function model(s, pos, vel)
     @named sys = ODESystem(reduce(vcat, Symbolics.scalarize.(eqs2)), t)
     simple_sys = structural_simplify(sys) 
     simple_sys, pos, vel, conn, e_x, e_y, e_z, v_app_point, alpha1p 
-
-    #
 end
-
+# -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # next step function
-# function init_sim!()
+# -----------------------------
 function next_step!(s::KPS5; dt=s.set.dt)
     s.t_0 = s.integrator.t
     steptime = @elapsed OrdinaryDiffEqCore.step!(s.integrator, dt, true)
-    # if !successful_retcode(s.integrator.sol)
-    #     println("Return code for solution: ", s.integrator.sol.retcode)
-    # end
-    # @assert successful_retcode(s.integrator.sol)
     s.iter += 1
     s.integrator.t, steptime
 end
-
 # -----------------------------
 # Simulation Function
 # -----------------------------
-function generate_getters!(s)
-    sys = s.sys
-    c=collect
-    get_state = ModelingToolkit.getu(sys, 
-        [c(sys.pos)]
-    )
-
-    s.get_state = (integ) -> get_state(integ)
-    return nothing
-end
-
 function simulate(s, logger)
-    # global sol
-    global u 
     dt = s.set.dt
     tol = s.set.tol
     tspan = (0.0, dt)
     time_range = 0:dt:s.set.duration-dt
     steps = length(time_range)
-    sys_state = SysState{s.set.points}()
     iter = 0
     for i in 1:steps
         next_step!(s; dt=s.set.dt)
@@ -373,164 +354,150 @@ function simulate(s, logger)
         y = u[1][2, :]
         z = u[1][3, :]
         iter += s.iter
+        sys_state = SysState{s.set.points}()
         sys_state.X .= x
         sys_state.Y .= y
         sys_state.Z .= z
+        println("iter: $iter", " steps: $steps")
+        # sys_state.time = t
         log!(logger, sys_state)
+        println(x[end], ", ", sys_state.X[end])
     end
     println("iter: $iter", " steps: $steps")
     return nothing
 end
-# function simulates(s, simple_sys, pos, vel, alpha1p; prn=false)
-#     dt = 0.02
-#     tol = 1e-6
-#     tspan = (0.0, s.set.duration)
-#     ts = 0:dt:s.set.duration
-#     prob = ODEProblem(simple_sys, nothing, tspan)
-#     elapsed_time = @elapsed sol = solve(prob, Rodas5(autodiff=false); dt=dt, abstol=tol, reltol=tol, saveat=ts)
-
-#     # Debugging: Print the solution
-#     # if prn
-#     #     println("Solution (sol):")
-#     #     #println(sol)
-#     #     # Debugging: Print positions and velocities at specific time steps
-#     #     for (i, t_val) in enumerate(ts)
-#     #         if i % 10 == 1  # Print every 10th time step
-#     #             println("\nTime = $t_val")
-#     #             println("Positions (pos):")
-#     #             println(sol[pos, i])
-#     #             println("Velocities (vel):")
-#     #             println(sol[vel, i])
-#     #         end
-#     #     end
-#     end
-#     sol, elapsed_time
-# end
-# # -----------------------------
-# # Plotting Function (for animation)
-# # -----------------------------
+# ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Generate Getters
+# -----------------------------
+function generate_getters!(s)
+    sys = s.sys
+    c = collect
+    get_state = ModelingToolkit.getu(sys, 
+        [c(sys.pos)]
+    )
+    s.get_state = (integ) -> get_state(integ)
+    return nothing
+end
+# -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Plotting Function (for animation)
+# -----------------------------
 # function play(s, sol, pos, conn)
-#     pos_sol = sol[pos, :]
-#     X, Z = [], [] 
-#     for i in 1:length(pos_sol)
-#         x, z = [], []  # Renamed from x, y to y, z
-#         for j in 1:s.set.points
-#             push!(x, pos_sol[i][1, j])  # Extract y-coordinate for point j at time step i
-#             push!(z, pos_sol[i][3, j])  # Extract z-coordinate for point j at time step i
-#         end
-#         push!(X, x)
-#         push!(Z, z)
-#     end
-#     lines, sc = nothing, nothing
-#     #zlim = (minimum(vcat(Z...)) - 2, maximum(vcat(Z...)) + 2)  # Renamed from ylim to zlim
-#     #xlim = (minimum(vcat(X...)) - 2, maximum(vcat(X...)) + 2)  # Renamed from xlim to ylim
-#     zlim = (0,17.5)
-#     xlim = (0,17.5)
+#     # pos_sol = sol[pos, :]
+#     # X, Z = [], [] 
+#     # for i in 1:length(pos_sol)
+#     #     x, z = [], []  # Renamed from x, y to y, z
+#     #     for j in 1:s.set.points
+#     #         push!(x, pos_sol[i][1, j])  # Extract y-coordinate for point j at time step i
+#     #         push!(z, pos_sol[i][3, j])  # Extract z-coordinate for point j at time step i
+#     #     end
+#     #     push!(X, x)
+#     #     push!(Z, z)
+#     # end
+#     # lines, sc = nothing, nothing
+#     # #zlim = (minimum(vcat(Z...)) - 2, maximum(vcat(Z...)) + 2)  # Renamed from ylim to zlim
+#     # #xlim = (minimum(vcat(X...)) - 2, maximum(vcat(X...)) + 2)  # Renamed from xlim to ylim
+#     # zlim = (0,17.5)
+#     # xlim = (0,17.5)
 
-#     for i in 1:length(X)
-#         x = X[i]
-#         z = Z[i]
-#         lines, sc = plot_kite(x, z, xlim, zlim, lines, sc, conn)  # Changed order of arguments if needed
-#         plt.pause(0.01)
-#         plt.show(block=false)
+#     # for i in 1:length(X)
+#     #     x = X[i]
+#     #     z = Z[i]
+#     #     lines, sc = plot_kite(x, z, xlim, zlim, lines, sc, conn)  # Changed order of arguments if needed
+#     #     plt.pause(0.01)
+#     #     plt.show(block=false)
+#     # end
+#     # nothing
+
+
+#     for t in 0:set.dt:set.duration-set.dt                         # Define points for triangle    
+#         points = [
+#             [t, 0, 2.0],           # top
+#             [t-0.5, 0, 1.0],       # bottom left
+#             [t+0.5, 0, 1.0]        # bottom right
+#             ]
+#         # Define segments to connect points
+#         segments = [
+#             [1, 2],  # top to bottom left
+#             [2, 3],  # bottom left to right
+#             [3, 1]   # bottom right to top
+#         ]
+#         # Plot the triangle
+#         plot2d(points, segments, t; zoom=false, xlim=(0, 5), ylim=(0, 3))
+#         sleep(0.05)
 #     end
-#     nothing
 # end
-# # -----------------------------
-# # Plotting Function for polars
-# # -----------------------------
-# function plotpolars(alpha_cl, cl_list, alpha_cd, cd_list)
-#     # Create a figure with two subplots
-#     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
-#     # Create the splines
-#     cl_spline = Spline1D(alpha_cl, cl_list)
-#     cd_spline = Spline1D(alpha_cd, cd_list)
-#     # Create dense x-axis for smooth spline curves
-#     alpha_cl_dense = range(0, 45, length=200)
-#     alpha_cd_dense = range(0, 45, length=200)
-#     # Evaluate splines at dense points
-#     cl_values = [cl_spline(a) for a in alpha_cl_dense]
-#     cd_values = [cd_spline(a) for a in alpha_cd_dense]
-#     # Plot Cl vs Alpha - both original points and spline
-#     #ax1.plot(alpha_cl, cl_list, "o", markersize=6, label="Data points")  
-#     ax1.plot(alpha_cl_dense, cl_values, "-", label="Spline interpolation")
-#     ax1.set_xlabel("Alpha (degrees)")
-#     ax1.set_ylabel("Cl")
-#     ax1.set_title("Cl vs Alpha")
-#     ax1.grid(true)
-#     ax1.legend()
-#     # Plot Cd vs Alpha - both original points and spline
-#     #ax2.plot(alpha_cd, cd_list, "o", markersize=6, label="Data points")
-#     ax2.plot(alpha_cd_dense, cd_values, "-", label="Spline interpolation")
-#     ax2.set_xlabel("Alpha (degrees)")
-#     ax2.set_ylabel("Cd")
-#     ax2.set_title("Cd vs Alpha")
-#     ax2.grid(true)
-#     ax2.legend()
-#     plt.tight_layout()
-#     plt.show()
-#     return fig
-# end
-# # -----------------------------
-# # plotting AOA over time
-# # -----------------------------
-# function plot_alpha1p_control(sol, alpha1p)
-#     # Extract time values
-#     time = sol.t
-    
-#     # Extract alpha1p values for all 4 points
-#     alpha1p_values = [sol[alpha1p[i], :] for i in 1:4]
-    
-#     # Create a figure
-#     fig = plt.figure(figsize=(10, 6))
-#     ax = fig.add_subplot(111)
-    
-#     # Plot each alpha1p value
-#     ax.plot(time, alpha1p_values[1], label="Kite Point 1")
-#     ax.plot(time, alpha1p_values[2], label="Kite Point 2")
-#     ax.plot(time, alpha1p_values[3], label="Kite Point 3")
-#     ax.plot(time, alpha1p_values[4], label="Kite Point 4")
-    
-#     # Add labels and title
-#     ax.set_xlabel("Time (s)")
-#     ax.set_ylabel("Angle of Attack (deg)")
-#     ax.set_title("Angle of Attack over Time")
-#     ax.legend()
-#     ax.grid(true)
-    
-#     # Display the plot
-#     plt.tight_layout()
-#     plt.show()
-    
-#     # Save the figure if needed
-#     plt.savefig("alpha1p_over_time.png")
-    
-#     return fig
-# end
-# Main function to run the simulation
+
+function play(s, lg)
+    sl = lg.syslog
+    segments = Vector{Int64}[]
+    for conn_pair in s.set.conn
+        push!(segments, Int64[conn_pair[1], conn_pair[2]])
+    end
+
+    # Add tether segments
+    for i in 0:(s.set.tethersegments-2)
+        push!(segments, [6+i, 6+i+1])
+    end
+    # Add final connection from last tether point to bridle point
+    push!(segments, [6+s.set.tethersegments-1, 1])
+
+    for step in 1:length(0:s.set.dt:s.set.duration)-1 #-s.set.dt
+        # Get positions at this time step
+        x = sl.X[step]
+        y = sl.Y[step]
+        z = sl.Z[step]
+        
+        # Create points array for all points in the system
+        points = Vector{Float64}[]
+        for i in 1:s.set.points
+            push!(points, Float64[x[i], y[i], z[i]])
+        end        
+        # Calculate appropriate limits for the plot
+        x_min, x_max = 0, 10
+        z_min, z_max = 0, 20
+        t = s.set.dt * (step-1)
+        println("points = ", points)
+        println("segments = ", segments)
+        println("t = ", t)
+        # Plot the kite system at this time step
+        plot2d(points, segments, t;
+               zoom = false,
+               xlim = (x_min, x_max),
+               ylim = (z_min, z_max)
+        )
+        
+        # Add a small delay to control animation speed
+        sleep(0.05)
+    end
+    nothing
+end
+
+function plot_front_view3(lg)
+    display(plotxy(lg.y, lg.z;
+    xlabel="pos_y [m]",
+    ylabel="height [m]",
+    fig="front_view"))
+    nothing
+end
+# ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Running the Main Function
+# -----------------------------
 function main()
-    global logger,lg
+    global lg
     set = Settings2()
     s = KPS5(set=set)
     time_range = 0:set.dt:set.duration-set.dt
     steps = length(time_range)
-    logger = Logger(set.points, steps)
+    logger = Logger(s.set.points, steps)
     init_sim!(s)
     generate_getters!(s)
-    #simple_sys, pos, vel, conn, e_x, e_y, e_z, v_app_point, alpha1p = model(set)
     simulate(s, logger)
     save_log(logger, "tmp")
     lg = load_log("tmp")
-
-    
-    # println("Alpha1p over time:")
-    # for i in 1:length(sol.t)
-    #     println("t = $(sol.t[i]): Alpha1p = $(sol[alpha1p, i])")
-    # end
-    #plot_alpha1p_control(sol, alpha1p)
-    #plotpolars(alpha_cl, cl_list, alpha_cd, cd_list)
-    #play(s, sol, pos, conn)
-    #println("Elapsed time: $(elapsed_time) s, speed: $(round(s.set.duration/elapsed_time)) times real-time")
+    # plot_front_view3(lg)
+    # Display animation
+    play(s, lg)
 end
 
 main()
+# ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
