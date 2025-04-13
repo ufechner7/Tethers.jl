@@ -1,6 +1,7 @@
 # average AOA is used, so now only 1 value, not 4, making editable
 # clean up code
-# make actual plot look what Uwe has sent 
+# New Plot
+# Using logger
 using Timers
 tic()
 using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, Parameters, ControlPlots
@@ -15,46 +16,46 @@ toc()
 # settings
 # ---------
 @with_kw mutable struct Settings2 @deftype Float64
-    g_earth::Vector{Float64} = [0.0, 0.0, -9.81]         # gravitational acceleration [m/s²]
+    g_earth::Vector{Float64} = [0.0, 0.0, -9.81]           # gravitational acceleration [m/s²]
     v_wind_tether::Vector{Float64} = [13.5, 0.0, 0.0]      # wind velocity [m/s]
-    rho::Float64 = 1.225                                 # air density [kg/m³]
-    duration::Float64 = 10                          # simulation duration [s]
-    dt = 0.05                                          # time step [s]
-    tol = 1e-6                                         # tolerance for the solver
-    save::Bool = false                                   # save animation frames
-    # kite
-    m_kite::Float64 = 10.58                               # mass of kite [kg]
-    S::Float64 = 20.36                                      # surface area [m²]
-    kite_width::Float64 = 8.16                                      # width of kite [m]
-    kite_height::Float64 = 3.15                                    # height of kite [m]
-    chord_length::Float64 = 2.0                                  # chord length [m]
+    rho::Float64 = 1.225                                   # air density [kg/m³]
+    duration::Float64 = 10                                 # simulation duration [s]
+    dt = 0.05                                              # time step [s]
+    tol = 1e-6                                             # tolerance for the solver
+    save::Bool = false                                     # save animation frames
+    # kite 
+    m_kite::Float64 = 10.58                                # mass of kite [kg]
+    S::Float64 = 20.36                                     # surface area [m²]
+    kite_width::Float64 = 8.16                             # width of kite [m]
+    kite_height::Float64 = 3.15                            # height of kite [m]
+    chord_length::Float64 = 2.0                            # chord length [m]
     # KCU + bridle
-    bridle_height = 4.9                                  # height of bridle [m]
-    d_bridleline::Float64 = 0.00375                                     # bridle line diameter [mm]
-    l_bridle::Float64 = 33.4                           # sum of the lengths of the bridle lines [m]
-    kcu_cd::Float64 = 0.47                               # KCU drag coefficient
-    kcu_diameter::Float64 = 0.38                         # KCU diameter [m]
-    m_kcu::Float64 = 11                                 # mass of KCU  (at bridle point)[kg]
+    bridle_height = 4.9                                    # height of bridle [m]
+    d_bridleline::Float64 = 0.00375                        # bridle line diameter [mm]
+    l_bridle::Float64 = 33.4                               # sum of the lengths of the bridle lines [m]
+    kcu_cd::Float64 = 0.47                                 # KCU drag coefficient
+    kcu_diameter::Float64 = 0.38                           # KCU diameter [m]
+    m_kcu::Float64 = 11                                    # mass of KCU  (at bridle point)[kg]
     conn::Vector{Tuple{Int, Int}} = [(1,2), (2,3),
-    (3,1), (1,4), (2,4), (3,4), (1,5), (2,5), (3,5)]    # connections between KITE points  
+    (3,1), (1,4), (2,4), (3,4), (1,5), (2,5), (3,5)]       # connections between KITE points  
     # spring constants
-    springconstant_tether::Float64 = 614600.0            # TETHER unit spring constant [N]
-    springconstant_bridle::Float64 = 10000.0             # BRIDLE unit spring constant [N]
-    springconstant_kite::Float64 = 60000.0               # KITE unit spring constant [N]
+    springconstant_tether::Float64 = 614600.0              # TETHER unit spring constant [N]
+    springconstant_bridle::Float64 = 10000.0               # BRIDLE unit spring constant [N]
+    springconstant_kite::Float64 = 60000.0                 # KITE unit spring constant [N]
     # damping
-    damping_tether::Float64 = 473                        # TETHER unit damping coefficient [Ns]
-    rel_damping_kite::Float64 = 6.0                      # KITE relative unit damping coefficient [-]
-    rel_damping_bridle:: Float64 = 6.0                   # BRIDLE relative unit damping coefficient [-]
+    damping_tether::Float64 = 473                          # TETHER unit damping coefficient [Ns]
+    rel_damping_kite::Float64 = 6.0                        # KITE relative unit damping coefficient [-]
+    rel_damping_bridle:: Float64 = 6.0                     # BRIDLE relative unit damping coefficient [-]
     # tether
-    l_totaltether::Float64 = 10.0                        # tether length [m]
-    v_ro::Float64 = 0.0                                  # reel-out speed [m/s]
-    rho_tether::Float64 = 724.0                          # density of tether [kg/m³]
-    cd_tether::Float64 = 0.958                           # drag coefficient of tether
-    d_tether::Float64 = 0.004                            # tether diameter [m]
-    beta::Float64 = pi/3                                 # Elevation angle, angle XZ plane, between origin and bridle point [rad]
-    tethersegments::Int64 = 14                            # number of tether segments [-]
-    segments::Int64 = 9 + tethersegments                 # total segments [-]
-    points::Int64 = 5 + tethersegments                   # total points [-]
+    l_totaltether::Float64 = 50.0                          # tether length [m]
+    v_ro::Float64 = 0.0                                    # reel-out speed [m/s]
+    rho_tether::Float64 = 724.0                            # density of tether [kg/m³]
+    cd_tether::Float64 = 0.958                             # drag coefficient of tether
+    d_tether::Float64 = 0.004                              # tether diameter [m]
+    beta::Float64 = pi/3                                   # Elevation angle, angle XZ plane, between origin and bridle point [rad]
+    tethersegments::Int64 = 14                             # number of tether segments [-]
+    segments::Int64 = 9 + tethersegments                   # total segments [-]
+    points::Int64 = 5 + tethersegments                     # total points [-]
 end
 @with_kw mutable struct KPS5
     "Reference to the settings2 struct"
@@ -69,10 +70,10 @@ end
 # ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Interpolating polars using Dierckx
 # -----------------------------
-alpha_cl= [-180.0, -160.0, -90.0, -20.0, -10.0,  -5.0,  0.0, 20.0, 40.0, 90.0, 160.0, 180.0]
-cl_list = [   0.0,    0.5,   0.0,  0.08, 0.125,  0.15,  0.2,  1.0,  1.0,  0.0,  -0.5,   0.0]
-alpha_cd = [-180.0, -170.0, -140.0, -90.0, -20.0, 0.0, 20.0, 90.0, 140.0, 170.0, 180.0]
-cd_list = [   0.5,    0.5,    0.5,   1.0,   0.2, 0.1,  0.2,  1.0,   0.5,   0.5,   0.5] 
+alpha_cl = [-180.0, -160.0,  -90.0,  -20.0,  -10.0,  -5.0,  0.0, 20.0,  40.0,  90.0, 160.0, 180.0]
+cl_list  = [   0.0,    0.5,    0.0,   0.08,  0.125,  0.15,  0.2,  1.0,   1.0,   0.0,  -0.5,   0.0]
+alpha_cd = [-180.0, -170.0, -140.0,  -90.0,  -20.0,   0.0, 20.0, 90.0, 140.0, 170.0, 180.0]
+cd_list  = [   0.5,    0.5,    0.5,    1.0,    0.2,   0.1,  0.2,  1.0,   0.5,   0.5,   0.5] 
 function cl_interp(alpha)
     cl_spline = Spline1D(alpha_cl, cl_list)
     return cl_spline(alpha)
@@ -90,13 +91,9 @@ function init_sim!(s::KPS5)
     pos, vel = calc_initial_state(s)
     simple_sys,  pos, vel, conn, e_x, e_y, e_z, v_app_point, alpha1p  = model(s, pos, vel)
     s.sys = simple_sys
-    # sys, inputs = model(s, pos, vel)
-    # (s.simple_sys, _) = structural_simplify(sys, (inputs, []); simplify=true)
     tspan = (0.0, s.set.duration)
     s.prob = ODEProblem(simple_sys, nothing, tspan)
-    #s.prob = ODEProblem(s.simple_sys, nothing, tspan; fully_determined=true)
     s.integrator = OrdinaryDiffEqCore.init(s.prob, Rodas5(autodiff=false); s.set.dt, abstol=s.set.tol, save_on=false)
-    #s.integrator = OrdinaryDiffEqCore.init(s.prob, solver; dt, abstol=s.set.abs_tol, reltol=s.set.rel_tol, save_on=false)
 end
 # ------------------------------
 # Calculate Initial State
@@ -259,7 +256,7 @@ function model(s, pos, vel)
             push!(eqs, half_drag_force[:, i] ~ 0.25 * rho * cd_tether * norm_v_app[i] * (rest_lengths[i]*d_tether) * v_app_perp[:, i])
         elseif i in [1, 3, 4, 7] # bridle lines, try to find Cd_bridlelines later
             push!(eqs, half_drag_force[:, i] ~ 0.25 * rho * cd_tether * norm_v_app[i] * (rest_lengths[i]*s.set.d_bridleline) * v_app_perp[:, i])
-        else # kite
+        else    # kite
             push!(eqs, half_drag_force[:, i] ~ zeros(3))
         end
         eqs2 = vcat(eqs2, reduce(vcat, eqs))
@@ -279,15 +276,15 @@ function model(s, pos, vel)
                 sum([half_drag_force[:, j] for j in 1:s.set.segments if conn[j][1] == i]; init=zeros(3)) +
                 sum([half_drag_force[:, j] for j in 1:s.set.segments if conn[j][2] == i]; init=zeros(3))
         v_app_point[:, i] ~ s.set.v_wind_tether - vel[:, i]
-        if i == 1                                    #KCU drag at bridle point
+        if i == 1                  # KCU drag at bridle point
             area_kcu = pi * ((kcu_diameter / 2) ^ 2)
             Dx_kcu = 0.5*rho*kcu_cd *area_kcu*(v_app_point[1, i]*v_app_point[1, i])
             Dy_kcu = 0.5*rho*kcu_cd *area_kcu*(v_app_point[2, i]*v_app_point[2, i])
             Dz_kcu = 0.5*rho*kcu_cd *area_kcu*(v_app_point[3, i]*v_app_point[3, i])
             D = [Dx_kcu, Dy_kcu, Dz_kcu]
             push!(eqs, total_force[:, i] ~ force + D)
-        elseif i in 2:5 #the kite points that get Aero Forces
-            v_a = s.set.v_wind_tether - vel[:, i]           # Appas.set.t wind velocity
+        elseif i in 2:5           # the kite points that get Aero Forces
+            v_a = s.set.v_wind_tether - vel[:, i]        # Appas.set.t wind velocity
             v_app_mag_squared = v_app_point[1, i]^2 + v_app_point[2, i]^2 + v_app_point[3, i]^2
             alpha1p_i = compute_alpha1p(v_a, e_z, e_x)   # Calculate Alpha1p at this time step
             eqs2 = vcat(eqs2, alpha1p[i-1] ~ alpha1p_i)  # Add the equation for Alpha1p for each of 4 kite points (first bering bridle so i-1)   
@@ -348,7 +345,6 @@ function simulate(s, logger)
     iter = 0
     for i in 1:steps
         next_step!(s; dt=s.set.dt)
-        # sol = s.integrator.sol
         u = s.get_state(s.integrator)
         x = u[1][1, :]
         y = u[1][2, :]
@@ -359,7 +355,6 @@ function simulate(s, logger)
         sys_state.Y .= y
         sys_state.Z .= z
         println("iter: $iter", " steps: $steps")
-        # sys_state.time = t
         log!(logger, sys_state)
         println(x[end], ", ", sys_state.X[end])
     end
@@ -384,20 +379,17 @@ function play(s, lg)
     for conn_pair in s.set.conn
         push!(segments, Int64[conn_pair[1], conn_pair[2]])
     end
-
     # Add tether segments
     for i in 0:(s.set.tethersegments-2)
         push!(segments, [6+i, 6+i+1])
     end
     # Add final connection from last tether point to bridle point
     push!(segments, [6+s.set.tethersegments-1, 1])
-
     for step in 1:length(0:s.set.dt:s.set.duration)-1 #-s.set.dt
         # Get positions at this time step
         x = sl.X[step]
         y = sl.Y[step]
-        z = sl.Z[step]
-        
+        z = sl.Z[step] 
         # Create points array for all points in the system
         points = Vector{Float64}[]
         for i in 1:s.set.points
@@ -413,13 +405,11 @@ function play(s, lg)
                xlim = (x_min, x_max),
                ylim = (z_min, z_max)
         )
-        
         # Add a small delay to control animation speed
         sleep(0.05)
     end
     nothing
 end
-
 function plot_front_view3(lg)
     display(plotxy(lg.y, lg.z;
     xlabel="pos_y [m]",
@@ -442,8 +432,6 @@ function main()
     simulate(s, logger)
     save_log(logger, "tmp")
     lg = load_log("tmp")
-    # plot_front_view3(lg)
-    # Display animation
     play(s, lg)
 end
 
