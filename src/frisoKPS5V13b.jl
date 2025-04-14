@@ -22,7 +22,7 @@ toc()
     g_earth::Vector{Float64} = [0.0, 0.0, -9.81]           # gravitational acceleration [m/s²]
     v_wind_tether::Vector{Float64} = [13.5, 0.0, 0.0]      # wind velocity [m/s]
     rho::Float64 = 1.225                                   # air density [kg/m³]
-    sim_time::Float64 = 5                                  # simulation duration [s]
+    sim_time::Float64 = 5                                 # simulation duration [s]
     dt = 0.05                                              # time step [s]
     tol = 1e-6                                             # tolerance for the solver
     save::Bool = false                                     # save animation frames
@@ -48,15 +48,13 @@ toc()
     rel_damping_kite::Float64 = 6.0                        # KITE relative unit damping coefficient [-]
     rel_damping_bridle:: Float64 = 6.0                     # BRIDLE relative unit damping coefficient [-]
     # tether
-    l_totaltether::Float64 = 50.0                          # tether length [m]
-    v_ro::Float64 = 0.0                                    # reel-out speed [m/s]
+    l_tether::Float64 = 50.0                               # tether length [m]
+    v_reel_out ::Float64 = 0.5                                    # reel-out speed [m/s]
     rho_tether::Float64 = 724.0                            # density of tether [kg/m³]
     cd_tether::Float64 = 0.958                             # drag coefficient of tether
-    d_tether::Float64 = 0.004                              # tether diameter [m]
-    beta::Float64 = 1.22173048                                   # Elevation angle, angle XZ plane, between origin and bridle point [rad]
+    d_tether::Float64 = 4                              # tether diameter [mm]
+    elevation::Float64 = 1.22173048                          # Elevation angle, angle XZ plane, between origin and bridle point [rad]
     segments::Int64 = 14                             # number of tether segments [-]
-    total_segments::Int64 = 9 + segments                   # total segments [-]
-    points::Int64 = 5 + segments                     # total points [-]
 end
 @with_kw mutable struct KPS5
     "Reference to the settings2 struct"
@@ -68,7 +66,15 @@ end
     integrator::Union{OrdinaryDiffEqCore.ODEIntegrator, Nothing} = nothing
     get_state::Function            = () -> nothing
 end
-# getting connections
+# ------------------------------------------------------------------------------------------------------------------------------------------------------------
+# deriving a constants for points, total segments, and connections
+# ---------
+function points(s)
+    return 5 + s.set.segments 
+end
+function total_segments(s)
+    return 9 + s.set.segments
+end
 function getconnections(s)
     conn = [(1,2), (2,3), (3,1), (1,4), (2,4), (3,4), (1,5), (2,5), (3,5)]      # connections between KITE points 
     conn = vcat(conn, [(6+i, 6+i+1) for i in 0:(s.set.segments-2)]...)          # connection between tether points
@@ -77,7 +83,7 @@ function getconnections(s)
 end    
 # ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Interpolating polars using Dierckx
-# -----------------------------
+# ------------------------------------
 alpha_cl = [-180.0, -160.0,  -90.0,  -20.0,  -10.0,  -5.0,  0.0, 20.0,  40.0,  90.0, 160.0, 180.0]
 cl_list  = [   0.0,    0.5,    0.0,   0.08,  0.125,  0.15,  0.2,  1.0,   1.0,   0.0,  -0.5,   0.0]
 alpha_cd = [-180.0, -170.0, -140.0,  -90.0,  -20.0,   0.0, 20.0, 90.0, 140.0, 170.0, 180.0]
@@ -90,7 +96,7 @@ function cd_interp(alpha)
     cd_spline = Spline1D(alpha_cd, cd_list)
     return cd_spline(alpha)
 end
-@register_symbolic cl_interp(alpha)
+@register_symbolic cl_interp(s, alpha)
 @register_symbolic cd_interp(alpha)
 # -----------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Initialize the simulation
@@ -107,7 +113,7 @@ end
 # Calculate Initial State
 # ------------------------------
 function calc_initial_state(s)  
-    p1location = [s.set.l_totaltether*cos(s.set.beta) 0 s.set.l_totaltether*sin(s.set.beta)]
+    p1location = [s.set.l_tether*cos(s.set.elevation) 0 s.set.l_tether*sin(s.set.elevation)]
     kitepos0rot = get_kite_points(s)
     POS0 = kitepos0rot .+ p1location'
     POS0 = hcat(POS0, zeros(3, 1))
@@ -115,7 +121,7 @@ function calc_initial_state(s)
         extra_nodes = [POS0[:,6] + (POS0[:,1] - POS0[:,6]) * i / s.set.segments for i in 1:(s.set.segments-1)]
         POS0 = hcat(POS0, extra_nodes...)
     end     
-    VEL0 = zeros(3, s.set.points)
+    VEL0 = zeros(3, points(s))
     return POS0, VEL0
 end
 # -----------------------------------------------------
@@ -129,7 +135,7 @@ function get_kite_points(s)
     0.000               0                                    0                                -s.set.width/2           s.set.width/2;
     0.000     s.set.height+s.set.h_bridle    s.set.height+s.set.h_bridle  s.set.h_bridle         s.set.h_bridle]
 
-    beta = s.set.beta  
+    beta = s.set.elevation
     Y_r = [sin(beta) 0 cos(beta);
                  0    1       0;
           -cos(beta) 0 sin(beta)]    
@@ -184,7 +190,7 @@ function calc_rest_lengths(s)
     POS0, VEL0  = calc_initial_state(s)  
     lengths = [norm(POS0[:,conn[i][2]] - POS0[:,conn[i][1]]) for i in 1:9]
     l10 = norm(POS0[:,1] - POS0[:,6])
-    lengths = vcat(lengths, [(l10+s.set.v_ro*t)/s.set.segments for _ in 1:s.set.segments]...)
+    lengths = vcat(lengths, [(l10 + s.set.v_reel_out*t)/s.set.segments for _ in 1:s.set.segments]...)
     return lengths, l10
 end
 # ------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -197,23 +203,23 @@ function model(s, pos, vel)
     @parameters m_kite=s.set.mass kcu_mass=s.set.kcu_mass rho_tether=s.set.rho_tether 
     @parameters rho=s.set.rho cd_tether=s.set.cd_tether d_tether=s.set.d_tether S=s.set.Area
     @parameters kcu_cd=s.set.kcu_cd kcu_diameter=s.set.kcu_diameter
-    @variables pos(t)[1:3, 1:s.set.points] = POS0
-    @variables vel(t)[1:3, 1:s.set.points] = VEL0
-    @variables acc(t)[1:3, 1:s.set.points]
-    @variables v_app_point(t)[1:3, 1:s.set.points]
-    @variables segment(t)[1:3, 1:s.set.total_segments]
-    @variables unit_vector(t)[1:3, 1:s.set.total_segments]
-    @variables norm1(t)[1:s.set.total_segments]
-    @variables rel_vel(t)[1:3, 1:s.set.total_segments]
-    @variables spring_vel(t)[1:s.set.total_segments]
-    @variables k_spring(t)[1:s.set.total_segments]
-    @variables spring_force(t)[1:3, 1:s.set.total_segments]
-    @variables v_apparent(t)[1:3, 1:s.set.total_segments]
-    @variables v_app_perp(t)[1:3, 1:s.set.total_segments]
-    @variables norm_v_app(t)[1:s.set.total_segments]
-    @variables half_drag_force(t)[1:3, 1:s.set.total_segments]
-    @variables drag_force(t)[1:3, 1:s.set.total_segments]
-    @variables total_force(t)[1:3, 1:s.set.points]
+    @variables pos(t)[1:3, 1:points(s)] = POS0
+    @variables vel(t)[1:3, 1:points(s)] = VEL0
+    @variables acc(t)[1:3, 1:points(s)]
+    @variables v_app_point(t)[1:3, 1:points(s)]
+    @variables segment(t)[1:3, 1:total_segments(s)]
+    @variables unit_vector(t)[1:3, 1:total_segments(s)]
+    @variables norm1(t)[1:total_segments(s)]
+    @variables rel_vel(t)[1:3, 1:total_segments(s)]
+    @variables spring_vel(t)[1:total_segments(s)]
+    @variables k_spring(t)[1:total_segments(s)]
+    @variables spring_force(t)[1:3, 1:total_segments(s)]
+    @variables v_apparent(t)[1:3, 1:total_segments(s)]
+    @variables v_app_perp(t)[1:3, 1:total_segments(s)]
+    @variables norm_v_app(t)[1:total_segments(s)]
+    @variables half_drag_force(t)[1:3, 1:total_segments(s)]
+    @variables drag_force(t)[1:3, 1:total_segments(s)]
+    @variables total_force(t)[1:3, 1:points(s)]
     # local kite reference frame
     @variables e_x(t)[1:3]
     @variables e_y(t)[1:3]
@@ -239,7 +245,7 @@ function model(s, pos, vel)
                             # masses
     mass_bridlelines = ((s.set.d_line/2000)^2)*pi*rho_tether*s.set.l_bridle #total mass entire bridle 
     mass_halfbridleline = mass_bridlelines/8 # half the connection of bridle line to kite (to assign to each kitepoint) so the other 4 halves get assigned to bridlepoint 
-    mass_tether = ((d_tether/2)^2)*pi*rho_tether*l_tether
+    mass_tether = ((d_tether/2000)^2)*pi*rho_tether*l_tether
     mass_tetherpoints = mass_tether/(s.set.segments+1)
     mass_bridlepoint = 4*mass_halfbridleline + kcu_mass + mass_tetherpoints # 4 bridle connections, kcu and tether
     m_kitepoints = (m_kite/4) + mass_halfbridleline 
@@ -248,7 +254,7 @@ function model(s, pos, vel)
     # -----------------------------
     # Equations for Each Segment (Spring Forces, Drag, etc.)
     # -----------------------------
-    for i in 1:s.set.total_segments
+    for i in 1:total_segments(s)
         eqs = [
             segment[:, i]      ~ pos[:, conn[i][2]] - pos[:, conn[i][1]],
             norm1[i]           ~ norm(segment[:, i]),
@@ -262,7 +268,7 @@ function model(s, pos, vel)
             norm_v_app[i]      ~ norm(v_app_perp[:, i])
         ]
         if i > 9 # tether segments
-            push!(eqs, half_drag_force[:, i] ~ 0.25 * rho * cd_tether * norm_v_app[i] * (rest_lengths[i]*d_tether) * v_app_perp[:, i])
+            push!(eqs, half_drag_force[:, i] ~ 0.25 * rho * cd_tether * norm_v_app[i] * (rest_lengths[i]*d_tether/1000) * v_app_perp[:, i])
         elseif i in [1, 3, 4, 7] # bridle lines, try to find Cd_bridlelines later
             push!(eqs, half_drag_force[:, i] ~ 0.25 * rho * cd_tether * norm_v_app[i] * (rest_lengths[i]*(s.set.d_line/1000)) * v_app_perp[:, i])
         else    # kite
@@ -280,18 +286,18 @@ function model(s, pos, vel)
     alpha1p = compute_alpha1p(v_a_kite, e_z, e_x)   # Calculate Alpha1p at this time step
     eqs2 = vcat(eqs2, alpha1p[1] ~ alpha1p)  # Add the equation for Alpha1p for each of 4 kite points (first bering bridle so i-1)   
     # getting Cl and Cd
-    Cl = cl_interp(alpha1p)            
+    Cl = cl_interp(s, alpha1p)            
     Cd = cd_interp(alpha1p)
 
     # -----------------------------
     # Force Balance at Each Point
     # -----------------------------
-    for i in 1:s.set.points  
+    for i in 1:points(s)  
         eqs = []  
-        force = sum([spring_force[:, j] for j in 1:s.set.total_segments if conn[j][2] == i]; init=zeros(3)) -
-                sum([spring_force[:, j] for j in 1:s.set.total_segments if conn[j][1] == i]; init=zeros(3)) +
-                sum([half_drag_force[:, j] for j in 1:s.set.total_segments if conn[j][1] == i]; init=zeros(3)) +
-                sum([half_drag_force[:, j] for j in 1:s.set.total_segments if conn[j][2] == i]; init=zeros(3))
+        force = sum([spring_force[:, j] for j in 1:total_segments(s) if conn[j][2] == i]; init=zeros(3)) -
+                sum([spring_force[:, j] for j in 1:total_segments(s) if conn[j][1] == i]; init=zeros(3)) +
+                sum([half_drag_force[:, j] for j in 1:total_segments(s) if conn[j][1] == i]; init=zeros(3)) +
+                sum([half_drag_force[:, j] for j in 1:total_segments(s) if conn[j][2] == i]; init=zeros(3))
         v_app_point[:, i] ~ s.set.v_wind_tether - vel[:, i]
         if i == 1                  # KCU drag at bridle point
             area_kcu = pi * ((kcu_diameter / 2) ^ 2)
@@ -361,7 +367,7 @@ function simulate(s, logger)
         y = u[1][2, :]
         z = u[1][3, :]
         iter += s.iter
-        sys_state = SysState{s.set.points}()
+        sys_state = SysState{points(s)}()
         sys_state.X .= x
         sys_state.Y .= y
         sys_state.Z .= z
@@ -387,32 +393,32 @@ end
 function play(s, lg)
     conn = getconnections(s)
     sl = lg.syslog
-    total_segments = Vector{Int64}[]
+    total_segmentsvector = Vector{Int64}[]
     for conn_pair in conn
-        push!(total_segments, Int64[conn_pair[1], conn_pair[2]])
+        push!(total_segmentsvector, Int64[conn_pair[1], conn_pair[2]])
     end
     # Add tether segments
     for i in 0:(s.set.segments-2)
-        push!(total_segments, [6+i, 6+i+1])
+        push!(total_segmentsvector, [6+i, 6+i+1])
     end
     # Add final connection from last tether point to bridle point
-    push!(total_segments, [6+s.set.segments-1, 1])
+    push!(total_segmentsvector, [6+s.set.segments-1, 1])
     for step in 1:length(0:s.set.dt:s.set.sim_time)-1 #-s.set.dt
         # Get positions at this time step
         x = sl.X[step]
         y = sl.Y[step]
         z = sl.Z[step] 
         # Create points array for all points in the system
-        points = Vector{Float64}[]
-        for i in 1:s.set.points
-            push!(points, Float64[x[i], y[i], z[i]])
+        pointsvector = Vector{Float64}[]
+        for i in 1:points(s)                 #FIX THIS!
+            push!(pointsvector, Float64[x[i], y[i], z[i]])
         end        
         # Calculate appropriate limits for the plot
         x_min, x_max = 0, 40
         z_min, z_max = 0, 60
         t = s.set.dt * (step-1)
         # Plot the kite system at this time step
-        plot2d(points, total_segments, t;
+        plot2d(pointsvector, total_segmentsvector, t;
                zoom = false,
                xlim = (x_min, x_max),
                ylim = (z_min, z_max)
@@ -433,12 +439,12 @@ end
 # Running the Main Function
 # -----------------------------
 function main()
-    global lg
+    global lg, s
     set = Settings2()
     s = KPS5(set=set)
     time_range = 0:set.dt:set.sim_time-set.dt
     steps = length(time_range)
-    logger = Logger(s.set.points, steps)
+    logger = Logger(points(s), steps)
     init_sim!(s)
     generate_getters!(s)
     simulate(s, logger)
