@@ -359,14 +359,14 @@ function simulate(s, logger)
     time_range = 0:dt:s.set.sim_time-dt
     steps = length(time_range)
     iter = 0
+    sys_state = SysState{points(s)}()
     for i in 1:steps
         next_step!(s; dt=s.set.dt)
         u = s.get_state(s.integrator)
         x = u[1][1, :]
         y = u[1][2, :]
         z = u[1][3, :]
-        iter += s.iter
-        sys_state = SysState{points(s)}()
+        iter += s.iter    
         sys_state.X .= x
         sys_state.Y .= y
         sys_state.Z .= z
