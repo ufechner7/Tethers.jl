@@ -1,8 +1,9 @@
 #this exact cod eis used to compare it in the kitemodels version
+using Timers
+tic()
 using Dierckx
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using KiteUtils
-using Timers
 using Pkg 
 #using DAEProblemLibrary
 # if ! ("ControlPlots" ∈ keys(Pkg.project().dependencies))
