@@ -1,3 +1,4 @@
+using ControlPlots
 include("../src/Tether_quasistatic.jl")
 
 # Set initial conditions
@@ -10,16 +11,6 @@ state_vec, tether_pos, Ft_ground, Ft_kite, p0 =  simulate_tether(state_vec, kite
 
 x_qs = vec(sqrt.(tether_pos[1,:].^2 + tether_pos[2,:].^2))
 y_qs = vec(tether_pos[3,:])
-
-# Read the catenary curve
-x_cat, y_cat = get_analytic_catenary("test/data/input_analytic_catenary.mat")
-
-#= plt.plot(x_cat, y_cat)
-plt.plot(x_qs, y_qs, marker = "o")
-plt.legend(["Analytic catenary", "Quasi static model"])
-plt.xlabel("X [m]")
-plt.ylabel("Y [m]")
-plt.show() =#
 
 
 tether_pos = hcat(p0, tether_pos, [0; 0; 0])
