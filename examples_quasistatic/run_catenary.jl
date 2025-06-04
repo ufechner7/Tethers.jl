@@ -20,6 +20,10 @@ plt.scatter3D(0, 0, 0,  s = 200, marker = "s", c = "C7")
 plt.scatter3D(p0[1], p0[2], p0[3], s = 50, marker = "D", c = "g")
 plt.xlabel("X [m]")
 plt.ylabel("Y [m]")
+plt.xlim(0, 100)
+plt.ylim(0, 100)
+plt.zlim(0, 800)
+
 plt.legend(["Tether", "Origin", "Kite"])
 plt.show()
 
