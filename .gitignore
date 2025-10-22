@@ -16,3 +16,7 @@ kps-image_tmp.so
 src/model.jl
 video/Tether_08b.mp4
 video/Tether.mp4
+examples_plotting/
+Manifest-v1.10.toml
+Manifest-v1.11.toml
+bin/kps-image-1.11.so

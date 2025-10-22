@@ -1,11 +1,10 @@
 # Tutorial example simulating a 3D mass-spring system with a nonlinear spring (1% stiffnes
 # for l < l_0), n tether segments, tether drag and reel-in and reel-out. 
-# New feature: A steady state solver is used to find the initial tether shape for any
-# given pair of endpoints, which is then used as the initial condition for the simulation.
+# New feature: if the second extremity is fixed, acceleration can be fed to simulate imposed motion from a kite.
 using ModelingToolkit, OrdinaryDiffEq, SteadyStateDiffEq, LinearAlgebra, Timers, Parameters, ControlPlots
 tic()
 using ModelingToolkit: t_nounits as t, D_nounits as D
-using LaTeXStrings, StatsBase
+using ControlPlots, LaTeXStrings, StatsBase
 
 @with_kw mutable struct Settings3 @deftype Float64
     g_earth::Vector{Float64} = [0.0, 0.0, -9.81] # gravitational acceleration     [m/s²]
@@ -49,7 +48,7 @@ function calc_initial_state(se; p1, p2)
     POS0, VEL0
 end
 
-function model(se; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
+function model(se; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false, acc_p2 = [0,0,0])
     if ! isnothing(p1)
         @assert isa(p1, AbstractVector) || error("p1 must be a vector")
         @assert (length(p1) == 3)       || error("p1 must have length 3")
@@ -68,7 +67,7 @@ function model(se; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
     # find steady state
     v_ro = se.v_ro      # save the reel-out speed
     se.v_ro = 0         # v_ro must be zero, otherwise finding the steady state is not possible
-    simple_sys, pos, =  model(se, p1, p2, true, true, POS0, VEL0)
+    simple_sys, pos, =  model(se, p1, p2, true, true, POS0, VEL0, acc_p2)
     tspan = (0.0, se.duration)
     prob = ODEProblem(simple_sys, nothing, tspan)
     prob1 = SteadyStateProblem(prob)
@@ -76,9 +75,9 @@ function model(se; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
     POS0 = sol1[pos]
     # create the real model
     se.v_ro = v_ro
-    model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0)
+    model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0, acc_p2)
 end
-function model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0)
+function model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0, acc_p2)
     mass_per_meter = se.rho_tether * π * (se.d_tether/2000.0)^2
     @parameters c_spring0=se.c_spring/(se.l0/se.segments) l_seg=se.l0/se.segments
     @parameters rel_compression_stiffness = se.rel_compression_stiffness
@@ -131,14 +130,14 @@ function model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0)
             if isnothing(p2) || ! fix_p2
                 push!(eqs, acc[:, i]         ~ se.g_earth + total_force[:, i] / (0.5 * m_tether_particle))
             else
-                push!(eqs, acc[:, i]         ~ zeros(3))
+                push!(eqs, acc[:, i]         ~ acc_p2)
             end
         elseif i == 1
             push!(eqs, total_force[:, i] ~ spring_force[:, i] + half_drag_force[:, i])
             if isnothing(p1) || ! fix_p1
                 push!(eqs, acc[:, i]     ~ se.g_earth + total_force[:, i] / (0.5 * m_tether_particle))
             else
-                push!(eqs, acc[:, i]     ~ zeros(3))
+                push!(eqs, acc[:, i]     ~ zeros(3))                
             end
         else
             push!(eqs, total_force[:, i] ~ spring_force[:, i-1] - spring_force[:, i] 
@@ -170,12 +169,12 @@ function simulate(se, simple_sys)
     elapsed_time = @elapsed sol = solve(prob, KenCarp4(autodiff=false); dt, abstol=tol, reltol=tol, saveat=ts)
     sol, elapsed_time
 end
-
-function main(; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
+"""
+function main(; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false, acc_p2=[0,0,0])
     global sol, pos, vel, len, c_spr
     se = Settings3()
     set_tether_diameter!(se, se.d_tether) # adapt spring and damping constants to tether diameter
-    simple_sys, pos, vel, len, c_spr = model(se; p1, p2, fix_p1, fix_p2)
+    simple_sys, pos, vel, len, c_spr = model(se; p1, p2, fix_p1, fix_p2, acc_p2)
     sol, elapsed_time = simulate(se, simple_sys)
     if @isdefined __PC
         return sol, pos, vel, simple_sys
@@ -183,7 +182,12 @@ function main(; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
     sol, pos, vel, simple_sys
 end
 
-sol, pos, vel, simple_sys = main(p2=[-60,0,0], fix_p2=true);
+sol, pos, vel, simple_sys = main(p2=[-60,0,0], fix_p2=true, acc_p2=[0,0,-1.0]);
+x=sol[pos][1][:,:]
+"""
+
+#=
+sol, pos, vel, simple_sys = main(p2=[-60,0,0], fix_p2=true, acc_p2=[0,0,-1.0]);
 x=sol[pos][1][1,:]
 z=sol[pos][1][3,:]
 plt.plot(x,z, color="black")
@@ -236,4 +240,5 @@ ax.set_axis_off()
 plt.show()
 
 nothing
+=#
 
