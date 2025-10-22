@@ -11,7 +11,19 @@ fi
 
 juliaup add 1.11
 juliaup up 1.11
-juliaup default 1.11
+julia_version=$(julia --version | awk '{print($3)}')
+julia_major=${julia_version:0:3} 
+if [[ $julia_major == "1.1" ]]; then
+    julia_major=${julia_version:0:4} 
+fi
+
+# Verify supported Julia versions (1.10 or 1.11)
+if [[ "$julia_major" != "1.10" && "$julia_major" != "1.11" ]]; then
+    echo "Warning: Unsupported Julia version detected: $julia_version. This script supports Julia 1.10 or 1.11 only." >&2
+    echo "Use the command 'juliaup default 1.10' or 'juliaup default 1.11' to switch to a supported version." >&2
+    exit 1
+fi
+
 echo "Installing package TestEnv in the global environment!"
 julia --startup-file=no -e "using Pkg; Pkg.add(\"TestEnv\")"
 
@@ -62,11 +74,7 @@ else
     export MPLBACKEND=qt5agg
 fi
 
-julia_version=$(julia --version | awk '{print($3)}')
-julia_major=${julia_version:0:3} 
-if [[ $julia_major == "1.1" ]]; then
-    julia_major=${julia_version:0:4} 
-fi
+
 if test -f "kps-image-${julia_major}.so"; then
     mv bin/kps-image-${julia_major}.so bin/kps-image-${julia_major}.so.bak
 fi
