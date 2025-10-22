@@ -83,13 +83,13 @@ echo "Updating packages..."
 if test -f "Manifest.toml"; then
    rm Manifest.toml
 fi
-julia --startup-file=no --pkgimages=no --project -e "using TestEnv; TestEnv.activate(); using Pkg; Pkg.add(\"PyCall\"); Pkg.build(\"PyCall\")"
+julia --startup-file=no  --project -e "using TestEnv; TestEnv.activate(); using Pkg; Pkg.add(\"PyCall\"); Pkg.build(\"PyCall\")"
 if [[ $PYTHON == "" ]]; then
-    julia --startup-file=no --pkgimages=no --project -e "using TestEnv; TestEnv.activate(); using Pkg; Pkg.add(\"Conda\"); using Conda; Conda.add(\"matplotlib\"); using ControlPlots"
+    julia --startup-file=no  --project -e "using TestEnv; TestEnv.activate(); using Pkg; Pkg.add(\"Conda\"); using Conda; Conda.add(\"matplotlib\"); using ControlPlots"
 fi
-julia --startup-file=no --pkgimages=no --project -e "using Pkg; Pkg.update()"
+julia --startup-file=no  --project -e "using Pkg; Pkg.update()"
 
-julia --pkgimages=no --project -t auto -e "using Pkg; Pkg.precompile()"
-julia --pkgimages=no --project -t auto --gcthreads=4,1 -e "include(\"./test/create_sys_image.jl\");"
+julia  --project -t auto -e "using Pkg; Pkg.precompile()"
+julia  --project -t auto --gcthreads=4,1 -e "include(\"./test/create_sys_image.jl\");"
 
 mv kps-image_tmp.so bin/kps-image-${julia_major}.so
