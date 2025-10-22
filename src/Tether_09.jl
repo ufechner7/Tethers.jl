@@ -5,7 +5,7 @@
 using ModelingToolkit, OrdinaryDiffEq, SteadyStateDiffEq, LinearAlgebra, Timers, Parameters, ControlPlots
 tic()
 using ModelingToolkit: t_nounits as t, D_nounits as D
-using ControlPlots, LaTeXStrings, StatsBase
+using LaTeXStrings, StatsBase
 
 @with_kw mutable struct Settings3 @deftype Float64
     g_earth::Vector{Float64} = [0.0, 0.0, -9.81] # gravitational acceleration     [m/s²]
