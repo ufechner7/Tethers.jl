@@ -67,7 +67,7 @@ function model(se)
                spring_vel[i]        ~ -unit_vector[:, i] ⋅ rel_vel[:, i],
                c_spr[i]             ~ c_spring/(1+rel_compression_stiffness) 
                                       * (rel_compression_stiffness+(norm1[i] > length/se.segments)),               
-               spring_force[:, i]  .~ (c_spr[i] * (norm1[i] - (length/se.segments)) 
+               spring_force[:, i]   ~ (c_spr[i] * (norm1[i] - (length/se.segments)) 
                                        + damping * spring_vel[i]) * unit_vector[:, i]]
         eqs2 = vcat(eqs2, reduce(vcat, eqs))
     end
