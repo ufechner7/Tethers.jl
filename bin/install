@@ -6,6 +6,19 @@ if [[ $(basename $(pwd)) == "bin" ]]; then
     cd ..
 fi
 
+# Parse flags
+_yes=false
+for _arg in "$@"; do
+    case "$_arg" in
+        -y|--yes) _yes=true ;;
+        *) echo "Unknown option: $_arg"; exit 1 ;;
+    esac
+done
+# Also treat CI environments as non-interactive
+if [[ "${CI:-}" == "true" ]]; then
+    _yes=true
+fi
+
 # Check if juliaup is installed
 if ! command -v juliaup &> /dev/null; then
     echo "Error: juliaup is not installed. Please install it first."
@@ -25,7 +38,12 @@ fi
 echo "Which Julia version do you want to use?"
 echo "  1) Julia 1.11"
 echo "  2) Julia 1.12"
-read -rp "Enter 1 or 2 [default: ${_default_choice}]: " _julia_choice
+if [[ "$_yes" == "true" ]]; then
+    _julia_choice=""
+    echo "Non-interactive mode: using default (${_default_julia})"
+else
+    read -rp "Enter 1 or 2 [default: ${_default_choice}]: " _julia_choice
+fi
 case "${_julia_choice}" in
     1)
         _desired_julia="1.11"

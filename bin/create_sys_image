@@ -3,6 +3,19 @@ if [[ $(basename $(pwd)) == "bin" ]]; then
     cd ..
 fi
 
+# Parse flags
+_yes=false
+for _arg in "$@"; do
+    case "$_arg" in
+        -y|--yes) _yes=true ;;
+        *) echo "Unknown option: $_arg"; exit 1 ;;
+    esac
+done
+# Also treat CI environments as non-interactive
+if [[ "${CI:-}" == "true" ]]; then
+    _yes=true
+fi
+
 export QT_QPA_PLATFORM=xcb
 
 if ! command -v juliaup &> /dev/null; then
@@ -15,7 +28,12 @@ if ! command -v julia &> /dev/null; then
     echo "Julia is not installed. Which version do you want to install?"
     echo "  1) Julia 1.11"
     echo "  2) Julia 1.12"
-    read -rp "Enter 1 or 2 [default: 2]: " _julia_choice
+    if [[ "$_yes" == "true" ]]; then
+        _julia_choice=""
+        echo "Non-interactive mode: using default (1.12)"
+    else
+        read -rp "Enter 1 or 2 [default: 2]: " _julia_choice
+    fi
     case "${_julia_choice}" in
         1) _desired_julia="1.11" ;;
         2|"") _desired_julia="1.12" ;;
@@ -50,20 +68,25 @@ if [ -x "$PYTHON_PATH" ]; then
         export PYTHON=$PYTHON_PATH
     else
         echo "Matplotlib is not found."
-        read -p "Do you want to install matplotlib with Conda? (y/n): " choice
-        case "$choice" in 
-          y|Y ) 
+        if [[ "$_yes" == "true" ]]; then
+            echo "Non-interactive mode: installing matplotlib with Conda."
             export PYTHON=""
-            ;;
-          n|N ) 
-            echo "Exiting without installing matplotlib."
-            exit 1
-            ;;
-          * ) 
-            echo "Invalid choice. Exiting."
-            exit 1
-            ;;
-        esac
+        else
+            read -p "Do you want to install matplotlib with Conda? (y/n): " choice
+            case "$choice" in 
+              y|Y ) 
+                export PYTHON=""
+                ;;
+              n|N ) 
+                echo "Exiting without installing matplotlib."
+                exit 1
+                ;;
+              * ) 
+                echo "Invalid choice. Exiting."
+                exit 1
+                ;;
+            esac
+        fi
     fi
 else
     echo "Python is not found."

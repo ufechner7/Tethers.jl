@@ -8,6 +8,6 @@ export JULIA_DEPOT_PATH=/tmp/testdepot
 git clone https://github.com/ufechner7/Tethers.jl
 cd Tethers.jl
 cd bin
-./install
-./create_sys_image
+./install --yes
+./create_sys_image --yes
 cd ..
