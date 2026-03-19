@@ -68,7 +68,7 @@ function model(se; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
     # find steady state
     v_ro = se.v_ro      # save the reel-out speed
     se.v_ro = 0         # v_ro must be zero, otherwise finding the steady state is not possible
-    simple_sys, pos, =  model(se, p1, p2, true, true, POS0, VEL0)
+    simple_sys, sys, pos, =  model(se, p1, p2, true, true, POS0, VEL0)
     tspan = (0.0, se.duration)
     prob = ODEProblem(simple_sys, nothing, tspan)
     prob1 = SteadyStateProblem(prob)
@@ -155,7 +155,7 @@ function model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0)
         
     @named sys = ODESystem(reduce(vcat, Symbolics.scalarize.(eqs2)), t)
     simple_sys = mtkcompile(sys)
-    simple_sys, pos, vel, len, c_spr
+    simple_sys, sys, pos, vel, len, c_spr
 end
 
 function simulate(se, simple_sys)
@@ -203,7 +203,7 @@ function main(; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
     global sol, pos, vel, len, c_spr, simple_sys
     se = Settings3()
     set_tether_diameter!(se, se.d_tether) # adapt spring and damping constants to tether diameter
-    simple_sys, pos, vel, len, c_spr = model(se; p1, p2, fix_p1, fix_p2)
+    simple_sys, sys, pos, vel, len, c_spr = model(se; p1, p2, fix_p1, fix_p2)
     sol, elapsed_time = simulate(se, simple_sys)
     if @isdefined __PC
         return sol, pos, vel, simple_sys
@@ -211,6 +211,8 @@ function main(; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
     play(se, sol, pos)
     println("Elapsed time: $(elapsed_time) s, speed: $(round(se.duration/elapsed_time)) times real-time")
     println("Number of evaluations per step: ", round(sol.stats.nf/(se.duration/0.02), digits=1))
+    println("Equations: ", length(equations(sys)))
+    println("Equations of simplified system: ", length(equations(simple_sys)))
     sol, pos, vel, simple_sys
 end
 
