@@ -201,7 +201,7 @@ function play(se, sol, pos)
 end
 
 function main(; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
-    global sol, pos, vel, len, c_spr
+    global sol, pos, vel, len, c_spr, simple_sys
     se = Settings3()
     set_tether_diameter!(se, se.d_tether) # adapt spring and damping constants to tether diameter
     simple_sys, pos, vel, len, c_spr = model(se; p1, p2, fix_p1, fix_p2)
