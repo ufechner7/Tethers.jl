@@ -1,6 +1,9 @@
 # Example one: Falling mass.
+using Timers
+tic()
 using ModelingToolkit, OrdinaryDiffEq, ControlPlots
 using ModelingToolkit: t_nounits as t, D_nounits as D
+toc()
 
 G_EARTH::Vector{Float64} = [0.0, 0.0, -9.81]    # gravitational acceleration     [m/s²]
 
@@ -23,6 +26,7 @@ tol      = 1e-6
 ts       = 0:dt:duration
 
 prob = ODEProblem(simple_sys, nothing, (0.0, duration))
+toc()
 @time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
 
 # plotting the result
