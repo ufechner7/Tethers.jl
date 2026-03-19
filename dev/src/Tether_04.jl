@@ -53,7 +53,7 @@ end
 eqs2 = vcat(eqs2, [acc[:, 1] ~ zeros(3)])
      
 @named sys = ODESystem(reduce(vcat, Symbolics.scalarize.(eqs2)), t)
-simple_sys = structural_simplify(sys)
+simple_sys = mtkcompile(sys)
 
 # running the simulation
 duration = 10.0

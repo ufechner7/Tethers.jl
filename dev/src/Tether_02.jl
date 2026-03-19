@@ -23,7 +23,7 @@ eqs = vcat(D(pos)       ~ vel,
            acc          ~ G_EARTH .+ spring_force/mass)
 
 @named sys = ODESystem(Symbolics.scalarize.(reduce(vcat, Symbolics.scalarize.(eqs))), t)
-simple_sys = structural_simplify(sys)
+simple_sys = mtkcompile(sys)
 
 # running the simulation
 duration = 10.0

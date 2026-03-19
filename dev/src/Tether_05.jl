@@ -68,7 +68,7 @@ for i in 1:(segments+1)
 end
      
 @named sys = ODESystem(reduce(vcat, Symbolics.scalarize.(eqs2)), t)
-simple_sys = structural_simplify(sys)
+simple_sys = mtkcompile(sys)
 
 # running the simulation
 dt = 0.02
