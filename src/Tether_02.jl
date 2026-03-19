@@ -20,7 +20,7 @@ eqs = vcat(D(pos)       ~ vel,
            unit_vector  ~ -pos / norm1,         # direction from point mass to origin
            spring_vel   ~ -unit_vector ⋅ vel,
            spring_force ~ (c_spring * (norm1 - abs(l0)) + damping * spring_vel) * unit_vector,
-           acc          ~ G_EARTH + spring_force/mass)
+           acc          ~ G_EARTH .+ spring_force/mass)
 
 @named sys = ODESystem(Symbolics.scalarize.(reduce(vcat, Symbolics.scalarize.(eqs))), t)
 simple_sys = structural_simplify(sys)
