@@ -106,3 +106,4 @@ julia  --project -t auto -e "using Pkg; Pkg.precompile()"
 julia  --project -t auto --gcthreads=4,1 -e "include(\"./test/create_sys_image.jl\");"
 
 mv kps-image_tmp.so bin/kps-image-${julia_major}.so
+julia --project -e "using Pkg; Pkg.precompile(); using Parameters"
