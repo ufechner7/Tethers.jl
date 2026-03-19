@@ -64,9 +64,8 @@ function model(se)
         total_force(t)[1:3, 1:se.segments+1]
     end
     # basic differential equations
-    eqs1 = vcat(D.(pos) .~ vel,
-                D.(vel) .~ acc)
-    eqs2 = vcat(eqs1...)
+    eqs2 = vcat([D(pos[:, i]) ~ vel[:, i] for i in axes(pos, 2)],
+                [D(vel[:, i]) ~ acc[:, i] for i in axes(vel, 2)])
     # loop over all segments to calculate the spring and drag forces
     for i in 1:se.segments
         eqs = [segment[:, i]      ~ pos[:, i+1] - pos[:, i],
@@ -90,14 +89,14 @@ function model(se)
         eqs = []
         if i == se.segments+1
             push!(eqs, total_force[:, i] ~ spring_force[:, i-1] + half_drag_force[:, i-1])
-            push!(eqs, acc[:, i]         ~ se.g_earth + total_force[:, i] / (0.5 * m_tether_particle))
+            push!(eqs, acc[:, i]         ~ se.g_earth .+ total_force[:, i] / (0.5 * m_tether_particle))
         elseif i == 1
             push!(eqs, total_force[:, i] ~ spring_force[:, i] + half_drag_force[:, i])
             push!(eqs, acc[:, i]         ~ zeros(3))
         else
             push!(eqs, total_force[:, i] ~ spring_force[:, i-1] - spring_force[:, i] 
                                            + half_drag_force[:, i-1] + half_drag_force[:, i])
-            push!(eqs, acc[:, i]         ~ se.g_earth + total_force[:, i] / m_tether_particle)
+            push!(eqs, acc[:, i]         ~ se.g_earth .+ total_force[:, i] / m_tether_particle)
         end
         eqs2 = vcat(eqs2, reduce(vcat, eqs))
     end

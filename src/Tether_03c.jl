@@ -25,7 +25,7 @@ function model3(G_EARTH, L0, V0)
             spring_vel   ~ -unit_vector ⋅ vel,
             c_spring     ~ c_spring0 * (norm1 > abs(l0)),
             spring_force ~ (c_spring * (norm1 - abs(l0)) + damping * spring_vel) * unit_vector,
-            acc          ~ G_EARTH + spring_force/mass)
+            acc          ~ G_EARTH .+ spring_force/mass)
 
     @named sys = ODESystem(Symbolics.scalarize.(reduce(vcat, Symbolics.scalarize.(eqs))), t)
     simple_sys = structural_simplify(sys)

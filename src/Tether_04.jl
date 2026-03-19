@@ -33,9 +33,8 @@ end
 @variables spring_force(t)[1:3, 1:segments]
 
 # basic differential equations
-eqs1 = vcat(D.(pos) .~ vel,
-            D.(vel) .~ acc)
-eqs2 = vcat(eqs1...)
+eqs2 = vcat([D(pos[:, i]) ~ vel[:, i] for i in axes(pos, 2)],
+            [D(vel[:, i]) ~ acc[:, i] for i in axes(vel, 2)])
 # loop over all segments to calculate the spring forces
 for i in 1:segments
     global eqs2; local eqs
@@ -47,13 +46,13 @@ for i in 1:segments
            c_spring[i]        ~ c_spring0 * (norm1[i] > l_seg),
            spring_force[:, i] ~ (c_spring[i] * (norm1[i] - l_seg) + damping * spring_vel[i]) * unit_vector[:, i],
            # TODO: the spring_force must be distributed
-           acc[:, i+1]        ~ G_EARTH + spring_force[:, i] / mass]
+           acc[:, i+1]        ~ G_EARTH .+ spring_force[:, i] / mass]
     eqs2 = vcat(eqs2, reduce(vcat, eqs))
 end
 # fix the first pointmass
-push!(eqs2, acc[:, 1] ~ zeros(3))
+eqs2 = vcat(eqs2, [acc[:, 1] ~ zeros(3)])
      
-@named sys = ODESystem(Symbolics.scalarize.(reduce(vcat, Symbolics.scalarize.(eqs2))), t)
+@named sys = ODESystem(reduce(vcat, Symbolics.scalarize.(eqs2)), t)
 simple_sys = structural_simplify(sys)
 
 # running the simulation
