@@ -9,18 +9,32 @@ if ! command -v juliaup &> /dev/null; then
     exit 1
 fi
 
-juliaup add 1.11
-juliaup up 1.11
+if ! command -v julia &> /dev/null; then
+    echo "Julia is not installed. Which version do you want to install?"
+    echo "  1) Julia 1.11"
+    echo "  2) Julia 1.12"
+    read -rp "Enter 1 or 2 [default: 2]: " _julia_choice
+    case "${_julia_choice}" in
+        1) _desired_julia="1.11" ;;
+        2|"") _desired_julia="1.12" ;;
+        *) echo "Invalid choice. Exiting."; exit 1 ;;
+    esac
+    echo "Installing Julia ${_desired_julia}..."
+    juliaup add "${_desired_julia}"
+    juliaup default "${_desired_julia}"
+    echo "Julia ${_desired_julia} installed and set as default."
+fi
+
 julia_version=$(julia --version | awk '{print($3)}')
 julia_major=${julia_version:0:3} 
 if [[ $julia_major == "1.1" ]]; then
     julia_major=${julia_version:0:4} 
 fi
 
-# Verify supported Julia versions (1.10 or 1.11)
-if [[ "$julia_major" != "1.10" && "$julia_major" != "1.11" ]]; then
-    echo "Warning: Unsupported Julia version detected: $julia_version. This script supports Julia 1.10 or 1.11 only." >&2
-    echo "Use the command 'juliaup default 1.10' or 'juliaup default 1.11' to switch to a supported version." >&2
+# Verify supported Julia versions (1.11 or 1.12)
+if [[ "$julia_major" != "1.11" && "$julia_major" != "1.12" ]]; then
+    echo "Warning: Unsupported Julia version detected: $julia_version. This script supports Julia 1.11 or 1.12 only." >&2
+    echo "Use the command 'juliaup default 1.11' or 'juliaup default 1.12' to switch to a supported version." >&2
     exit 1
 fi
 
