@@ -37,6 +37,7 @@ Build the system image:
 ```bash
 cd repos/Tethers.jl
 cd bin
+./install
 ./create_sys_image
 ```
 
