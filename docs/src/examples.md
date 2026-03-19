@@ -340,7 +340,14 @@ for i in 1:se.segments
         cb = vcat(cb, cbi)
     end
 end
-@named sys = ODESystem(eqs, t; continuous_events = cb)
+@named sys = ODESystem(reduce(vcat, Symbolics.scalarize.(eqs2)), t; continuous_events = cb)
+```
+
+**MTK 11 note:** In ModelingToolkit v11, the broadcast form `.~` for array equations that are later processed with `Symbolics.scalarize` no longer produces valid `Equation` objects. The spring force assignment must use `~` instead of `.~`:
+```julia
+# MTK 11: use ~ instead of .~ for array equations used with Symbolics.scalarize
+spring_force[:, i]   ~ (c_spr[i] * (norm1[i] - (length/se.segments)) 
+                        + damping * spring_vel[i]) * unit_vector[:, i]
 ```
 
 ## Segmented tether with aerodynamic drag
