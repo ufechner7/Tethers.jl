@@ -49,7 +49,7 @@ for i in 1:segments
            acc[:, i+1]        ~ G_EARTH .+ spring_force[:, i] / mass]
     eqs2 = vcat(eqs2, reduce(vcat, eqs))
 end
-# fix the first pointmass
+# fix the first point masses
 eqs2 = vcat(eqs2, [acc[:, 1] ~ zeros(3)])
      
 @named sys = ODESystem(reduce(vcat, Symbolics.scalarize.(eqs2)), t)
