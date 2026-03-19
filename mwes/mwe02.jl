@@ -27,7 +27,7 @@ eqs = vcat(D.(pos)      ~ vel,
            acc          ~ G_EARTH + spring_force/mass)
 
 @named sys = ODESystem(eqs, t; continuous_events = [norm(pos) ~ abs(L0)])
-simple_sys = structural_simplify(sys)
+simple_sys = mtkcompile(sys)
 
 
 duration = 10.0

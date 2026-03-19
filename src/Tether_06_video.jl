@@ -85,7 +85,7 @@ eqs = [len               ~ L0 + V_RO*t,
 eqs2 = vcat(eqs2, reduce(vcat, eqs))  
      
 @named sys = ODESystem(reduce(vcat, Symbolics.scalarize.(eqs2)), t)
-simple_sys = structural_simplify(sys)
+simple_sys = mtkcompile(sys)
 
 # running the simulation
 dt = 0.05
