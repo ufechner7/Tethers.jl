@@ -37,10 +37,7 @@ Pkg = "1.10.0, 1.11.0, 1.12"
 SteadyStateDiffEq = "2.9"
 Symbolics = "7.16"
 Timers = "0.1.5"
-julia = "1.10, 1.11"
+julia = "1.11, 1.12"
 
-[extras]
-Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
-
-[targets]
-test = ["Documenter"]
+[workspace]
+projects = ["docs", "test"]
