@@ -4,6 +4,7 @@
 - uses MTK 11, which is much, much faster when simplifying complex equation systems
 - new `bin/install` script. Use it before running `bin/create_sys_image`.
 - updated many other packages to the latest version
+- the `install` and the `create_sys_image` now support the parameter `--yes` for non-interactive use
 
 ### Tethers v1.2.0 2025-10-22
 #### Changed
