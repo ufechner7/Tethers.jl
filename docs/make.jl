@@ -1,7 +1,4 @@
 using Tethers, Pkg
-if ! ("Documenter" ∈ keys(Pkg.project().dependencies))
-    using TestEnv; TestEnv.activate()
-end
 using Documenter: deploydocs, makedocs
 
 src="src"

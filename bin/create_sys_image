@@ -40,9 +40,6 @@ if [[ "$julia_major" != "1.11" && "$julia_major" != "1.12" ]]; then
     exit 1
 fi
 
-echo "Installing package TestEnv in the global environment!"
-julia --startup-file=no -e "using Pkg; Pkg.add(\"TestEnv\")"
-
 export KMP_DUPLICATE_LIB_OK=TRUE
 
 PYTHON_PATH=$(which python3)
@@ -99,9 +96,9 @@ echo "Updating packages..."
 if test -f "Manifest.toml"; then
    rm Manifest.toml
 fi
-julia --startup-file=no  --project -e "using TestEnv; TestEnv.activate(); using Pkg; Pkg.add(\"PyCall\"); Pkg.build(\"PyCall\")"
+julia --startup-file=no  --project -e "using Pkg; Pkg.add(\"PyCall\"); Pkg.build(\"PyCall\")"
 if [[ $PYTHON == "" ]]; then
-    julia --startup-file=no  --project -e "using TestEnv; TestEnv.activate(); using Pkg; Pkg.add(\"Conda\"); using Conda; Conda.add(\"matplotlib\"); using ControlPlots"
+    julia --startup-file=no  --project -e "using Pkg; Pkg.add(\"Conda\"); using Conda; Conda.add(\"matplotlib\"); using ControlPlots"
 fi
 julia --startup-file=no  --project -e "using Pkg; Pkg.instantiate()"
 
