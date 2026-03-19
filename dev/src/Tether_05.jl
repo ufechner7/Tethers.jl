@@ -36,9 +36,8 @@ end
 @variables total_force(t)[1:3, 1:segments+1]
 
 # basic differential equations
-eqs1 = vcat(D.(pos) .~ vel,
-            D.(vel) .~ acc)
-eqs2 = vcat(eqs1...)
+eqs2 = vcat([D(pos[:, i]) ~ vel[:, i] for i in axes(pos, 2)],
+            [D(vel[:, i]) ~ acc[:, i] for i in axes(vel, 2)])
 # loop over all segments to calculate the spring forces
 for i in segments:-1:1
     global eqs2; local eqs
@@ -57,13 +56,13 @@ for i in 1:(segments+1)
     eqs = []
     if i == segments+1
         push!(eqs, total_force[:, i] ~ spring_force[:, i-1])
-        push!(eqs, acc[:, i]         ~ G_EARTH + total_force[:, i] / (0.5 * mass))
+        push!(eqs, acc[:, i]         ~ G_EARTH .+ total_force[:, i] / (0.5 * mass))
     elseif i == 1
         push!(eqs, total_force[:, i] ~ spring_force[:, i])
         push!(eqs, acc[:, i]         ~ zeros(3))
     else
         push!(eqs, total_force[:, i] ~ spring_force[:, i-1] - spring_force[:, i])
-        push!(eqs, acc[:, i]         ~ G_EARTH + total_force[:, i] / mass)
+        push!(eqs, acc[:, i]         ~ G_EARTH .+ total_force[:, i] / mass)
     end
     eqs2 = vcat(eqs2, reduce(vcat, eqs))
 end
