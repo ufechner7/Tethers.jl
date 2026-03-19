@@ -1,6 +1,7 @@
 #!/bin/bash
 
 export KMP_DUPLICATE_LIB_OK=TRUE
+export QT_QPA_PLATFORM=xcb
 
 # total memory in kB
 MEM=$(grep MemTotal /proc/meminfo | awk '{print $2}')
