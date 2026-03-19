@@ -1,0 +1,84 @@
+#!/bin/bash -eu
+# SPDX-FileCopyrightText: 2025 Uwe Fechner
+# SPDX-License-Identifier: MIT
+
+if [[ $(basename $(pwd)) == "bin" ]]; then
+    cd ..
+fi
+
+# Detect Julia version
+julia_version=$(julia --version | awk '{print($3)}')
+julia_major=${julia_version:0:3}
+if [[ $julia_major == "1.1" ]]; then
+    julia_major=${julia_version:0:4}
+fi
+
+echo "Detected Julia version: $julia_version (major: $julia_major)"
+
+# Only accept Julia 1.10, 1.11, and 1.12
+if [[ $julia_major != "1.10" ]] && [[ $julia_major != "1.11" ]] && [[ $julia_major != "1.12" ]]; then
+    echo "Error: Julia $julia_major is not supported. Only Julia 1.10, 1.11 and 1.12 are supported."
+    exit 1
+fi
+
+# Copy the appropriate default manifest
+DEFAULT_MANIFEST="Manifest-v${julia_major}.toml.default"
+VERSIONED_MANIFEST="Manifest-v${julia_major}.toml"
+
+if [ -f "$DEFAULT_MANIFEST" ]; then
+    cp "$DEFAULT_MANIFEST" "$VERSIONED_MANIFEST"
+    echo "Copied $DEFAULT_MANIFEST to $VERSIONED_MANIFEST"
+else
+    echo "Warning: $DEFAULT_MANIFEST not found, skipping copy."
+fi
+
+# Remove any stale plain Manifest.toml so Julia does not write through a symlink
+if [ -L "Manifest.toml" ]; then
+    rm -f Manifest.toml
+    echo "Removed stale symlink Manifest.toml"
+elif [ -f "Manifest.toml" ]; then
+    rm -f Manifest.toml
+    echo "Removed stale Manifest.toml"
+fi
+
+# Instantiate the project; on failure, delete the manifest and run Pkg.update()
+echo "Instantiating project..."
+_ec=0
+julia --project -e '
+using Pkg
+try
+    Pkg.instantiate()
+catch e
+    @warn "Pkg.instantiate() failed, falling back to Pkg.update()..." exception=e
+    proj_dir = dirname(Base.active_project())
+    for f in readdir(proj_dir)
+        if startswith(f, "Manifest") && endswith(f, ".toml") && !endswith(f, ".default")
+            rm(joinpath(proj_dir, f), force=true)
+            @info "Deleted $f"
+        end
+    end
+    Pkg.update()
+    exit(2)
+end
+' || _ec=$?
+
+if [[ $_ec -eq 2 ]]; then
+    echo "Pkg.instantiate() failed; project updated successfully via Pkg.update()."
+elif [[ $_ec -eq 0 ]]; then
+    echo "Pkg.instantiate() of default manifest succeeded."
+else
+    echo "Error: Installation failed with exit code $_ec."
+    exit $_ec
+fi
+
+# If Julia 1.12 created a plain Manifest.toml, rename it to the versioned name
+if [ -f "Manifest.toml" ]; then
+    mv Manifest.toml "$VERSIONED_MANIFEST"
+    echo "Renamed Manifest.toml to $VERSIONED_MANIFEST"
+fi
+
+echo "Precompiling..."
+julia --project -e 'using Pkg; Pkg.precompile()'
+
+echo ""
+echo "Installation completed successfully."
