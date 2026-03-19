@@ -3,7 +3,6 @@
 # New feature: A steady state solver is used to find the initial tether shape for any
 # given pair of endpoints, which is then used as the initial condition for the simulation.
 using ModelingToolkit, OrdinaryDiffEq, SteadyStateDiffEq, LinearAlgebra, Timers, Parameters, ControlPlots
-tic()
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using ControlPlots
 
@@ -154,7 +153,10 @@ function model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0)
     eqs2 = vcat(eqs2, reduce(vcat, eqs))  
         
     @named sys = ODESystem(reduce(vcat, Symbolics.scalarize.(eqs2)), t)
-    simple_sys = mtkcompile(sys)
+    tic()
+    simple_sys = mtkcompile(sys) # first call 16.6s, second call 3.9s with MTK 10
+    @info "Model compiled, now finding the initial condition with the steady state solver..."
+    toc()
     simple_sys, sys, pos, vel, len, c_spr
 end
 
@@ -164,7 +166,6 @@ function simulate(se, simple_sys)
     tspan = (0.0, se.duration)
     ts    = 0:dt:se.duration
     prob = ODEProblem(simple_sys, nothing, tspan)
-    toc()
     elapsed_time = @elapsed sol = solve(prob, FBDF(autodiff=true); dt, abstol=tol, reltol=tol, saveat=ts)
     elapsed_time = @elapsed sol = solve(prob, FBDF(autodiff=true); dt, abstol=tol, reltol=tol, saveat=ts)
     sol, elapsed_time
