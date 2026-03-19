@@ -1,4 +1,4 @@
-### Tethers v1.2.0 2025-10-22
+### Tethers v1.2.1 2026-03-20
 #### Changed
 - works now with Julia 1.11 or Julia 1.11; use `juliaup default 1.11` or `juliaup default 1.12` to select your preferred Julia version
 - uses MTK 11, which is much, much faster when simplifying complex equation systems
