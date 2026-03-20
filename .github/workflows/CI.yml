@@ -31,7 +31,7 @@ jobs:
             arch: x64
             version: 1
           - os: macOS-latest
-            arch: x64
+            arch: aarch64
             version: 1
     steps:
       - name: Install matplotlib
