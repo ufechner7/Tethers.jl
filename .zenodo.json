@@ -1,0 +1,30 @@
+{
+  "title": "Tethers.jl",
+  "description": "A Julia tutorial package for modeling tethers and cables using spring-damper systems and differential equation solvers. Covers falling masses, non-linear spring-dampers, segmented tethers with aerodynamic drag, and tethers with reel-out and reel-in.",
+  "creators": [
+    {
+      "name": "Fechner, Uwe",
+      "affiliation": "Delft University of Technology",
+      "orcid": "0009-0008-2532-9458"
+    }
+  ],
+  "keywords": [
+    "tether",
+    "cable",
+    "Julia",
+    "simulation",
+    "differential equations",
+    "spring-damper",
+    "airborne wind energy"
+  ],
+  "license": "MIT",
+  "upload_type": "software",
+  "access_right": "open",
+  "related_identifiers": [
+    {
+      "identifier": "https://github.com/ufechner7/Tethers.jl",
+      "relation": "isSupplementTo",
+      "scheme": "url"
+    }
+  ]
+}

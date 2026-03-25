@@ -103,4 +103,20 @@ Dyneema tether. The Julia solvers achieve about 5000 times the performance.
 
 See also: [Why Julia?](https://ufechner7.github.io/2022/08/13/why-julia.html) and read the [documentation](https://ufechner7.github.io/Tethers.jl/dev/) or go straight to the [examples](https://ufechner7.github.io/Tethers.jl/dev/examples/).
 
+## Citing
+
+If you use Tethers.jl in your research, please cite it using the metadata in [CITATION.cff](CITATION.cff) or the following BibTeX entry:
+
+```bibtex
+@software{fechner_tethers_jl,
+  author  = {Fechner, Uwe},
+  title   = {{Tethers.jl}},
+  url     = {https://github.com/ufechner7/Tethers.jl},
+  version = {1.2.1},
+  date    = {2026-03-20},
+}
+```
+
+A DOI will be assigned by [Zenodo](https://zenodo.org) automatically when a new release is published after the GitHub–Zenodo integration is enabled at <https://zenodo.org/account/settings/github/>.
+
 
