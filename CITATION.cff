@@ -12,6 +12,7 @@ authors:
     given-names: "Uwe"
     email: uwe.fechner.msc@gmail.com
     orcid: "https://orcid.org/0009-0008-2532-9458"
+doi: 10.5281/zenodo.19220562
 repository-code: "https://github.com/ufechner7/Tethers.jl"
 url: "https://ufechner7.github.io/Tethers.jl/dev/"
 license: MIT

@@ -1,6 +1,7 @@
 # Tethers.jl
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://ufechner7.github.io/Tethers.jl/dev)
 [![Build Status](https://github.com/ufechner7/Tethers.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/ufechner7/Tethers.jl/actions/workflows/CI.yml?query=branch%3Amain)
+[![DOI](https://zenodo.org/badge/729036178.svg)](https://doi.org/10.5281/zenodo.19220561)
 
 ## Introduction
 
@@ -116,7 +117,3 @@ If you use Tethers.jl in your research, please cite it using the metadata in [CI
   date    = {2026-03-20},
 }
 ```
-
-A DOI will be assigned by [Zenodo](https://zenodo.org) automatically when a new release is published after the GitHub–Zenodo integration is enabled at <https://zenodo.org/account/settings/github/>.
-
-
