@@ -1,3 +1,7 @@
+### Tethers v1.2.2 2026-03-20
+#### Added
+- add CITATION.cff
+
 ### Tethers v1.2.1 2026-03-20
 #### Changed
 - works now with Julia 1.11 or Julia 1.12; use `juliaup default 1.11` or `juliaup default 1.12` to select your preferred Julia version
