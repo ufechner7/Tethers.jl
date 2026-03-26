@@ -106,7 +106,7 @@ See also: [Why Julia?](https://ufechner7.github.io/2022/08/13/why-julia.html) an
 
 ## Citing
 
-If you use Tethers.jl in your research, please cite it using the metadata in [CITATION.cff](CITATION.cff) or the following BibTeX entry:
+If you use Tethers.jl in your research, please cite it using the metadata in [CITATION.cff](https://github.com/ufechner7/Tethers.jl/blob/main/CITATION.cff) or the following BibTeX entry:
 
 ```bibtex
 @software{fechner_tethers_jl,
