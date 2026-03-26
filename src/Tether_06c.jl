@@ -116,8 +116,12 @@ function simulate(se, simple_sys)
     tspan = (0.0, se.duration)
     ts    = 0:se.dt:se.duration
     prob = ODEProblem(simple_sys, nothing, tspan)
-    sol = solve(prob, FBDF(), dt=se.dt, abstol=tol, reltol=tol, saveat=ts)
-    elapsed_time = @elapsed sol = solve(prob, FBDF(), dt=se.dt, abstol=tol, reltol=tol, saveat=ts)
+    solve_kwargs = (; dt=se.dt, abstol=tol, reltol=tol, saveat=ts)
+    if se.callbacks
+        solve_kwargs = merge(solve_kwargs, (; tstops=ts))
+    end
+    sol = solve(prob, FBDF(); solve_kwargs...)
+    elapsed_time = @elapsed sol = solve(prob, FBDF(); solve_kwargs...)
     sol, elapsed_time
 end
 
