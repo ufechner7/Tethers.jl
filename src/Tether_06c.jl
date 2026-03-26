@@ -117,8 +117,8 @@ function simulate(se, simple_sys)
     ts    = 0:se.dt:se.duration
     prob = ODEProblem(simple_sys, nothing, tspan)
     solve_kwargs = (; dt=se.dt, abstol=tol, reltol=tol, saveat=ts)
-    sol = solve(prob, FBDF(); solve_kwargs...)
-    elapsed_time = @elapsed sol = solve(prob, FBDF(); solve_kwargs...)
+    sol = solve(prob, KenCarp4(autodiff=false); solve_kwargs...)
+    elapsed_time = @elapsed sol = solve(prob, KenCarp4(autodiff=false); solve_kwargs...)
     sol, elapsed_time
 end
 
