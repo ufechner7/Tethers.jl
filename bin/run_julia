@@ -4,6 +4,51 @@ export KMP_DUPLICATE_LIB_OK=TRUE
 export QT_QPA_PLATFORM=xcb
 export JULIA_PKG_SERVER_REGISTRY_PREFERENCE="eager"
 
+# Add only a minimal set of Conda shared libraries needed at runtime.
+# Loading the full Conda lib directory can override Julia/system libs (SuiteSparse,
+# Python deps), so we expose only selected compatibility libraries.
+_repo_root="$(cd "$(dirname "$0")/.." && pwd)"
+_conda_env=""
+if [[ -d "${_repo_root}/.CondaPkg/env" ]]; then
+    _conda_env="${_repo_root}/.CondaPkg/env"
+elif [[ -d "${_repo_root}/.CondaPkg/.pixi/envs/default" ]]; then
+    _conda_env="${_repo_root}/.CondaPkg/.pixi/envs/default"
+fi
+
+if [[ -n "${_conda_env}" ]]; then
+    export CONDA_PREFIX="${_conda_env}"
+    export PATH="${_conda_env}/bin:${PATH}"
+
+    _compat_lib_dir="${_repo_root}/.CondaPkg/compat_libs"
+    mkdir -p "${_compat_lib_dir}"
+
+    # Keep this list intentionally short to avoid broad symbol conflicts.
+    if [[ -f "${_conda_env}/lib/libiconv.so.2" ]]; then
+        ln -sfn "${_conda_env}/lib/libiconv.so.2" "${_compat_lib_dir}/libiconv.so.2"
+    fi
+
+    # Prefer Julia artifact OpenSSL libs (they must match OpenSSL_jll ABI),
+    # then fall back to Conda if no artifact copy is available.
+    _artifact_libcrypto="$(find "${HOME}/.julia/artifacts" -type f -path '*/lib/libcrypto.so.3' 2>/dev/null | head -n 1)"
+    _artifact_libssl="$(find "${HOME}/.julia/artifacts" -type f -path '*/lib/libssl.so.3' 2>/dev/null | head -n 1)"
+
+    if [[ -n "${_artifact_libcrypto}" ]]; then
+        ln -sfn "${_artifact_libcrypto}" "${_compat_lib_dir}/libcrypto.so.3"
+    elif [[ -f "${_conda_env}/lib/libcrypto.so.3" ]]; then
+        ln -sfn "${_conda_env}/lib/libcrypto.so.3" "${_compat_lib_dir}/libcrypto.so.3"
+    fi
+
+    if [[ -n "${_artifact_libssl}" ]]; then
+        ln -sfn "${_artifact_libssl}" "${_compat_lib_dir}/libssl.so.3"
+    elif [[ -f "${_conda_env}/lib/libssl.so.3" ]]; then
+        ln -sfn "${_conda_env}/lib/libssl.so.3" "${_compat_lib_dir}/libssl.so.3"
+    fi
+
+    if [[ -d "${_compat_lib_dir}" ]]; then
+        export LD_LIBRARY_PATH="${_compat_lib_dir}:${LD_LIBRARY_PATH:-}"
+    fi
+fi
+
 # total memory in kB
 MEM=$(grep MemTotal /proc/meminfo | awk '{print $2}')
 if (( $MEM >=  15000000 )); then
@@ -13,9 +58,11 @@ fi
 if [[ $(basename $(pwd)) == "bin" ]]; then
     cd ..
 fi
+
 if [[ $HOSTNAME == "tuxedi" ]]; then
     sudo performance.sh
 fi
+
 
 # Build the startup expression; optionally include a user-provided script
 if [[ -n "${1:-}" ]]; then
