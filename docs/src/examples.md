@@ -48,7 +48,7 @@ acceleration. For equality in symbolic equations the character `~` has to be use
 
 The next lines are:
 ```julia
-@named sys = ODESystem(eqs, t)
+@named sys = System(eqs, t)
 simple_sys = mtkcompile(sys)
 ```
 This means we create a named ordinary equation system, depending on `t`. Then we simplify the system symbolically (order reduction). If you type `sys` in the Julia REPL (command line) you can see that the original system had 9 equations, the second line above created a system with only six equations. This step helps to speed up the simulation and often also removes algebraic loops which makes the ODE a lot simpler to solve numerically later on.
@@ -340,7 +340,7 @@ for i in 1:se.segments
         cb = vcat(cb, cbi)
     end
 end
-@named sys = ODESystem(reduce(vcat, Symbolics.scalarize.(eqs2)), t; continuous_events = cb)
+@named sys = System(reduce(vcat, Symbolics.scalarize.(eqs2)), t; continuous_events = cb)
 ```
 
 **MTK 11 note:** In ModelingToolkit v11, the broadcast form `.~` for array equations that are later processed with `Symbolics.scalarize` no longer produces valid `Equation` objects. The spring force assignment must use `~` instead of `.~`:
