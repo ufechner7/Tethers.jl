@@ -90,6 +90,13 @@ else
     echo "Warning: $DEFAULT_MANIFEST not found, skipping copy."
 fi
 
+# Delete any existing custom system image for this Julia version
+SOFILE="bin/kps-image-${julia_major}.so"
+if test -f "$SOFILE"; then
+    echo "Deleting old system image: $SOFILE"
+    rm -f "$SOFILE"
+fi
+
 # Remove any stale plain Manifest.toml so Julia does not write through a symlink
 if [ -L "Manifest.toml" ]; then
     rm -f Manifest.toml
@@ -135,8 +142,14 @@ if [ -f "Manifest.toml" ]; then
     echo "Renamed Manifest.toml to $VERSIONED_MANIFEST"
 fi
 
+# Copy the versioned manifest to docs before instantiating it (Julia 1.11 only)
+if [[ $julia_major == "1.11" ]] && [ -f "$VERSIONED_MANIFEST" ]; then
+    cp "$VERSIONED_MANIFEST" "docs/Manifest-v1.11.toml"
+    echo "Copied $VERSIONED_MANIFEST to docs/Manifest-v1.11.toml"
+fi
+
 echo "Instantiating docs subproject..."
-julia --project=docs -e 'using Pkg; Pkg.instantiate(); Pkg.precompile()'
+julia --project=docs -e 'using Pkg; Pkg.resolve(); Pkg.instantiate(); Pkg.precompile()'
 
 echo "Precompiling..."
 julia --project -e 'using Pkg; Pkg.precompile()'
