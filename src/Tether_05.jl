@@ -67,7 +67,7 @@ for i in 1:(segments+1)
     eqs2 = vcat(eqs2, reduce(vcat, eqs))
 end
      
-@named sys = ODESystem(reduce(vcat, Symbolics.scalarize.(eqs2)), t)
+@named sys = System(reduce(vcat, Symbolics.scalarize.(eqs2)), t)
 simple_sys = mtkcompile(sys)
 
 # running the simulation

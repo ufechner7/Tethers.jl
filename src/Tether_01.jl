@@ -16,7 +16,7 @@ eqs = vcat(D(pos) ~ vel,
            D(vel) ~ acc,
            acc    ~ G_EARTH)
 
-@named sys = ODESystem(eqs, t)
+@named sys = System(eqs, t)
 simple_sys = mtkcompile(sys)
 
 # running the simulation
