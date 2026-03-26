@@ -29,14 +29,8 @@ if ! command -v juliaup &> /dev/null; then
 fi
 
 # Ask which Julia version to use
-# Default to 1.12 if it is already installed and is the current default, otherwise 1.11
-if juliaup status 2>/dev/null | grep '^\s*\*' | grep -q '1\.12'; then
-    _default_choice=2
-    _default_julia="1.12"
-else
-    _default_choice=1
-    _default_julia="1.11"
-fi
+_default_julia="1.11"
+
 echo "Which Julia version do you want to use?"
 echo "  1) Julia 1.11"
 echo "  2) Julia 1.12"
@@ -44,7 +38,7 @@ if [[ "$_yes" == "true" ]]; then
     _julia_choice=""
     echo "Non-interactive mode: using default (${_default_julia})"
 else
-    read -rp "Enter 1 or 2 [default: ${_default_choice}]: " _julia_choice
+    read -rp "Enter 1 or 2 [default: ${_default_julia}]: " _julia_choice
 fi
 case "${_julia_choice}" in
     1)
