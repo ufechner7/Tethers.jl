@@ -19,33 +19,36 @@ if [[ -n "${_conda_env}" ]]; then
     export CONDA_PREFIX="${_conda_env}"
     export PATH="${_conda_env}/bin:${PATH}"
 
-    _compat_lib_dir="${_repo_root}/.CondaPkg/compat_libs"
-    mkdir -p "${_compat_lib_dir}"
+    # Only Linux uses the shared-library shim (LD_LIBRARY_PATH, .so files).
+    if [[ "${OSTYPE}" == linux* ]]; then
+        _compat_lib_dir="${_repo_root}/.CondaPkg/compat_libs"
+        mkdir -p "${_compat_lib_dir}"
 
-    # Keep this list intentionally short to avoid broad symbol conflicts.
-    if [[ -f "${_conda_env}/lib/libiconv.so.2" ]]; then
-        ln -sfn "${_conda_env}/lib/libiconv.so.2" "${_compat_lib_dir}/libiconv.so.2"
-    fi
+        # Keep this list intentionally short to avoid broad symbol conflicts.
+        if [[ -f "${_conda_env}/lib/libiconv.so.2" ]]; then
+            ln -sfn "${_conda_env}/lib/libiconv.so.2" "${_compat_lib_dir}/libiconv.so.2"
+        fi
 
-    # Prefer Julia artifact OpenSSL libs (they must match OpenSSL_jll ABI),
-    # then fall back to Conda if no artifact copy is available.
-    _artifact_libcrypto="$(find "${HOME}/.julia/artifacts" -type f -path '*/lib/libcrypto.so.3' 2>/dev/null | head -n 1)"
-    _artifact_libssl="$(find "${HOME}/.julia/artifacts" -type f -path '*/lib/libssl.so.3' 2>/dev/null | head -n 1)"
+        # Prefer Julia artifact OpenSSL libs (they must match OpenSSL_jll ABI),
+        # then fall back to Conda if no artifact copy is available.
+        _artifact_libcrypto="$(find "${HOME}/.julia/artifacts" -type f -path '*/lib/libcrypto.so.3' 2>/dev/null | head -n 1)"
+        _artifact_libssl="$(find "${HOME}/.julia/artifacts" -type f -path '*/lib/libssl.so.3' 2>/dev/null | head -n 1)"
 
-    if [[ -n "${_artifact_libcrypto}" ]]; then
-        ln -sfn "${_artifact_libcrypto}" "${_compat_lib_dir}/libcrypto.so.3"
-    elif [[ -f "${_conda_env}/lib/libcrypto.so.3" ]]; then
-        ln -sfn "${_conda_env}/lib/libcrypto.so.3" "${_compat_lib_dir}/libcrypto.so.3"
-    fi
+        if [[ -n "${_artifact_libcrypto}" ]]; then
+            ln -sfn "${_artifact_libcrypto}" "${_compat_lib_dir}/libcrypto.so.3"
+        elif [[ -f "${_conda_env}/lib/libcrypto.so.3" ]]; then
+            ln -sfn "${_conda_env}/lib/libcrypto.so.3" "${_compat_lib_dir}/libcrypto.so.3"
+        fi
 
-    if [[ -n "${_artifact_libssl}" ]]; then
-        ln -sfn "${_artifact_libssl}" "${_compat_lib_dir}/libssl.so.3"
-    elif [[ -f "${_conda_env}/lib/libssl.so.3" ]]; then
-        ln -sfn "${_conda_env}/lib/libssl.so.3" "${_compat_lib_dir}/libssl.so.3"
-    fi
+        if [[ -n "${_artifact_libssl}" ]]; then
+            ln -sfn "${_artifact_libssl}" "${_compat_lib_dir}/libssl.so.3"
+        elif [[ -f "${_conda_env}/lib/libssl.so.3" ]]; then
+            ln -sfn "${_conda_env}/lib/libssl.so.3" "${_compat_lib_dir}/libssl.so.3"
+        fi
 
-    if [[ -d "${_compat_lib_dir}" ]]; then
-        export LD_LIBRARY_PATH="${_compat_lib_dir}:${LD_LIBRARY_PATH:-}"
+        if [[ -d "${_compat_lib_dir}" ]]; then
+            export LD_LIBRARY_PATH="${_compat_lib_dir}:${LD_LIBRARY_PATH:-}"
+        fi
     fi
 fi
 
