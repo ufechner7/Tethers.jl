@@ -17,6 +17,8 @@ if [[ "${CI:-}" == "true" ]]; then
 fi
 
 export QT_QPA_PLATFORM=xcb
+export MPLBACKEND=agg
+export KMP_DUPLICATE_LIB_OK=TRUE
 
 if ! command -v juliaup &> /dev/null; then
     echo "Please install the Julia installer 'juliaup'!"
@@ -57,8 +59,6 @@ if [[ "$julia_major" != "1.11" && "$julia_major" != "1.12" ]]; then
     echo "Use the command 'juliaup default 1.11' or 'juliaup default 1.12' to switch to a supported version." >&2
     exit 1
 fi
-
-export KMP_DUPLICATE_LIB_OK=TRUE
 
 PYTHON_PATH=$(which python3)
 if [ -x "$PYTHON_PATH" ]; then
@@ -103,8 +103,6 @@ if (( $MEM <  15000000 )); then
     fi
     export JULIA_IMAGE_THREADS=1
     export JULIA_PKG_PRESERVE_TIERED_INSTALLED=true
-else
-    export MPLBACKEND=qt5agg
 fi
 
 
