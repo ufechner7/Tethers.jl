@@ -138,4 +138,7 @@ julia  --project -t auto -e "using Pkg; Pkg.precompile()"
 julia  --project -t auto --heap-size-hint=8000M -e "include(\"./test/create_sys_image.jl\");"
 
 mv kps-image_tmp.so bin/kps-image-${julia_major}.so
-julia --project -e "using Pkg; Pkg.precompile(); using Parameters"
+julia --project -J bin/kps-image-${julia_major}.so -e "using Pkg; Pkg.precompile(); using Parameters"
+
+echo "Instantiating docs subproject..."
+julia --project=docs -J bin/kps-image-${julia_major}.so -e 'using Pkg; Pkg.resolve(); Pkg.instantiate(); Pkg.precompile()'
