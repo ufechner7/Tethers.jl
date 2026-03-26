@@ -26,26 +26,34 @@ if ! command -v juliaup &> /dev/null; then
     exit 1
 fi
 
-if ! command -v julia &> /dev/null; then
-    echo "Julia is not installed. Which version do you want to install?"
+# Ask which Julia version to use, defaulting to the currently active version
+if juliaup status 2>/dev/null | grep '^\s*\*' | grep -q '1\.12'; then
+    _default_julia="1.12"
+    _default_choice=2
+else
+    _default_julia="1.11"
+    _default_choice=1
+fi
+
+if [[ "$_yes" == "true" ]]; then
+    _julia_choice=""
+    echo "Non-interactive mode: using Julia ${_default_julia}"
+else
+    echo "Which Julia version do you want to use?"
     echo "  1) Julia 1.11"
     echo "  2) Julia 1.12"
-    if [[ "$_yes" == "true" ]]; then
-        _julia_choice=""
-        echo "Non-interactive mode: using default (1.11)"
-    else
-        read -rp "Enter 1 or 2 [default: 1]: " _julia_choice
-    fi
-    case "${_julia_choice}" in
-        1|"") _desired_julia="1.11" ;;
-        2) _desired_julia="1.12" ;;
-        *) echo "Invalid choice. Exiting."; exit 1 ;;
-    esac
-    echo "Installing Julia ${_desired_julia}..."
-    juliaup add "${_desired_julia}"
-    juliaup default "${_desired_julia}"
-    echo "Julia ${_desired_julia} installed and set as default."
+    read -rp "Enter 1 or 2 [default: ${_default_choice}]: " _julia_choice
 fi
+case "${_julia_choice}" in
+    1) _desired_julia="1.11" ;;
+    2) _desired_julia="1.12" ;;
+    "") _desired_julia="${_default_julia}" ;;
+    *) echo "Invalid choice. Exiting."; exit 1 ;;
+esac
+echo "Installing and activating Julia ${_desired_julia}..."
+juliaup add "${_desired_julia}"
+juliaup default "${_desired_julia}"
+echo "Julia ${_desired_julia} is now the default."
 
 julia_version=$(julia --version | awk '{print($3)}')
 julia_major=${julia_version:0:3} 
@@ -128,11 +136,7 @@ echo "Updating packages..."
 if test -f "Manifest.toml"; then
    rm Manifest.toml
 fi
-julia --startup-file=no  --project -e "using Pkg; Pkg.add(\"PyCall\"); Pkg.build(\"PyCall\")"
-if [[ $PYTHON == "" ]]; then
-    julia --startup-file=no  --project -e "using Pkg; Pkg.add(\"Conda\"); using Conda; Conda.add(\"matplotlib\"); using ControlPlots"
-fi
-julia --startup-file=no  --project -e "using Pkg; Pkg.instantiate()"
+julia --startup-file=no --project -e "using Pkg; Pkg.resolve(); Pkg.instantiate()"
 
 julia  --project -t auto -e "using Pkg; Pkg.precompile()"
 julia  --project -t auto --heap-size-hint=8000M -e "include(\"./test/create_sys_image.jl\");"
