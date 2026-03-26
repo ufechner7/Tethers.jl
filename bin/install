@@ -6,6 +6,8 @@ if [[ $(basename $(pwd)) == "bin" ]]; then
     cd ..
 fi
 
+export JULIA_PKG_SERVER_REGISTRY_PREFERENCE="eager"
+
 # Parse flags
 _yes=false
 for _arg in "$@"; do
