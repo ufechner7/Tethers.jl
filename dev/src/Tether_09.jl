@@ -153,7 +153,7 @@ function model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0)
            damping           ~ se.damping  / l_spring]
     eqs2 = vcat(eqs2, reduce(vcat, eqs))  
         
-    @named sys = ODESystem(reduce(vcat, Symbolics.scalarize.(eqs2)), t)
+    @named sys = System(reduce(vcat, Symbolics.scalarize.(eqs2)), t)
     simple_sys = mtkcompile(sys)
     simple_sys, pos, vel, len, c_spr
 end

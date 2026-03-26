@@ -27,7 +27,7 @@ function model3(G_EARTH, L0, V0)
             spring_force ~ (c_spring * (norm1 - abs(l0)) + damping * spring_vel) * unit_vector,
             acc          ~ G_EARTH .+ spring_force/mass)
 
-    @named sys = ODESystem(Symbolics.scalarize.(reduce(vcat, Symbolics.scalarize.(eqs))), t)
+    @named sys = System(Symbolics.scalarize.(reduce(vcat, Symbolics.scalarize.(eqs))), t)
     simple_sys = mtkcompile(sys)
     simple_sys, pos, vel, c_spring
 end

@@ -52,7 +52,7 @@ end
 # fix the first point masses
 eqs2 = vcat(eqs2, [acc[:, 1] ~ zeros(3)])
      
-@named sys = ODESystem(reduce(vcat, Symbolics.scalarize.(eqs2)), t)
+@named sys = System(reduce(vcat, Symbolics.scalarize.(eqs2)), t)
 simple_sys = mtkcompile(sys)
 
 # running the simulation

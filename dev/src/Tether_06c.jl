@@ -103,9 +103,9 @@ function model(se)
                 cb = vcat(cb, cbi)
             end
         end
-        @named sys = ODESystem(reduce(vcat, Symbolics.scalarize.(eqs2)), t; continuous_events = cb)
+        @named sys = System(reduce(vcat, Symbolics.scalarize.(eqs2)), t; continuous_events = cb)
     else
-        @named sys = ODESystem(reduce(vcat, Symbolics.scalarize.(eqs2)), t)
+        @named sys = System(reduce(vcat, Symbolics.scalarize.(eqs2)), t)
     end
     simple_sys = mtkcompile(sys)
     simple_sys, pos, vel
