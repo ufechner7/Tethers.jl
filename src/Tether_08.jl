@@ -329,6 +329,7 @@ function main(; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
     sol, pos, vel, simple_sys
 end
 
+# run the simulation with a free (unfixed) second attachment point
 main(p2=[-40,0,-47], fix_p2=false);
 
 nothing
