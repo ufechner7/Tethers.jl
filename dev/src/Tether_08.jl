@@ -5,7 +5,6 @@
 using ModelingToolkit, OrdinaryDiffEq, SteadyStateDiffEq, LinearAlgebra, Timers, Parameters, ControlPlots
 
 using ModelingToolkit: t_nounits as t, D_nounits as D
-using ControlPlots
 
 """
     Settings3
@@ -49,6 +48,13 @@ spring (1% stiffness for `l < l_0`), tether drag and reel-in/reel-out, used by
     save::Bool = false                           # save png files in folder video
 end
 
+"""
+    set_tether_diameter!(se, d; c_spring_4mm = 614600, damping_4mm = 473)
+
+Set the tether diameter `d` [mm] in the settings `se` and scale the unit spring
+constant `se.c_spring` and the unit damping constant `se.damping` with the
+cross section, relative to the reference values of a 4 mm tether.
+"""
 function set_tether_diameter!(se, d; c_spring_4mm = 614600, damping_4mm = 473)
     se.d_tether = d
     se.c_spring = c_spring_4mm * (d/4.0)^2
@@ -61,23 +67,31 @@ end
 Compute a linearly interpolated initial position and velocity for each tether
 particle between the endpoints `p1` and `p2`, for the settings `se`.
 
-If `p2` is `nothing`, it is derived from `p1` using `se.α0` and `se.l0`.
+If `p2` is `nothing`, it is derived from `p1` using `se.α0` and `se.l0`; if `p1`
+is `nothing`, it is derived from `p2` the same way. At least one of them must be
+given.
 
 Returns `(POS0, VEL0)`, each a `3 × (se.segments+1)` matrix; `VEL0` is all zeros.
 """
 function calc_initial_state(se; p1, p2)
-    # calculate p2 based on se.α0 and se.l0 if not given
+    isnothing(p1) && isnothing(p2) && error("at least one of p1 and p2 must be defined")
+    # calculate the missing endpoint based on se.α0 and se.l0
     if isnothing(p2)
         z  = cos(se.α0) * se.l0
         y  = sin(se.α0) * se.l0
         p2 = [p1[1], p1[2] - y, p1[3] - z]
         println("p2: ", p2)
+    elseif isnothing(p1)
+        z  = cos(se.α0) * se.l0
+        y  = sin(se.α0) * se.l0
+        p1 = [p2[1], p2[2] + y, p2[3] + z]
+        println("p1: ", p1)
     end
     POS0 = zeros(3, se.segments+1)
     VEL0 = zeros(3, se.segments+1)
     # use a linear interpolation between p1 and p2 for the intermediate points
+    Δ = (p2-p1) / se.segments
     for i in 1:se.segments+1
-        Δ = (p2-p1) / se.segments
         POS0[:, i] .= p1 + (i-1) * Δ
     end
     POS0, VEL0
@@ -93,8 +107,9 @@ solve to find a physically consistent initial tether shape between the endpoints
 `p1` and `p2` are the fixed or free endpoints of the tether, each a length-3 vector
 or `nothing`. `fix_p1` and `fix_p2` control whether the corresponding endpoint is
 held fixed (`true`) or free to accelerate under gravity and tether forces (`false`);
-an endpoint that is `nothing` cannot be fixed. If `p2` is `nothing`, it is derived
-from `se.α0` and `se.l0`.
+an endpoint that is `nothing` cannot be fixed. An endpoint that is `nothing` is
+derived from the other one using `se.α0` and `se.l0`, so at least one of them must
+be given.
 
 Internally, this first builds the model with `se.v_ro` set to zero and solves for
 the steady-state tether positions `POS0`, then rebuilds the model with the original
@@ -106,38 +121,43 @@ uncompiled (`sys`) `ModelingToolkit.System`, and the symbolic variables `pos`, `
 """
 function model(se; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
     if ! isnothing(p1)
-        @assert isa(p1, AbstractVector) || error("p1 must be a vector")
-        @assert (length(p1) == 3)       || error("p1 must have length 3")
+        isa(p1, AbstractVector) || error("p1 must be a vector")
+        length(p1) == 3         || error("p1 must have length 3")
     else
-        @assert ! fix_p1                || error("if p1 undefined it cannot be fixed")
+        fix_p1 && error("if p1 undefined it cannot be fixed")
     end
 
     if ! isnothing(p2)
-        @assert isa(p2, AbstractVector) || error("p2 must be a vector")
-        @assert (length(p2) == 3)       || error("p2 must have length 3")
+        isa(p2, AbstractVector) || error("p2 must be a vector")
+        length(p2) == 3         || error("p2 must have length 3")
     else
-        @assert ! fix_p2                || error("if p2 undefined it cannot be fixed")
+        fix_p2 && error("if p2 undefined it cannot be fixed")
     end
     # straight line approximation for the tether
     POS0, VEL0 = calc_initial_state(se; p1, p2)
     # find steady state
     v_ro = se.v_ro      # save the reel-out speed
     se.v_ro = 0         # v_ro must be zero, otherwise finding the steady state is not possible
-    simple_sys, sys, pos, =  model(se, p1, p2, true, true, POS0, VEL0)
-    tspan = (0.0, se.duration)
-    prob = ODEProblem(simple_sys, nothing, tspan)
-    prob1 = SteadyStateProblem(prob)
-    sol1 = solve(prob1, DynamicSS(KenCarp4(autodiff=false)))
+    local sol1, pos
+    try
+        simple_sys, sys, pos, =  model(se, p1, p2, true, true, POS0, VEL0)
+        tspan = (0.0, se.duration)
+        prob = ODEProblem(simple_sys, nothing, tspan)
+        prob1 = SteadyStateProblem(prob)
+        sol1 = solve(prob1, DynamicSS(KenCarp4(autodiff=false)))
+    finally
+        se.v_ro = v_ro  # restore the reel-out speed, also if the steady state solver failed
+    end
+    SciMLBase.successful_retcode(sol1) ||
+        error("Steady state solver failed with return code $(sol1.retcode)!")
     POS0 = sol1[pos]
     # create the real model
-    se.v_ro = v_ro
     model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0)
 end
 
 # internal helper: builds the system given precomputed initial conditions POS0, VEL0
 function model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0)
     mass_per_meter = se.rho_tether * π * (se.d_tether/2000.0)^2
-    @parameters c_spring0=se.c_spring/(se.l0/se.segments) l_seg=se.l0/se.segments
     @parameters rel_compression_stiffness = se.rel_compression_stiffness
     @variables begin 
         pos(t)[1:3, 1:se.segments+1]  = POS0
@@ -190,7 +210,8 @@ function model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0)
                 push!(eqs, acc[:, i]         ~ zeros(3))
             end
         elseif i == 1
-            push!(eqs, total_force[:, i] ~ spring_force[:, i] + half_drag_force[:, i])
+            # spring_force[:, i] acts on particle i+1; particle i feels the reaction
+            push!(eqs, total_force[:, i] ~ -spring_force[:, i] + half_drag_force[:, i])
             if isnothing(p1) || ! fix_p1
                 push!(eqs, acc[:, i]     ~ se.g_earth .+ total_force[:, i] / (0.5 * m_tether_particle))
             else
@@ -204,10 +225,10 @@ function model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0)
         eqs2 = vcat(eqs2, reduce(vcat, eqs))
     end
     # scalar equations
-    eqs = [l_spring   ~ (se.l0 + se.v_ro*t) / se.segments,
-    c_spring          ~ se.c_spring / l_spring,
-    m_tether_particle ~ mass_per_meter * l_spring,
-    damping           ~ se.damping  / l_spring]
+    eqs = [l_spring          ~ (se.l0 + se.v_ro*t) / se.segments,
+           c_spring          ~ se.c_spring / l_spring,
+           m_tether_particle ~ mass_per_meter * l_spring,
+           damping           ~ se.damping  / l_spring]
     eqs2 = vcat(eqs2, reduce(vcat, eqs))  
         
     @named sys = System(reduce(vcat, Symbolics.scalarize.(eqs2)), t)
@@ -221,7 +242,8 @@ end
     simulate(se, simple_sys)
 
 Simulate the tether model `simple_sys` (as returned by [`model`](@ref)) over the
-duration `se.duration` using a fixed step size of 0.02s and the `FBDF` solver.
+duration `se.duration` with the adaptive `FBDF` solver, starting with a step size
+of 0.02s and storing the result on a 0.02s grid.
 
 The solver is run twice; the first call triggers compilation, and only the
 elapsed time of the second (timed) call is returned.
@@ -235,29 +257,38 @@ function simulate(se, simple_sys)
     tspan = (0.0, se.duration)
     ts    = 0:dt:se.duration
     prob = ODEProblem(simple_sys, nothing, tspan)
-    
     elapsed_time = @elapsed sol = solve(prob, FBDF(autodiff=true); dt, abstol=tol, reltol=tol, saveat=ts)
     elapsed_time = @elapsed sol = solve(prob, FBDF(autodiff=true); dt, abstol=tol, reltol=tol, saveat=ts)
     sol, elapsed_time
 end
 
+"""
+    play(se, sol, pos)
+
+Animate the solution `sol` of the tether model, plotting the tether shape stored in
+the symbolic variable `pos` every 151ms of simulated time, at half of real-time speed.
+
+If `se.save` is `true`, one PNG file per frame is written to the `video` folder.
+"""
 function play(se, sol, pos)
     dt = 0.151
     ylim = (-1.2 * (se.l0 + se.v_ro*se.duration), 0.5)
     xlim = (-se.l0, se.l0)
-    mkpath("video")
-    z_max = 0.0
+    if se.save
+        mkpath("video")
+    end
     # text position
-    xy = (se.l0/4.2, z_max-7)
+    xy = (se.l0/4.2, -7.0)
+    POS = sol[pos]  # extract the positions once, and not for every frame
     start = time_ns()
     i = 1; j = 0
     for time in 0:dt:se.duration
         # while we run the simulation in steps of 20ms, we update the plot only every 150ms
         # therefore we have to skip some steps of the result
-        while sol.t[i] < time
+        while i < length(sol.t) && sol.t[i] < time
             i += 1
         end
-        plot2d(sol[pos][i], time; segments=se.segments, xlim, ylim, xy)
+        plot2d(POS[i], time; segments=se.segments, xlim, ylim, xy)
         if se.save
             ControlPlots.plt.savefig("video/"*"img-"*lpad(j, 4, "0"))
         end
@@ -270,6 +301,17 @@ function play(se, sol, pos)
     nothing
 end
 
+"""
+    main(; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
+
+Build, simulate and animate the tether model for the endpoints `p1` and `p2`; see
+[`model`](@ref) for the meaning of the arguments.
+
+Prints the elapsed time, the number of solver evaluations per time step and the
+number of equations before and after simplification. Returns
+`(sol, pos, vel, simple_sys)`. If the global `__PC` is defined (precompilation),
+the animation and the printed statistics are skipped.
+"""
 function main(; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
     global sol, pos, vel, len, c_spr, simple_sys
     se = Settings3()
@@ -287,6 +329,7 @@ function main(; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
     sol, pos, vel, simple_sys
 end
 
+# run the simulation with a free (unfixed) second attachment point
 main(p2=[-40,0,-47], fix_p2=false);
 
 nothing
