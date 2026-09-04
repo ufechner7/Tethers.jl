@@ -61,17 +61,25 @@ end
 Compute a linearly interpolated initial position and velocity for each tether
 particle between the endpoints `p1` and `p2`, for the settings `se`.
 
-If `p2` is `nothing`, it is derived from `p1` using `se.α0` and `se.l0`.
+If `p2` is `nothing`, it is derived from `p1` using `se.α0` and `se.l0`; if `p1`
+is `nothing`, it is derived from `p2` the same way. At least one of them must be
+given.
 
 Returns `(POS0, VEL0)`, each a `3 × (se.segments+1)` matrix; `VEL0` is all zeros.
 """
 function calc_initial_state(se; p1, p2)
-    # calculate p2 based on se.α0 and se.l0 if not given
+    isnothing(p1) && isnothing(p2) && error("at least one of p1 and p2 must be defined")
+    # calculate the missing endpoint based on se.α0 and se.l0
     if isnothing(p2)
         z  = cos(se.α0) * se.l0
         y  = sin(se.α0) * se.l0
         p2 = [p1[1], p1[2] - y, p1[3] - z]
         println("p2: ", p2)
+    elseif isnothing(p1)
+        z  = cos(se.α0) * se.l0
+        y  = sin(se.α0) * se.l0
+        p1 = [p2[1], p2[2] + y, p2[3] + z]
+        println("p1: ", p1)
     end
     POS0 = zeros(3, se.segments+1)
     VEL0 = zeros(3, se.segments+1)
@@ -93,8 +101,9 @@ solve to find a physically consistent initial tether shape between the endpoints
 `p1` and `p2` are the fixed or free endpoints of the tether, each a length-3 vector
 or `nothing`. `fix_p1` and `fix_p2` control whether the corresponding endpoint is
 held fixed (`true`) or free to accelerate under gravity and tether forces (`false`);
-an endpoint that is `nothing` cannot be fixed. If `p2` is `nothing`, it is derived
-from `se.α0` and `se.l0`.
+an endpoint that is `nothing` cannot be fixed. An endpoint that is `nothing` is
+derived from the other one using `se.α0` and `se.l0`, so at least one of them must
+be given.
 
 Internally, this first builds the model with `se.v_ro` set to zero and solves for
 the steady-state tether positions `POS0`, then rebuilds the model with the original
@@ -123,14 +132,20 @@ function model(se; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
     # find steady state
     v_ro = se.v_ro      # save the reel-out speed
     se.v_ro = 0         # v_ro must be zero, otherwise finding the steady state is not possible
-    simple_sys, sys, pos, =  model(se, p1, p2, true, true, POS0, VEL0)
-    tspan = (0.0, se.duration)
-    prob = ODEProblem(simple_sys, nothing, tspan)
-    prob1 = SteadyStateProblem(prob)
-    sol1 = solve(prob1, DynamicSS(KenCarp4(autodiff=false)))
+    local sol1, pos
+    try
+        simple_sys, sys, pos, =  model(se, p1, p2, true, true, POS0, VEL0)
+        tspan = (0.0, se.duration)
+        prob = ODEProblem(simple_sys, nothing, tspan)
+        prob1 = SteadyStateProblem(prob)
+        sol1 = solve(prob1, DynamicSS(KenCarp4(autodiff=false)))
+    finally
+        se.v_ro = v_ro  # restore the reel-out speed, also if the steady state solver failed
+    end
+    SciMLBase.successful_retcode(sol1) ||
+        error("Steady state solver failed with return code $(sol1.retcode)!")
     POS0 = sol1[pos]
     # create the real model
-    se.v_ro = v_ro
     model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0)
 end
 
@@ -190,7 +205,8 @@ function model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0)
                 push!(eqs, acc[:, i]         ~ zeros(3))
             end
         elseif i == 1
-            push!(eqs, total_force[:, i] ~ spring_force[:, i] + half_drag_force[:, i])
+            # spring_force[:, i] acts on particle i+1; particle i feels the reaction
+            push!(eqs, total_force[:, i] ~ -spring_force[:, i] + half_drag_force[:, i])
             if isnothing(p1) || ! fix_p1
                 push!(eqs, acc[:, i]     ~ se.g_earth .+ total_force[:, i] / (0.5 * m_tether_particle))
             else
