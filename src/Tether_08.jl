@@ -7,6 +7,30 @@ using ModelingToolkit, OrdinaryDiffEq, SteadyStateDiffEq, LinearAlgebra, Timers,
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using ControlPlots
 
+"""
+    Settings3
+
+Simulation parameters for the 3D mass-spring tether model with a nonlinear
+spring (1% stiffness for `l < l_0`), tether drag and reel-in/reel-out, used by
+[`calc_initial_state`](@ref) and the main simulation loop.
+
+# Fields
+- `g_earth::Vector{Float64}`: gravitational acceleration vector [m/s²]
+- `v_wind_tether::Vector{Float64}`: wind velocity acting on the tether [m/s]
+- `rho`: air density [kg/m³]
+- `cd_tether`: drag coefficient of the tether [-]
+- `l0`: initial tether length [m]
+- `v_ro`: reel-out speed [m/s]
+- `d_tether`: tether diameter [mm]
+- `rho_tether`: density of the tether material (Dyneema) [kg/m³]
+- `c_spring`: unit spring constant [N]
+- `rel_compression_stiffness`: relative compression stiffness [-]
+- `damping`: unit damping constant [Ns]
+- `segments::Int64`: number of tether segments [-]
+- `α0`: initial tether angle [rad]
+- `duration`: duration of the simulation [s]
+- `save::Bool`: if `true`, save PNG files to the `video` folder
+"""
 @with_kw mutable struct Settings3 @deftype Float64
     g_earth::Vector{Float64} = [0.0, 0.0, -9.81] # gravitational acceleration     [m/s²]
     v_wind_tether::Vector{Float64} = [2, 0.0, 0.0]
@@ -31,6 +55,16 @@ function set_tether_diameter!(se, d; c_spring_4mm = 614600, damping_4mm = 473)
     se.damping = damping_4mm * (d/4.0)^2
 end
                               
+"""
+    calc_initial_state(se; p1, p2)
+
+Compute a linearly interpolated initial position and velocity for each tether
+particle between the endpoints `p1` and `p2`, for the settings `se`.
+
+If `p2` is `nothing`, it is derived from `p1` using `se.α0` and `se.l0`.
+
+Returns `(POS0, VEL0)`, each a `3 × (se.segments+1)` matrix; `VEL0` is all zeros.
+"""
 function calc_initial_state(se; p1, p2)
     # calculate p2 based on se.α0 and se.l0 if not given
     if isnothing(p2)
@@ -49,6 +83,27 @@ function calc_initial_state(se; p1, p2)
     POS0, VEL0
 end
 
+"""
+    model(se; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
+
+Build the ModelingToolkit tether model for the settings `se`, using a steady-state
+solve to find a physically consistent initial tether shape between the endpoints
+`p1` and `p2`.
+
+`p1` and `p2` are the fixed or free endpoints of the tether, each a length-3 vector
+or `nothing`. `fix_p1` and `fix_p2` control whether the corresponding endpoint is
+held fixed (`true`) or free to accelerate under gravity and tether forces (`false`);
+an endpoint that is `nothing` cannot be fixed. If `p2` is `nothing`, it is derived
+from `se.α0` and `se.l0`.
+
+Internally, this first builds the model with `se.v_ro` set to zero and solves for
+the steady-state tether positions `POS0`, then rebuilds the model with the original
+`se.v_ro` and `POS0` as initial condition.
+
+Returns `(simple_sys, sys, pos, vel, len, c_spr)`: the compiled (`simple_sys`) and
+uncompiled (`sys`) `ModelingToolkit.System`, and the symbolic variables `pos`, `vel`,
+`len` and `c_spr` used to build it.
+"""
 function model(se; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
     if ! isnothing(p1)
         @assert isa(p1, AbstractVector) || error("p1 must be a vector")
@@ -78,6 +133,8 @@ function model(se; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
     se.v_ro = v_ro
     model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0)
 end
+
+# internal helper: builds the system given precomputed initial conditions POS0, VEL0
 function model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0)
     mass_per_meter = se.rho_tether * π * (se.d_tether/2000.0)^2
     @parameters c_spring0=se.c_spring/(se.l0/se.segments) l_seg=se.l0/se.segments
@@ -160,6 +217,18 @@ function model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0)
     simple_sys, sys, pos, vel, len, c_spr
 end
 
+"""
+    simulate(se, simple_sys)
+
+Simulate the tether model `simple_sys` (as returned by [`model`](@ref)) over the
+duration `se.duration` using a fixed step size of 0.02s and the `FBDF` solver.
+
+The solver is run twice; the first call triggers compilation, and only the
+elapsed time of the second (timed) call is returned.
+
+Returns a tuple `(sol, elapsed_time)` with the `ODESolution` and the elapsed
+time in seconds of the second solve.
+"""
 function simulate(se, simple_sys)
     dt = 0.02
     tol = 1e-6
