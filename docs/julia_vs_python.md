@@ -11,9 +11,11 @@ analytic Jacobian.
 | Steps taken | not reported by SciML by default | 436 |
 | Jacobian evals | analytic, symbolically generated (compiled once, ~free per call) | 83 (analytic, hand-derived) |
 | Setup/compile cost | `mtkcompile` symbolic pipeline (one-time, amortized across repeat solves — not counted here) | negligible (Python interpreted, no compile step) |
+| Lines of code | 140 (`src/Tether_06.jl`) | 313 (`src/Tether_06.py`) |
 
 **Julia is about 15–20x faster** than Python for this problem, even with both now using
-exact analytic Jacobians.
+exact analytic Jacobians. The Julia code is also much more compact, at less than half the
+line count of the Python version.
 
 ## Why the gap remains
 
