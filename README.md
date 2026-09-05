@@ -6,6 +6,7 @@
 ## Introduction
 
 A few examples where tether models can be useful:
+
 - cranes
 - undersea cables
 - mooring lines of floating wind turbines
@@ -20,6 +21,7 @@ a winch are even more challenging to model than constant-length tethers.
 A series of examples, from a simple falling mass towards a tether model, consisting of point masses connected by spring damper elements with the support of reel-out and reel-in and aerodynamic drag attached is presented.
 
 #### Status
+
 - the Julia examples are of good quality and well-documented and tested
 - the Python examples need some more work
 
@@ -35,6 +37,7 @@ git clone https://github.com/ufechner7/Tethers.jl
 ```
 
 Build the system image:
+
 ```bash
 cd repos/Tethers.jl
 cd bin
@@ -43,15 +46,20 @@ cd bin
 ```
 
 ## Basic example
+
 Use the provided script to start Julia from the `Tethers.jl` folder:
+
 ```bash
 cd repos/Tethers.jl
 ./bin/run_julia
 ```
+
 From the Julia prompt, run the simulation:
+
 ```julia
 include("src/Tether_01.jl")
 ```
+
 You should see a plot similar to:
 
 ![Falling mass](docs/images/FallingMass.png)
@@ -60,23 +68,29 @@ This example shows a mass that is thrown upwards, slows down and then falls.
 
 **HINT**  
 You get a menu from which you can run any of the examples by typing
+
 ```julia
 menu()
 ```
+
 at the Julia prompt.
 
 **Julia code:** [Tether_01.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_01.jl)
 
 ## Python version as comparison
+
 From the Julia prompt execute:
+
 ```julia
 include("src/RunTether_01.jl")
 ```
+
 This will install Python, Matplotlib and Assimulo and execute the script `Tether_01.py`.
 
 **Python code:** [Tether_01.py](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_01.py)
 
 If you compare the Python and the Julia scripts you can see that:
+
 - the Julia script is shorter and easier to read
 - Julia is about 16 times faster when running the simulation  
 For a stiff, segmented tether (example 6 and 7) the Julia solvers are more than 2000 times faster than Python.
@@ -84,6 +98,7 @@ For a stiff, segmented tether (example 6 and 7) the Julia solvers are more than 
 Have a look at the [Examples](https://ufechner7.github.io/Tethers.jl/dev/examples/) that teach you how to construct a full tether model step by step.
 
 ## Overall comparison
+
 Execution time for a simulation of 10s duration with logging the state every 20ms.
 Relative and absolute tolerance: $1.0^{-6}$. CPU: Ryzen 9 7950X.
 
