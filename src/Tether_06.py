@@ -5,7 +5,7 @@ for l < l_0). It uses five tether segments. The force coupling is now implemente
 correctly.
 """
 import numpy as np
-import pylab as plt
+import matplotlib.pyplot as plt
 import math
 import time
 
@@ -28,6 +28,25 @@ ZEROS  = np.array([0.0, 0.0, 0.0])
 RESULT = np.zeros(SEGMENTS * 6 + 3).reshape((-1, 3))
 mass_per_meter = RHO_TETHER * math.pi * (D_TETHER/2000.0)**2
 
+def calc_spring_force(pos1, pos2, vel1, vel2, l_seg, c_spring0, damping):
+    """ Spring and damping force of the segment between the masses at pos1 and pos2.
+        The result points from pos1 towards pos2. Spring and damper act in parallel
+        along the segment, therefore the damping force uses the component of the
+        relative velocity along the segment and not the full 3D vector. """
+    segment     = pos2 - pos1
+    norm        = np.linalg.norm(segment)
+    unit_vector = segment / norm
+    c_spring    = c_spring0 if norm > l_seg else 0.0 # a loose segment cannot push
+    spring_vel  = np.dot(vel2 - vel1, unit_vector)   # rate of change of the segment length
+    return (c_spring * (norm - l_seg) + damping * spring_vel) * unit_vector
+
+def calc_particle_mass(i, m_tether_particle):
+    """ Mass of particle i. The last particle is attached to one segment only and
+        therefore carries half of the mass of an inner particle. """
+    if i == SEGMENTS:
+        return 0.5 * m_tether_particle
+    return m_tether_particle
+
 # State vector y   = mass0.pos, mass1.pos, mass1.vel
 # Derivative   yd  = mass0.vel, mass1.vel, mass1.acc
 # Residual     res = (yd.mass0.vel), (y.mass1.vel - yd.mass1.vel), (yd.mass1.acc - G_EARTH)     
@@ -37,7 +56,6 @@ class ExtendedProblem(Implicit_Problem):
     # Set the initial conditions
     t0  = 0.0                   # Initial time
     pos, vel, acc = [], [], []
-    x, y, z0 = 0.0, 0.0, 0.0
     for i in range (SEGMENTS + 1):
         l0 = -i*L0/SEGMENTS
         pos.append(np.array([math.sin(ALPHA0) * l0, 0.0, math.cos(ALPHA0) * l0]))            
@@ -45,7 +63,7 @@ class ExtendedProblem(Implicit_Problem):
         if i == 0:
             acc.append(np.array([0.0, 0.0, 0.0]))
         else:
-            acc.append(np.array([0.0, 0.0, -9.81]))
+            acc.append(G_EARTH)
     y0, yd0 = pos[0], vel[0]
     for i in range (SEGMENTS):    
         y0  = np.append(y0,  np.append(pos[i+1], vel[i+1])) # Initial state vector
@@ -54,28 +72,25 @@ class ExtendedProblem(Implicit_Problem):
     def res(self, t, y, yd):  
         y1  = y.reshape((-1, 3)) # reshape the state vector such that we can access it per 3D-vector
         yd1 = yd.reshape((-1, 3))
-        length = L0 + V_RO*t
-        c_spring1 = C_SPRING / (length/SEGMENTS)       
-        damping  = DAMPING / (length/SEGMENTS)
-        m_tether_particle = mass_per_meter * (length/SEGMENTS)   
-        RESULT[0] = y1[0] # the velocity of mass0 shall be zero        
+        l_seg = (L0 + V_RO*t) / SEGMENTS   # unstretched length of one segment
+        c_spring1 = C_SPRING / l_seg
+        damping  = DAMPING / l_seg
+        m_tether_particle = mass_per_meter * l_seg
+        # mass0 is fixed: constrain its position. Its derivative yd1[0] is not
+        # determined by any residual and stays at the initial guess of zero.
+        RESULT[0] = y1[0]
         last_force = ZEROS # later this shall be the kite force
         
         for i in range(SEGMENTS-2, -1, -1):    # count down from segments-2 to zero
             # 1. calculate the force of the lowest spring (the spring next to the kite)   
             res_3   =  y1[2*i+4] - yd1[2*i+3]  # the derivative of the position of mass1 must be equal to its velocity
-            rel_vel = yd1[2*i+3] - yd1[2*i+1]  # calculate the relative velocity of mass2 with respect to mass 1 
-            segment = y1[2*i+3]  - y1[2*i+1]   # calculate the vector from mass1 to mass0
-            if np.linalg.norm(segment) > length/SEGMENTS:               # if the segment is not loose, calculate spring and damping force
-                c_spring = c_spring1
-            else:
-                c_spring = 0.0
-            force = c_spring * (np.linalg.norm(segment) - length/SEGMENTS) * segment / np.linalg.norm(segment) \
-                    + damping * rel_vel                                                
+            # the force of the segment between the masses i+1 and i+2
+            force = calc_spring_force(y1[2*i+1], y1[2*i+3], yd1[2*i+1], yd1[2*i+3],
+                                      l_seg, c_spring1, damping)
             # 2. apply it to the lowest mass (the mass next to the kite)   
             spring_forces = force - last_force    
             last_force = force       
-            mass = m_tether_particle               
+            mass = calc_particle_mass(i+2, m_tether_particle)
             acc1 = spring_forces / mass  # create the vector of the spring acceleration    
             res_4 = yd1[2*i+4] - (G_EARTH - acc1) # the derivative of the velocity must be equal to the total acceleration  
             RESULT[2*i+3] = res_3 
@@ -83,18 +98,11 @@ class ExtendedProblem(Implicit_Problem):
     
         # 3. calculate the force of the spring above    
         res_1   = y1[2]  - yd1[1] # the derivative of the position of mass1 must be equal to its velocity
-        rel_vel = yd1[1] - yd1[0] # calculate the relative velocity of mass1 with respect to mass 0 
-        segment = y1[1]  - y1[0]  # calculate the vector from mass1 to mass0       
-        norm = math.sqrt(segment[0]**2 + segment[1]**2 + segment[2]**2)  
-        if np.linalg.norm(segment) > length/SEGMENTS:               # if the segment is not loose, calculate spring and damping force
-            c_spring = c_spring1
-        else:
-            c_spring = 0.0
-        force = c_spring * (norm - length/SEGMENTS) * segment / norm + damping * rel_vel    
+        force = calc_spring_force(y1[0], y1[1], yd1[0], yd1[1], l_seg, c_spring1, damping)
 
         # 2. apply it to the next mass nearer to the winch
         spring_forces = force - last_force    
-        mass = m_tether_particle          
+        mass = calc_particle_mass(1, m_tether_particle)
         acc = spring_forces / mass  # create the vector of the spring acceleration
         res_2 = yd1[2] - (G_EARTH - acc) # the derivative of the velocity must be equal to the total acceleration
         
@@ -102,18 +110,18 @@ class ExtendedProblem(Implicit_Problem):
         RESULT[2] = res_2 
         return RESULT.flatten()
     
-def plot2d(fig, y, reltime, segments, line, sc, txt):
-    index = round(reltime*50)
+def plot2d(fig, t_sol, y, reltime, segments, line, sc, txt):
+    index = min(np.searchsorted(t_sol, reltime), len(t_sol) - 1)
     x, z = np.zeros(segments+1), np.zeros(segments+1)
     for i in range(segments):
         x[i+1] = y[index, 3+6*i]
         z[i+1] = y[index, 5+6*i]
-    z_max = np.max(z)
     if line is None:
-        line, = plt.plot(x,z, linewidth="1")
+        z_max = np.max(z)
+        line, = plt.plot(x, z, linewidth=1)
         sc  = plt.scatter(x, z, s=15, color="red")
         plt.pause(0.01)
-        txt = plt.annotate("t="+str(reltime)+" s",  
+        txt = plt.annotate("t="+str(round(reltime,1))+" s",  
                            xy=(segments*L0/4.2, z_max-3.0*segments/5), fontsize = 12)
         plt.show(block=False)
     else:
@@ -126,7 +134,7 @@ def plot2d(fig, y, reltime, segments, line, sc, txt):
         plt.show(block=False)
     return line, sc, txt
 
-def play(duration, y):
+def play(duration, t_sol, y):
     dt = 0.151
     plt.ioff()
     fig = plt.figure()
@@ -136,7 +144,7 @@ def play(duration, y):
     plt.tight_layout(rect=(0, 0, 0.98, 0.98))
     line, sc, txt = None, None, None
     for t in np.linspace(0, duration, num=round(duration/dt)):
-        line, sc, txt = plot2d(fig, y, t, SEGMENTS, line, sc, txt)
+        line, sc, txt = plot2d(fig, t_sol, y, t, SEGMENTS, line, sc, txt)
         time.sleep(dt/2)
     plt.show(block=True)
    
@@ -151,8 +159,8 @@ def run_example():
     sim.rtol = 1.0e-6
     sim.linear_solver="SPGMR"
 
-    time, y, yd = sim.simulate(DURATION, round(DURATION*50)+2) # 50 communications points per second 
-    play(DURATION, y)   
+    t_sol, y, yd = sim.simulate(DURATION, round(DURATION*50)) # 50 communication points per second
+    play(DURATION, t_sol, y)
     return
     
 if __name__ == '__main__':

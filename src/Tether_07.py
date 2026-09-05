@@ -7,8 +7,7 @@ Added a kite (additional mass at the end of the tether). Damping now increases w
 length. Damping is now also active when the tether is loose.
 """
 import numpy as np
-import pylab as plt
-import math
+import matplotlib.pyplot as plt
 
 from assimulo.solvers.sundials import IDA     # Imports the solver IDA from Assimulo
 from assimulo.problem import Implicit_Problem # Imports the problem formulation from Assimulo
@@ -24,6 +23,19 @@ V_REEL_OUT = 4.0
 ZEROS  = np.array([0.0, 0.0, 0.0])
 RESULT = np.zeros(SEGMENTS * 6 + 3).reshape((-1, 3))
 NONLINEAR = True
+
+def calc_spring_force(pos1, pos2, vel1, vel2, length, c_spring0, damping, loose):
+    """ Spring and damping force of the segment between the masses at pos1 and pos2.
+        The result points from pos1 towards pos2. Spring and damper act in parallel
+        along the segment, therefore the damping force uses the component of the
+        relative velocity along the segment and not the full 3D vector. A loose
+        segment cannot push, but it still damps. """
+    segment     = pos2 - pos1
+    norm        = np.linalg.norm(segment)
+    unit_vector = segment / norm
+    c_spring    = 0.0 if (loose and NONLINEAR) else c_spring0
+    spring_vel  = np.dot(vel2 - vel1, unit_vector) # rate of change of the segment length
+    return (c_spring * (norm - length) + damping * spring_vel) * unit_vector
 
 # Example seven:
 # Falling mass, attached to a spring with damping
@@ -60,11 +72,9 @@ class ExtendedProblem(Implicit_Problem):
             last_pos_ix = 0
         else:
             last_pos_ix = pos_ix - 6        
-        # calculate the norm of the vector from mass1 to mass0 minus the initial segment length
-        #event = (np.linalg.norm(y0[pos_ix:pos_ix + 3] - y0[last_pos_ix:last_pos_ix + 3] ) - L_0) <= 0
-        event = vel[i+1] > 0
-        #event = False
-        sw0.append(event)  
+        # a segment is loose if its length is not larger than the unstretched length
+        event = bool(np.linalg.norm(y0[pos_ix:pos_ix + 3] - y0[last_pos_ix:last_pos_ix + 3]) - L_0 <= 0)
+        sw0.append(event)
     print(sw0)       
     print(y0)
     print(yd0)
@@ -81,13 +91,9 @@ class ExtendedProblem(Implicit_Problem):
         for i in range(SEGMENTS-2, -1, -1):    # count down from segments-2 to zero
             # 1. calculate the force of the lowest spring (the spring next to the kite)   
             res_3   =  y1[2*i+4] - yd1[2*i+3]  # the derivative of the position of mass1 must be equal to its velocity
-            rel_vel = yd1[2*i+3] - yd1[2*i+1]  # calculate the relative velocity of mass2 with respect to mass 1 
-            segment = y1[2*i+3]  - y1[2*i+1]   # calculate the vector from mass1 to mass0
-            if not sw[SEGMENTS - 1 - i] or not NONLINEAR:               # if the segment is not loose, calculate spring and damping force
-                norm = math.sqrt(segment[0]**2 + segment[1]**2 + segment[2]**2)                
-                force = c_spring * (norm - length) * segment / norm + damping * rel_vel 
-            else:
-                force = damping * rel_vel                                                    
+            # the force of the segment between the masses i+1 and i+2
+            force = calc_spring_force(y1[2*i+1], y1[2*i+3], yd1[2*i+1], yd1[2*i+3],
+                                      length, c_spring, damping, sw[i+1])
             # 2. apply it to the lowest mass (the mass next to the kite)   
             spring_forces = force - last_force    
             last_force = force       
@@ -102,20 +108,15 @@ class ExtendedProblem(Implicit_Problem):
     
         # 3. calculate the force of the spring above    
         res_1   = y1[2]  - yd1[1] # the derivative of the position of mass1 must be equal to its velocity
-        rel_vel = yd1[1] - yd1[0] # calculate the relative velocity of mass1 with respect to mass 0 
-        segment = y1[1]  - y1[0]  # calculate the vector from mass1 to mass0
-        if not sw[0] or not NONLINEAR:         
-            norm = math.sqrt(segment[0]**2 + segment[1]**2 + segment[2]**2)  
-            force = c_spring * (norm - length) * segment / norm + damping * rel_vel    
-        else:
-            force = ZEROS
+        force = calc_spring_force(y1[0], y1[1], yd1[0], yd1[1],
+                                  length, c_spring, damping, sw[0])
     
         # 2. apply it to the next mass nearer to the winch
         spring_forces = force - last_force    
         if SEGMENTS == 1:
             mass = KITE_MASS + (MASS * length / L_0) 
         else:
-            mass = (mass * length / L_0)             
+            mass = MASS * length / L_0
         acc = spring_forces / mass  # create the vector of the spring acceleration
         res_2 = yd1[2] - (G_EARTH - acc) # the derivative of the velocity must be equal to the total acceleration
         
