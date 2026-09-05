@@ -1,8 +1,10 @@
 using Test, LinearAlgebra
 
-__BENCH__ = true; 
+__BENCH__ = true;
 
-@testset "Tether_06c" begin   
+include("test_tether_01.jl")
+
+@testset "Tether_06c" begin
     # without callbacks
     include("../src/Tether_06c.jl")
     set = deepcopy(Settings2())

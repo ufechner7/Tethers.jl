@@ -1,5 +1,6 @@
 Manifest.toml
 Manifest.toml.bak
+output/
 bin/kps-image-1.10.so
 .CondaPkg
 src/__pycache__
