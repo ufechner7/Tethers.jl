@@ -2,7 +2,6 @@
 Tutorial example simulating a 3D mass-spring system with a nonlinear spring (no spring forces
 for l < l_0) and n tether segments. 
 """
-# TODO: Distribute force correctly
 # TODO: Add 2D plot
 
 using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, MakieControlPlots
@@ -44,12 +43,17 @@ for i in 1:segments
            rel_vel[:, i]      ~ vel[:, i+1] - vel[:, i],
            spring_vel[i]      ~ -unit_vector[:, i] ⋅ rel_vel[:, i],
            c_spring[i]        ~ c_spring0 * (norm1[i] > l_seg),
-           spring_force[:, i] ~ (c_spring[i] * (norm1[i] - l_seg) + damping * spring_vel[i]) * unit_vector[:, i],
-           # TODO: the spring_force must be distributed
-           acc[:, i+1]        ~ G_EARTH .+ spring_force[:, i] / mass]
+           spring_force[:, i] ~ (c_spring[i] * (norm1[i] - l_seg) + damping * spring_vel[i]) * unit_vector[:, i]]
     eqs2 = vcat(eqs2, reduce(vcat, eqs))
 end
-# fix the first point masses
+# distribute the spring forces: mass i is pulled towards mass i-1 by the segment above it, and,
+# unless it is the last mass, pulled towards mass i+1 by the reaction of the segment below it
+for i in 2:segments+1
+    global eqs2
+    force_below = i <= segments ? spring_force[:, i] : zeros(3)
+    eqs2 = vcat(eqs2, [acc[:, i] ~ G_EARTH .+ (spring_force[:, i-1] .- force_below) / mass])
+end
+# fix the first point mass
 eqs2 = vcat(eqs2, [acc[:, 1] ~ zeros(3)])
      
 @named sys = System(reduce(vcat, Symbolics.scalarize.(eqs2)), t)
@@ -71,12 +75,25 @@ function plt(sol, particle)
     VEL_Z    = stack(sol[vel], dims=1)[:,3,particle]
     C_SPRING = stack(sol[c_spring], dims=1)[:, particle-1]
 
-    p = plot(X, [POS_Z, -L0.+0.005 .* C_SPRING], VEL_Z; xlabel="time [s]", ylabels=["pos_z [m]", "vel_z [m/s]"],
-             labels=["pos_z [m]", "c_spring", "vel_z [m/s]"], xticks=0:2:duration, fig="segmented tether")
+    p = plot(X, [POS_Z, -(particle-1)*L0 .+ 0.005 .* C_SPRING], VEL_Z; xlabel="time [s]", ylabels=["pos_z [m]", "vel_z [m/s]"],
+             labels=["pos_z [m]", "c_spring", "vel_z [m/s]"], xticks=0:2:duration, yticks=(0.25, 2),
+             fig="segmented tether")
     display(p)
     nothing
 end
 
-plt(sol, 3)
+plt(sol, segments+1)
+
+# saving the result of the lowest mass for comparison with the Python implementation
+X     = sol.t
+POS_Z = stack(sol[pos], dims=1)[:,3,segments+1]
+VEL_Z = stack(sol[vel], dims=1)[:,3,segments+1]
+mkpath("output")
+open(joinpath("output", "Tether_04_julia.csv"), "w") do io
+    println(io, "time,pos_z,vel_z")
+    for i in eachindex(X)
+        println(io, "$(X[i]),$(POS_Z[i]),$(VEL_Z[i])")
+    end
+end
 nothing
 

@@ -2,16 +2,18 @@
 """
 Tutorial example simulating a 3D mass-spring system.
 """
+import os
 import numpy as np
 import pylab as plt
 from assimulo.problem import Implicit_Problem #Imports the problem formulation from Assimulo
 from assimulo.solvers import Radau5DAE #Imports the solver IDA from Assimulo
 
 G_EARTH  = np.array([0.0, 0.0, -9.81]) # gravitational acceleration
-C_SPRING = 50.0                        # spring constant [N/m] 
+C_SPRING = 50.0                        # spring constant [N/m]
 DAMPING  =  0.5                        # damping [Ns/m]
 L_0      = 10.0                        # initial segment length [m]
-SEGMENTS = 3
+V0       = 4.0                         # initial velocity of the lowest mass [m/s]
+SEGMENTS = 2                           # number of tether segments, must match Tether_04.jl
 MASS     = 1.0                         # mass per tether of initial segment length [kg]
 ZEROS  = np.array([0.0, 0.0, 0.0])
 RESULT = np.zeros(SEGMENTS * 6 + 3).reshape((-1, 3))
@@ -32,11 +34,12 @@ def res1(t, y, yd):
     for i in range(SEGMENTS-2, -1, -1):    # count down from segments-2 to zero
         # 1. calculate the force of the lowest spring (the spring next to the kite)   
         res_3 =  y1[2*i+4]  - yd1[2*i+3]   # the derivative of the position of mass1 must be equal to its velocity
-        rel_vel1 = yd1[2*i+3] - yd1[2*i+1] # calculate the relative velocity of mass2 with respect to mass 1 
+        rel_vel1 = yd1[2*i+3] - yd1[2*i+1] # calculate the relative velocity of mass2 with respect to mass 1
         segment1 = y1[2*i+3] - y1[2*i+1]   # calculate the vector from mass1 to mass0
-        force = C_SPRING * (np.linalg.norm(segment1) - L_0) * segment1 / np.linalg.norm(segment1) \
-                         + DAMPING * rel_vel1 
-                             
+        norm1 = np.linalg.norm(segment1)
+        c_spring1 = C_SPRING if norm1 > L_0 else 0.0 # no compression stiffness: slack segments exert no spring force
+        force = c_spring1 * (norm1 - L_0) * segment1 / norm1 + DAMPING * rel_vel1
+
         # 2. apply it to the lowest mass (the mass next to the kite)   
         spring_forces = force - last_force    
         last_force = force                         
@@ -47,10 +50,11 @@ def res1(t, y, yd):
 
     # 3. calculate the force of the spring above    
     res_1 = y1[2]  - yd1[1]   # the derivative of the position of mass1 must be equal to its velocity
-    rel_vel = yd1[1] - yd1[0] # calculate the relative velocity of mass1 with respect to mass 0 
+    rel_vel = yd1[1] - yd1[0] # calculate the relative velocity of mass1 with respect to mass 0
     segment = y1[1] - y1[0]   # calculate the vector from mass1 to mass0
-    force = C_SPRING * (np.linalg.norm(segment) - L_0) * segment / np.linalg.norm(segment) \
-                     + DAMPING * rel_vel    
+    norm = np.linalg.norm(segment)
+    c_spring = C_SPRING if norm > L_0 else 0.0 # no compression stiffness: slack segments exert no spring force
+    force = c_spring * (norm - L_0) * segment / norm + DAMPING * rel_vel
 
     # 2. apply it to the next mass nearer to the winch
     spring_forces = force - last_force    
@@ -73,11 +77,11 @@ def run_example():
             pos.append(np.array([0.0, 0.0, z]))
         else:
             pos.append(np.array([x, y, z]))
-        vel.append(np.array([0.0, 0.0, 0.0]))
+        vel.append(np.array([0.0, 0.0, i * V0 / SEGMENTS]))
         acc.append(np.array([0.0, 0.0, -9.81]))
     y0, yd0 = pos[0], vel[0]
     sw0 = []
-    for i in range (SEGMENTS):    
+    for i in range (SEGMENTS):
         y0  = np.append(y0,  np.append(pos[i+1], vel[i+1])) # Initial state vector
         yd0 = np.append(yd0, np.append(vel[i+1], acc[i+1])) # Initial state vector derivative
         # array of booleans; true means the tether segment is loose (l < l_reelout)
@@ -85,45 +89,51 @@ def run_example():
         if i==0:
             last_pos_ix = 0
         else:
-            last_pos_ix = pos_ix - 6        
+            last_pos_ix = pos_ix - 6
         # calculate the norm of the vector from mass1 to mass0 minus the initial segment length
         event = (np.linalg.norm(y0[pos_ix:pos_ix + 3] - y0[last_pos_ix:last_pos_ix + 3] ) - L_0) <= 0
-        sw0.append(event)       
+        sw0.append(event)
 
     model = Implicit_Problem(res1, y0, yd0, t0) # Create an Assimulo problem
     model.name = 'Mass-Spring' # Specifies the name of problem (optional)
 
     sim = Radau5DAE(model)  # Create the Radau solver
-        
-    tfinal = 10.0           # Specify the final time
-    ncp    = 4000           # Number of communcation points (number of return points)
-    
-    # Use the .simulate method to simulate and provide the final time and ncp (optional)    
-    time, y, yd = sim.simulate(tfinal, ncp) 
-    
-    # plot the result
-    pos_z1 = y[:,5]
-    pos_z2 = y[:,5+6]   
-    pos_z3 = y[:,5+2*6]  
 
-    plt.ax1 = plt.subplot(111) 
+    tfinal = 10.0           # Specify the final time, must match Tether_04.jl's duration
+    ncp    = 500            # Number of communication points, must match Tether_04.jl's dt
+
+    # Use the .simulate method to simulate and provide the final time and ncp (optional)
+    time, y, yd = sim.simulate(tfinal, ncp)
+
+    # extract the z position and velocity of the lowest mass (mass SEGMENTS)
+    pos_z_ix = 5 + (SEGMENTS - 1) * 6
+    vel_z_ix = pos_z_ix + 3
+    pos_z = y[:, pos_z_ix]
+    vel_z = y[:, vel_z_ix]
+
+    # saving the result for comparison with the Julia implementation
+    os.makedirs("output", exist_ok=True)
+    with open(os.path.join("output", "Tether_04_python.csv"), "w") as f:
+        f.write("time,pos_z,vel_z\n")
+        for t_i, pz_i, vz_i in zip(time, pos_z, vel_z):
+            f.write(f"{t_i},{pz_i},{vz_i}\n")
+
+    plt.gcf().canvas.manager.set_window_title("segmented tether")
+    plt.ax1 = plt.subplot(111)
     plt.ax1.set_xlabel('time [s]')
-    plt.plot(time, pos_z1, color="green")
-    plt.plot(time, pos_z2, color="blue")    
-    plt.plot(time, pos_z3, color="black")    
-    plt.ax1.set_ylabel('pos_z [m]')   
-    if True:
-        # vel_z = y[:,8]
-        force_z = y[:,11]
-        # rel_vel = yd[:,3:6] - yd[:,0:3]
-        # vel_norm = np.sum(np.abs(rel_vel)**2, axis=-1)**(1./2)        
-        plt.ax2 = plt.twinx()  
-        plt.ax2.set_ylabel('vel_z [m/s]')   
-        # plt.plot(time, vel_z, color="red")  
-        plt.ax2.set_ylabel('force_z [N]')   
-        plt.plot(time, force_z, color="red")      
-        # plt.plot(time, vel_norm, color="blue")        
-    plt.show()
+    plt.plot(time, pos_z, color="green")
+    plt.ax1.set_ylabel('pos_z [m]')
+    plt.ax1.grid(True)
+    plt.ax2 = plt.twinx()
+    plt.ax2.set_ylabel('vel_z [m/s]')
+    plt.plot(time, vel_z, color="red")
+
+    if os.environ.get("TETHERS_BRIEF_PLOT") == "1":
+        # show briefly and close automatically, e.g. when running the tests
+        plt.pause(1)
+        plt.close('all')
+    else:
+        plt.show()
 
 if __name__ == '__main__':
     run_example()
