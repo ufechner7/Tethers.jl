@@ -3,6 +3,7 @@ using Test, LinearAlgebra
 __BENCH__ = true;
 
 include("test_tether_01.jl")
+include("test_tether_03.jl")
 
 @testset "Tether_06c" begin
     # without callbacks

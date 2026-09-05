@@ -1,15 +1,5 @@
-function read_tether_01_csv(file)
-    lines = readlines(file)
-    n = length(lines) - 1
-    t, pos_z, vel_z = zeros(n), zeros(n), zeros(n)
-    for (i, line) in enumerate(lines[2:end])
-        parts = split(line, ',')
-        t[i]      = parse(Float64, parts[1])
-        pos_z[i]  = parse(Float64, parts[2])
-        vel_z[i]  = parse(Float64, parts[3])
-    end
-    t, pos_z, vel_z
-end
+using Test
+include(joinpath(@__DIR__, "test_utils.jl"))
 
 @testset "Tether_01" begin
     pkg_dir = dirname(@__DIR__)
@@ -24,8 +14,8 @@ end
         end
     end
 
-    t_jl, pos_z_jl, vel_z_jl = read_tether_01_csv(joinpath(pkg_dir, "output", "Tether_01_julia.csv"))
-    t_py, pos_z_py, vel_z_py = read_tether_01_csv(joinpath(pkg_dir, "output", "Tether_01_python.csv"))
+    t_jl, pos_z_jl, vel_z_jl = read_pos_vel_csv(joinpath(pkg_dir, "output", "Tether_01_julia.csv"))
+    t_py, pos_z_py, vel_z_py = read_pos_vel_csv(joinpath(pkg_dir, "output", "Tether_01_python.csv"))
 
     @test length(t_jl) == length(t_py)
     @test t_jl ≈ t_py atol=1e-6
