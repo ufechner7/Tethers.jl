@@ -4,11 +4,11 @@
 # given pair of endpoints, which is then used as the initial condition for the simulation.
 # This example differs from Tether_08.jl in that the tether diameter is set to 12 mm
 # and that the size of the plot is twice as large (in pixels) as in Tether_08.jl.
-using ModelingToolkit, OrdinaryDiffEq, SteadyStateDiffEq, LinearAlgebra, Timers, Parameters, ControlPlots
+using ModelingToolkit, OrdinaryDiffEq, SteadyStateDiffEq, LinearAlgebra, Timers, Parameters, MakieControlPlots
 tic()
 using ModelingToolkit: t_nounits as t, D_nounits as D
-using ControlPlots
-plt.close("all")
+using MakieControlPlots
+close("all")
 
 @with_kw mutable struct Settings3 @deftype Float64
     g_earth::Vector{Float64} = [0.0, 0.0, -9.81] # gravitational acceleration     [m/s²]
@@ -192,13 +192,13 @@ function play(se, sol, pos)
         end
         plot2d(sol[pos][i], time; segments=se.segments, xlim, ylim, xy, fig="Tether_08", figsize=(8.54, 6.4), dpi=150)
         if se.save
-            ControlPlots.plt.savefig("video/"*"img-"*lpad(j, 4, "0"))
+            savefig("video/"*"img-"*lpad(j, 4, "0")*".png")
         end
         j += 1
         wait_until(start + 0.5 * time * 1e9)
     end
     if se.save
-        plt.close("all")
+        close("all")
         run(`./bin/export_video`)
     end
     nothing

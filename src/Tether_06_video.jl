@@ -1,9 +1,9 @@
 # Tutorial example simulating a 3D mass-spring system with a nonlinear spring (1% spring forces
 # for l < l_0), n tether segments and reel-in and reel-out. The compression stiffness is hardcoded
 # to 1% of the spring stiffness.
-using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, ControlPlots
+using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, MakieControlPlots
 using ModelingToolkit: t_nounits as t, D_nounits as D
-using ControlPlots
+using MakieControlPlots
 
 G_EARTH::Vector{Float64} = [0.0, 0.0, -9.81]    # gravitational acceleration     [m/s²]
 L0::Float64 = 50.0                              # initial tether length             [m]
@@ -114,13 +114,13 @@ function play()
         end
         plot2d(sol[pos][i], time; segments=SEGMENTS, xlim, ylim, xy, fig="Tether_08", figsize=(8.54, 6.4), dpi=150)
         if SAVE
-            ControlPlots.plt.savefig("video/"*"img-"*lpad(j, 4, "0"))
+            savefig("video/"*"img-"*lpad(j, 4, "0")*".png")
         end
         j += 1
         wait_until(start + time*1e9)
     end
     if SAVE
-        plt.close("all")
+        close("all")
         run(`./bin/export_video`)
     end
     nothing

@@ -1,7 +1,7 @@
 # Example one: Falling mass.
 using Timers
 tic()
-using ModelingToolkit, OrdinaryDiffEq, ControlPlots
+using ModelingToolkit, OrdinaryDiffEq, MakieControlPlots
 using ModelingToolkit: t_nounits as t, D_nounits as D
 toc()
 

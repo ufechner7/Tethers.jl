@@ -1,9 +1,9 @@
 # Tutorial example simulating a 3D mass-spring system with a nonlinear spring (no spring forces
 # for l < l_0), n tether segments and reel-in and reel-out. Can create a video of the simulation.
 # For creating the video, set save=true in the Settings struct.
-using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, Parameters, ControlPlots
+using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, Parameters, MakieControlPlots
 using ModelingToolkit: t_nounits as t, D_nounits as D
-using ControlPlots
+using MakieControlPlots
 
 @with_kw mutable struct Settings @deftype Float64
     g_earth::Vector{Float64} = [0.0, 0.0, -9.81] # gravitational acceleration     [m/s²]
@@ -121,7 +121,7 @@ function play(se, sol, pos)
         end
         plot2d(sol[pos][i], time; segments=se.segments, xlim, ylim, xy)
         if se.save
-            ControlPlots.plt.savefig("video/"*"img-"*lpad(j,4,"0"))
+            savefig("video/"*"img-"*lpad(j,4,"0")*".png")
         end
         j += 1
         wait_until(start + 0.5*time*1e9)

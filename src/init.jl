@@ -1,6 +1,6 @@
 println("Running init...")
 
-using ControlPlots
+using MakieControlPlots
 using REPL.TerminalMenus
 
 options = ["include(\"src/Tether_01.jl\")",
