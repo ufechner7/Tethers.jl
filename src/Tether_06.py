@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Tutorial example simulating a 3D mass-spring system with a nonlinear spring (no spring forces
-for l < l_0). It uses five tether segments. The force coupling is now implemented
-correctly.
+Tutorial example simulating a 3D mass-spring system with a nonlinear spring (1% spring
+forces for l < l_0, smoothly blended in near l_0), five tether segments and reel-out.
+The DAE is solved with Assimulo's IDA, using an analytic Jacobian.
 """
 import numpy as np
 import matplotlib.pyplot as plt
