@@ -11,14 +11,22 @@ V_RO::Float64 = 2.0                             # reel-out speed                
 D_TETHER::Float64 = 4                           # tether diameter                  [mm]
 RHO_TETHER::Float64 = 724.0                     # density of Dyneema            [kg/m³] 
 C_SPRING::Float64 = 614600.0                    # unit spring constant              [N]
-DAMPING::Float64  = 473*0.045                  # unit damping constant            [Ns]
+DAMPING::Float64  = 473                         # unit damping constant            [Ns]
 SEGMENTS::Int64 = 5                             # number of tether segments         [-]
 α0 = π/10                                       # initial tether angle            [rad]
 duration = 10                                   # duration of the simulation        [s]
 SAVE = false                                    # save png files in folder video
 mass_per_meter::Float64 = RHO_TETHER * π * (D_TETHER/2000.0)^2
+SMOOTH_REL_WIDTH::Float64 = 1e-3                # width of the taut/slack blend, as a
+                                                 # fraction of the segment length; must
+                                                 # match Tether_06.py
 
-# calculating consistant initial conditions
+# 0 for x<=0, 1 for x>=1, cubic (C1) ramp in between. Blending the taut/slack switch
+# this way (instead of a hard step) keeps the spring force differentiable, which
+# matters once a solver relies on an exact analytic Jacobian there (see Tether_06.py).
+smoothstep(x) = (xc = clamp(x, 0.0, 1.0); xc^2 * (3 - 2xc))
+
+# calculating consistent initial conditions
 POS0 = zeros(3, SEGMENTS+1)
 VEL0 = zeros(3, SEGMENTS+1)
 for i in 1:SEGMENTS+1
@@ -56,7 +64,7 @@ for i in SEGMENTS:-1:1
            unit_vector[:, i]  ~ -segment[:, i]/norm1[i],
            rel_vel[:, i]      ~ vel[:, i+1] - vel[:, i],
            spring_vel[i]      ~ -unit_vector[:, i] ⋅ rel_vel[:, i],
-           c_spr[i]           ~ c_spring/1.01 * (0.01 + (norm1[i] > len/SEGMENTS)),
+           c_spr[i]           ~ c_spring/1.01 * (0.01 + smoothstep((norm1[i] - len/SEGMENTS) / (SMOOTH_REL_WIDTH * len/SEGMENTS))),
            spring_force[:, i] ~ (c_spr[i] * (norm1[i] - (len/SEGMENTS)) + damping * spring_vel[i]) * unit_vector[:, i]]
     eqs2 = vcat(eqs2, reduce(vcat, eqs))
 end
