@@ -5,7 +5,7 @@ for l < l_0) and n tether segments, using the implicit solver RADAU.
 """
 import os
 import numpy as np
-import pylab as plt
+import matplotlib.pyplot as plt
 from assimulo.problem import Implicit_Problem # Imports the problem formulation from Assimulo
 from assimulo.solvers import Radau5DAE        # Imports the solver RADAU from Assimulo
 
