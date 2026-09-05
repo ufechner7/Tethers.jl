@@ -1,5 +1,5 @@
 # Example two: Falling mass, attached to linear spring
-using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, ControlPlots
+using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, MakieControlPlots
 using ModelingToolkit: t_nounits as t, D_nounits as D
 
 G_EARTH::Vector{Float64} = [0.0, 0.0, -9.81]    # gravitational acceleration     [m/s²]
