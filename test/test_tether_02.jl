@@ -7,7 +7,7 @@ include(joinpath(@__DIR__, "test_utils.jl"))
         # Julia implementation, using ModelingToolkit and the implicit solver Rodas5
         include(joinpath(pkg_dir, "src", "Tether_02.jl"))
         sleep(1)
-        MakieControlPlots.close("all")
+        Base.invokelatest(MakieControlPlots.close, "all")
         # Python implementation, using the implicit solver IDA
         withenv("TETHERS_BRIEF_PLOT" => "1") do
             include(joinpath(pkg_dir, "src", "RunTether_02.jl"))

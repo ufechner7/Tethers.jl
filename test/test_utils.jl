@@ -1,4 +1,4 @@
-function read_pos_vel_csv(file)
+@isdefined(read_pos_vel_csv) || function read_pos_vel_csv(file)
     lines = readlines(file)
     n = length(lines) - 1
     t, pos_z, vel_z = zeros(n), zeros(n), zeros(n)
