@@ -28,7 +28,8 @@ python_examples = [("Tether_01",  "include(\"src/RunTether_01.jl\")",  "Falling 
                     ("Tether_04",  "include(\"src/RunTether_04.jl\")",  "Multi-segment tether (2D arrays)"),
                     ("Tether_05",  "include(\"src/RunTether_05.jl\")",  "Segmented tether, correct force split"),
                     ("Tether_06",  "include(\"src/RunTether_06.jl\")",  "Segmented tether, reeling out"),
-                    ("Tether_07",  "include(\"src/RunTether_07.jl\")",  "Segmented tether with aerodynamic drag")]
+                    ("Tether_07",  "include(\"src/RunTether_07.jl\")",  "Segmented tether with aerodynamic drag"),
+                    ("Tether_08",  "include(\"src/RunTether_08.jl\")",  "Tether with arbitrary/free endpoints")]
 
 python_name_width = maximum(length(name) for (name, _, _) in python_examples)
 python_options = [rpad(name, python_name_width) * "  " * descr for (name, _, descr) in python_examples]
