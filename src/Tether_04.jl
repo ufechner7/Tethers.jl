@@ -1,6 +1,6 @@
 """
 Tutorial example simulating a 3D mass-spring system with a nonlinear spring (no spring forces
-for l < l_0) and n tether segments. 
+for l < l_0) and n tether segments, using the implicit solver Rodas5.
 """
 
 using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, MakieControlPlots

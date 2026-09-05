@@ -1,15 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-Tutorial example simulating a 3D mass-spring system using the Radau5DAE solver from Assimulo. 
-The system consists of a number of tether segments, each modeled as a mass-spring-damper system. 
-The simulation computes the positions and velocities of the masses over time, taking into account 
-gravitational forces, spring forces, and damping effects.
+Tutorial example simulating a 3D mass-spring system with a nonlinear spring (no spring forces
+for l < l_0) and n tether segments, using the implicit solver RADAU.
 """
 import os
 import numpy as np
 import pylab as plt
-from assimulo.problem import Implicit_Problem #Imports the problem formulation from Assimulo
-from assimulo.solvers import Radau5DAE # Imports the solver IDA from Assimulo
+from assimulo.problem import Implicit_Problem # Imports the problem formulation from Assimulo
+from assimulo.solvers import Radau5DAE        # Imports the solver RADAU from Assimulo
 
 G_EARTH  = np.array([0.0, 0.0, -9.81]) # gravitational acceleration
 C_SPRING = 50.0                        # spring constant [N/m]
