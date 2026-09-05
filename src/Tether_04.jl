@@ -71,8 +71,8 @@ function plt(sol, particle)
     VEL_Z    = stack(sol[vel], dims=1)[:,3,particle]
     C_SPRING = stack(sol[c_spring], dims=1)[:, particle-1]
 
-    p = plot(X, [POS_Z, -L0.+0.005 .* C_SPRING], VEL_Z; xlabel="time [s]", ylabels=["pos_z [m]", "vel_z [m/s]"], 
-             labels=["pos_z [m]", "c_spring", "vel_z [m/s]"], fig="segmented tether")
+    p = plot(X, [POS_Z, -L0.+0.005 .* C_SPRING], VEL_Z; xlabel="time [s]", ylabels=["pos_z [m]", "vel_z [m/s]"],
+             labels=["pos_z [m]", "c_spring", "vel_z [m/s]"], xticks=0:2:duration, fig="segmented tether")
     display(p)
     nothing
 end
