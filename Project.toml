@@ -1,22 +1,27 @@
 name = "Tethers"
 uuid = "9fc261b7-0902-4839-ada8-9390617e313c"
-authors = ["Uwe Fechner <uwe.fechner.msc@gmail.com> and contributors"]
 version = "1.2.2"
+authors = ["Uwe Fechner <uwe.fechner.msc@gmail.com> and contributors"]
+
+[workspace]
+projects = ["docs", "test"]
+
+[preferences.GLMakie]
+precompile_workload = false
 
 [deps]
-Conda = "8f4d0f93-b110-5947-807f-2305c1781a2d"
 CondaPkg = "992eb4ea-22a4-4c89-a5bb-47a3300528ab"
-ControlPlots = "23c2ee80-7a9e-4350-b264-8e670f12517c"
+GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
 LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 LinearSolve = "7ed4a6bd-45f5-4d41-b270-4a48e9bafcae"
 LiveServer = "16fef848-5104-11e9-1b77-fb7a48bbb589"
+MakieControlPlots = "6d616b69-6563-4f6e-8472-6f6c706c6f74"
 ModelingToolkit = "961ee093-0014-501f-94e3-6117800e7a78"
 OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
 PackageCompiler = "9b87118b-4619-50d2-8e1e-99f35a4d4d9d"
 Parameters = "d96e819e-fc66-5662-9728-84c9c7592b0a"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
-PyCall = "438e738f-606a-5dbb-bf0a-cddfbfd45ab0"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 SteadyStateDiffEq = "9672c7b4-1e72-59bd-8a11-6ac3964bc41f"
 Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
@@ -24,11 +29,11 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Timers = "21f18d07-b854-4dab-86f0-c15a3821819a"
 
 [compat]
-Conda = "1.10.2"
 CondaPkg = "0.2.23"
-ControlPlots = "0.2.1"
+GLMakie = "0.12, 0.13"
 LinearSolve = "3.66.0"
 LiveServer = "1.3.1"
+MakieControlPlots = "0.1.16"
 ModelingToolkit = "11"
 OrdinaryDiffEq = "6.108"
 PackageCompiler = "2.1.17"
@@ -38,6 +43,3 @@ SteadyStateDiffEq = "2.9"
 Symbolics = "7.16"
 Timers = "0.1.5"
 julia = "1.11, 1.12"
-
-[workspace]
-projects = ["docs", "test"]

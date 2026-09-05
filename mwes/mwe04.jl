@@ -1,10 +1,11 @@
-using ControlPlots
+using MakieControlPlots, GLMakie
 
 x = 1:5
 y = 1:5
-plt.plot(x,y, color="black")
-plt.scatter(x,y)
-ax = plt.gca()
-ax.set_axis_off()
-plt.show()
-
+fig = Figure()
+ax = Axis(fig[1, 1])
+lines!(ax, x, y; color=:black)
+scatter!(ax, x, y)
+hidedecorations!(ax)
+hidespines!(ax)
+display(fig)

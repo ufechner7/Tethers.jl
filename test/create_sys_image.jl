@@ -1,5 +1,5 @@
 @info "Loading packages ..."
-using ModelingToolkit, OrdinaryDiffEq, SteadyStateDiffEq, PackageCompiler, ControlPlots, Timers, REPL.TerminalMenus
+using ModelingToolkit, OrdinaryDiffEq, SteadyStateDiffEq, PackageCompiler, MakieControlPlots, Timers, REPL.TerminalMenus
 
 FAST=true
 
@@ -8,7 +8,7 @@ push!(LOAD_PATH,joinpath(pwd(),"src"))
 
 pkgs=[:ModelingToolkit, :OrdinaryDiffEq, :SteadyStateDiffEq, :Timers]
 if FAST
-    push!(pkgs, :ControlPlots)
+    push!(pkgs, :MakieControlPlots)
 end 
 
 GC.gc(true)

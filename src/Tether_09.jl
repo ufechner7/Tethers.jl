@@ -2,10 +2,10 @@
 # for l < l_0), n tether segments, tether drag and reel-in and reel-out. 
 # New feature: A steady state solver is used to find the initial tether shape for any
 # given pair of endpoints, which is then used as the initial condition for the simulation.
-using ModelingToolkit, OrdinaryDiffEq, SteadyStateDiffEq, LinearAlgebra, Timers, Parameters, ControlPlots
+using ModelingToolkit, OrdinaryDiffEq, SteadyStateDiffEq, LinearAlgebra, Timers, Parameters, MakieControlPlots
 tic()
 using ModelingToolkit: t_nounits as t, D_nounits as D
-using ControlPlots, LaTeXStrings, StatsBase
+using MakieControlPlots, GLMakie, LaTeXStrings, StatsBase
 
 @with_kw mutable struct Settings3 @deftype Float64
     g_earth::Vector{Float64} = [0.0, 0.0, -9.81] # gravitational acceleration     [m/s²]
@@ -186,54 +186,35 @@ end
 sol, pos, vel, simple_sys = main(p2=[-60,0,0], fix_p2=true);
 x=sol[pos][1][1,:]
 z=sol[pos][1][3,:]
-plt.plot(x,z, color="black")
-plt.scatter(x,z, color="red")
-plt.ylim(-80, 10)
 
-ax = plt.gca()
+fig = Figure()
+ax = Axis(fig[1, 1])
+lines!(ax, x, z; color=:black)
+scatter!(ax, x, z; color=:red)
+ylims!(ax, -80, 10)
+
 OFFSET = 2.5
 O1 = -1
-ax.annotate(L"P_1",
-            xy=(x[end]+O1, OFFSET), xycoords="data",
-            fontsize=14)
-ax.annotate(L"P_2",
-            xy=(x[end-1]+O1, z[end-1] + OFFSET), xycoords="data",
-            fontsize=14)
-ax.annotate(L"P_3",
-            xy=(x[end-2]+O1, z[end-2] + OFFSET), xycoords="data",
-            fontsize=14)
-ax.annotate(L"P_4",
-            xy=(x[end-3]+O1, z[end-3] + OFFSET), xycoords="data",
-            fontsize=14)
-ax.annotate(L"P_5",
-            xy=(x[end-4]+O1, z[end-4] + OFFSET), xycoords="data",
-            fontsize=14)
-ax.annotate(L"P_6",
-            xy=(x[end-5]+O1, z[end-5] + 1.2OFFSET), xycoords="data",
-            fontsize=14)
-ax.annotate(L"P_n",
-            xy=(0+O1, OFFSET), xycoords="data",
-            fontsize=14)
-ax.annotate(L"S_1",
-            xy=(mean(x[end-1:end])+2O1, -4OFFSET), xycoords="data",
-            fontsize=14)
-ax.annotate(L"S_2",
-            xy=(mean(x[end-2:end-1])+2O1, -6.5OFFSET), xycoords="data",
-            fontsize=14)
-ax.annotate(L"S_3",
-            xy=(mean(x[end-3:end-2])+2O1, -8.1OFFSET), xycoords="data",
-            fontsize=14)
-ax.annotate(L"S_4",
-            xy=(mean(x[end-4:end-3])+1.5O1, -8.1OFFSET), xycoords="data",
-            fontsize=14)
-ax.annotate(L"S_5",
-            xy=(mean(x[end-5:end-4])+1O1, -6.5OFFSET), xycoords="data",
-            fontsize=14)
-ax.annotate(L"S_{n-1}",
-            xy=(mean(x[end-6:end-5])+1O1, -4OFFSET), xycoords="data",
-            fontsize=14)
-ax.set_axis_off()
-plt.show()
+# labels of the particles P_i and of the segments S_i
+labels = [(L"P_1",     x[end]+O1,                    OFFSET),
+          (L"P_2",     x[end-1]+O1,                  z[end-1] + OFFSET),
+          (L"P_3",     x[end-2]+O1,                  z[end-2] + OFFSET),
+          (L"P_4",     x[end-3]+O1,                  z[end-3] + OFFSET),
+          (L"P_5",     x[end-4]+O1,                  z[end-4] + OFFSET),
+          (L"P_6",     x[end-5]+O1,                  z[end-5] + 1.2OFFSET),
+          (L"P_n",     0+O1,                         OFFSET),
+          (L"S_1",     mean(x[end-1:end])+2O1,       -4OFFSET),
+          (L"S_2",     mean(x[end-2:end-1])+2O1,     -6.5OFFSET),
+          (L"S_3",     mean(x[end-3:end-2])+2O1,     -8.1OFFSET),
+          (L"S_4",     mean(x[end-4:end-3])+1.5O1,   -8.1OFFSET),
+          (L"S_5",     mean(x[end-5:end-4])+1O1,     -6.5OFFSET),
+          (L"S_{n-1}", mean(x[end-6:end-5])+1O1,     -4OFFSET)]
+for (label, lx, lz) in labels
+    text!(ax, lx, lz; text=label, fontsize=14)
+end
+hidedecorations!(ax)
+hidespines!(ax)
+display(fig)
 
 nothing
 
