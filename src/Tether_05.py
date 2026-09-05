@@ -7,6 +7,7 @@ correctly.
 import numpy as np
 import matplotlib.pyplot as plt
 import math
+import os
 import time
 
 from assimulo.solvers.sundials import IDA     # Imports the solver IDA from Assimulo
@@ -153,19 +154,38 @@ def play(duration, t_sol, y):
     for t in np.linspace(0, duration, num=round(duration/dt)+1):
         line, sc, txt = plot2d(fig, t_sol, y, t, SEGMENTS, line, sc, txt)
         time.sleep(dt/2)
-    plt.show()
-   
-def run_example():  
-    # Create an instance of the problem 
-    model = ExtendedProblem()  # Create the problem 
-    model.name = 'Mass-Spring' # Specifies the name of problem (optional)   
-    
-    sim = IDA(model) # Create the solver 
-    sim.verbosity = 30 
+    if os.environ.get("TETHERS_BRIEF_PLOT") == "1":
+        # show briefly and close automatically, e.g. when running the tests
+        plt.pause(1)
+        plt.close('all')
+    else:
+        plt.show()
+
+def run_example():
+    # Create an instance of the problem
+    model = ExtendedProblem()  # Create the problem
+    model.name = 'Mass-Spring' # Specifies the name of problem (optional)
+
+    sim = IDA(model) # Create the solver
+    sim.verbosity = 30
     sim.atol = 1.0e-6
     sim.rtol = 1.0e-6
-    
+
     t_sol, y, yd = sim.simulate(DURATION, round(DURATION*50)) # 50 communication points per second
+
+    # extract the z position and velocity of the lowest mass (mass SEGMENTS)
+    pos_z_ix = 5 + (SEGMENTS - 1) * 6
+    vel_z_ix = pos_z_ix + 3
+    pos_z = y[:, pos_z_ix]
+    vel_z = y[:, vel_z_ix]
+
+    # saving the result for comparison with the Julia implementation
+    os.makedirs("output", exist_ok=True)
+    with open(os.path.join("output", "Tether_05_python.csv"), "w") as f:
+        f.write("time,pos_z,vel_z\n")
+        for t_i, pz_i, vz_i in zip(t_sol, pos_z, vel_z):
+            f.write(f"{t_i},{pz_i},{vz_i}\n")
+
     play(DURATION, t_sol, y)
     
 if __name__ == '__main__':

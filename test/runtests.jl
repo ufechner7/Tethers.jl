@@ -6,6 +6,7 @@ include("test_tether_01.jl")
 include("test_tether_02.jl")
 include("test_tether_03.jl")
 include("test_tether_04.jl")
+include("test_tether_05.jl")
 
 @testset "Tether_06c" begin
     # without callbacks

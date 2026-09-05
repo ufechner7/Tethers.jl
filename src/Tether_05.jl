@@ -81,6 +81,18 @@ elapsed_time = @elapsed sol = solve(prob, KenCarp4(autodiff=false); dt, abstol=t
 elapsed_time = @elapsed sol = solve(prob, KenCarp4(autodiff=false); dt, abstol=tol, reltol=tol, saveat=ts)
 println("Elapsed time: $(elapsed_time) s, speed: $(round(duration/elapsed_time)) times real-time")
 
+# saving the result of the lowest mass for comparison with the Python implementation
+X     = sol.t
+POS_Z = stack(sol[pos], dims=1)[:,3,segments+1]
+VEL_Z = stack(sol[vel], dims=1)[:,3,segments+1]
+mkpath("output")
+open(joinpath("output", "Tether_05_julia.csv"), "w") do io
+    println(io, "time,pos_z,vel_z")
+    for i in eachindex(X)
+        println(io, "$(X[i]),$(POS_Z[i]),$(VEL_Z[i])")
+    end
+end
+
 function play()
     dt = 0.15
     ylim = (-1.2 * segments * L0, 0.5)
