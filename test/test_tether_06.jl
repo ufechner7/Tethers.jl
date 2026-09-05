@@ -31,12 +31,6 @@ include(joinpath(@__DIR__, "test_utils.jl"))
     @test length(t_jl) == length(t_py)
     @test t_jl ≈ t_py atol=1e-6
     @test pos_z_jl ≈ pos_z_py rtol=1e-3
-    # DAMPING is deliberately low here, so right after the tether goes taut the two
-    # adaptive implicit solvers (FBDF vs. IDA) straddle the lightly-damped spring's
-    # on/off discontinuity differently, producing a large but short-lived vel_z spike
-    # (~2.65 m/s at t≈0.36s) that both sides damp out well before the end of the run.
-    # `≈` on vectors compares the 2-norm of the difference (not elementwise), and that
-    # spike is enough to push norm(vel_z_jl - vel_z_py) to ~8, so atol is set above that.
-    @test vel_z_jl ≈ vel_z_py rtol=1e-2 atol=10.0
+    @test vel_z_jl ≈ vel_z_py rtol=1e-2 atol=1e-2
 end
 nothing
