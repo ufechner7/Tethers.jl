@@ -1,7 +1,10 @@
 name = "Tethers"
 uuid = "9fc261b7-0902-4839-ada8-9390617e313c"
-authors = ["Uwe Fechner <uwe.fechner.msc@gmail.com> and contributors"]
 version = "1.2.2"
+authors = ["Uwe Fechner <uwe.fechner.msc@gmail.com> and contributors"]
+
+[workspace]
+projects = ["docs", "test"]
 
 [deps]
 Conda = "8f4d0f93-b110-5947-807f-2305c1781a2d"
@@ -17,7 +20,6 @@ OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
 PackageCompiler = "9b87118b-4619-50d2-8e1e-99f35a4d4d9d"
 Parameters = "d96e819e-fc66-5662-9728-84c9c7592b0a"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
-PyCall = "438e738f-606a-5dbb-bf0a-cddfbfd45ab0"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 SteadyStateDiffEq = "9672c7b4-1e72-59bd-8a11-6ac3964bc41f"
 Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
@@ -40,6 +42,3 @@ SteadyStateDiffEq = "2.9"
 Symbolics = "7.16"
 Timers = "0.1.5"
 julia = "1.11, 1.12"
-
-[workspace]
-projects = ["docs", "test"]
