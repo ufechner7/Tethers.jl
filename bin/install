@@ -24,12 +24,12 @@ fi
 # Check if juliaup is installed
 if ! command -v juliaup &> /dev/null; then
     echo "Error: juliaup is not installed. Please install it first."
-    echo "  curl -fsSL https://install.julialang.org | sh -s -- --default-channel 1.11"
+    echo "  curl -fsSL https://install.julialang.org | sh -s -- --default-channel 1.12"
     exit 1
 fi
 
 # Ask which Julia version to use
-_default_julia="1.11"
+_default_julia="1.12"
 
 echo "Which Julia version do you want to use?"
 echo "  1) Julia 1.11"
