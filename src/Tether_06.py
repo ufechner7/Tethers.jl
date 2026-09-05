@@ -7,6 +7,7 @@ correctly.
 import numpy as np
 import matplotlib.pyplot as plt
 import math
+import os
 import time
 
 from assimulo.solvers.sundials import IDA     # Imports the solver IDA from Assimulo
@@ -14,7 +15,7 @@ from assimulo.problem import Implicit_Problem # Imports the problem formulation 
 
 G_EARTH  = np.array([0.0, 0.0, -9.81]) # gravitational acceleration
 C_SPRING =  614600.0                   # spring constant
-DAMPING  =  473*0.0045                 # damping [Ns/m]
+DAMPING  =  473*0.045                 # unit damping constant [Ns], must match Tether_06.jl
 L0      =  50.0                        # initial segment length     [m]
 ALPHA0   = math.pi/10                  # initial tether angle     [rad]
 SEGMENTS = 5 
@@ -65,11 +66,14 @@ class ExtendedProblem(Implicit_Problem):
         else:
             acc.append(G_EARTH)
     y0, yd0 = pos[0], vel[0]
-    for i in range (SEGMENTS):    
+    for i in range (SEGMENTS):
         y0  = np.append(y0,  np.append(pos[i+1], vel[i+1])) # Initial state vector
-        yd0 = np.append(yd0, np.append(vel[i+1], acc[i+1])) # Initial state vector derivative          
+        yd0 = np.append(yd0, np.append(vel[i+1], acc[i+1])) # Initial state vector derivative
+    # mass0's position is a pure algebraic constraint (res only involves y, never yd
+    # for these three components), the rest are true differential states
+    algvar = np.append(np.zeros(3), np.ones(6 * SEGMENTS))
 
-    def res(self, t, y, yd):  
+    def res(self, t, y, yd):
         y1  = y.reshape((-1, 3)) # reshape the state vector such that we can access it per 3D-vector
         yd1 = yd.reshape((-1, 3))
         l_seg = (L0 + V_RO*t) / SEGMENTS   # unstretched length of one segment
@@ -146,20 +150,41 @@ def play(duration, t_sol, y):
     for t in np.linspace(0, duration, num=round(duration/dt)):
         line, sc, txt = plot2d(fig, t_sol, y, t, SEGMENTS, line, sc, txt)
         time.sleep(dt/2)
-    plt.show(block=True)
-   
-def run_example():  
-    # Create an instance of the problem 
-    model = ExtendedProblem()  # Create the problem 
-    model.name = 'Mass-Spring' # Specifies the name of problem (optional)   
-    
-    sim = IDA(model) # Create the solver 
-    sim.verbosity = 0 
-    sim.atol = 1.0e-6
-    sim.rtol = 1.0e-6
-    sim.linear_solver="SPGMR"
+    if os.environ.get("TETHERS_BRIEF_PLOT") == "1":
+        # show briefly and close automatically, e.g. when running the tests
+        plt.pause(1)
+        plt.close('all')
+    else:
+        plt.show(block=True)
+
+def run_example():
+    # Create an instance of the problem
+    model = ExtendedProblem()  # Create the problem
+    model.name = 'Mass-Spring' # Specifies the name of problem (optional)
+
+    sim = IDA(model) # Create the solver, using the default dense direct linear solver
+    sim.verbosity = 0
+    sim.atol = 1.0e-4
+    sim.rtol = 1.0e-4
+    sim.algvar = model.algvar
+    sim.suppress_alg = True
+    sim.maxord = 3
 
     t_sol, y, yd = sim.simulate(DURATION, round(DURATION*50)) # 50 communication points per second
+
+    # extract the z position and velocity of the lowest mass (mass SEGMENTS)
+    pos_z_ix = 5 + (SEGMENTS - 1) * 6
+    vel_z_ix = pos_z_ix + 3
+    pos_z = y[:, pos_z_ix]
+    vel_z = y[:, vel_z_ix]
+
+    # saving the result for comparison with the Julia implementation
+    os.makedirs("output", exist_ok=True)
+    with open(os.path.join("output", "Tether_06_python.csv"), "w") as f:
+        f.write("time,pos_z,vel_z\n")
+        for t_i, pz_i, vz_i in zip(t_sol, pos_z, vel_z):
+            f.write(f"{t_i},{pz_i},{vz_i}\n")
+
     play(DURATION, t_sol, y)
     return
     

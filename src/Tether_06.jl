@@ -11,7 +11,7 @@ V_RO::Float64 = 2.0                             # reel-out speed                
 D_TETHER::Float64 = 4                           # tether diameter                  [mm]
 RHO_TETHER::Float64 = 724.0                     # density of Dyneema            [kg/m³] 
 C_SPRING::Float64 = 614600.0                    # unit spring constant              [N]
-DAMPING::Float64  = 473                         # unit damping constant            [Ns]
+DAMPING::Float64  = 473*0.045                  # unit damping constant            [Ns]
 SEGMENTS::Int64 = 5                             # number of tether segments         [-]
 α0 = π/10                                       # initial tether angle            [rad]
 duration = 10                                   # duration of the simulation        [s]
@@ -89,13 +89,25 @@ simple_sys = mtkcompile(sys)
 
 # running the simulation
 dt = 0.02
-tol = 1e-6
+tol = 1e-5
 tspan = (0.0, duration)
 ts    = 0:dt:duration
 
 prob = ODEProblem(simple_sys, nothing, tspan)
 solve(prob, FBDF(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
 @time sol = solve(prob, FBDF(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
+
+# saving the result of the lowest mass for comparison with the Python implementation
+X     = sol.t
+POS_Z = stack(sol[pos], dims=1)[:,3,SEGMENTS+1]
+VEL_Z = stack(sol[vel], dims=1)[:,3,SEGMENTS+1]
+mkpath("output")
+open(joinpath("output", "Tether_06_julia.csv"), "w") do io
+    println(io, "time,pos_z,vel_z")
+    for i in eachindex(X)
+        println(io, "$(X[i]),$(POS_Z[i]),$(VEL_Z[i])")
+    end
+end
 
 # plotting the result
 function play()
