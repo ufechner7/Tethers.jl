@@ -45,7 +45,8 @@ POS_Z = stack(sol[pos], dims=1)[:,3]
 VEL_Z = stack(sol[vel], dims=1)[:,3]
 
 p = plot(X, [POS_Z, L0.+0.005 .* sol[c_spring]], VEL_Z; xlabel="time [s]", ylabels=["pos_z [m]", "vel_z [m/s]"],
-         labels=["pos_z [m]", "c_spring", "vel_z [m/s]"], fig="falling mass, non-linear spring")
+         labels=["pos_z [m]", "c_spring", "vel_z [m/s]"], xticks=0:2:duration, yticks=(0.2, 1),
+         fig="falling mass, non-linear spring")
 display(p)
 
 # saving the result for comparison with the Python implementation
