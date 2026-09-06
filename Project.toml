@@ -1,6 +1,6 @@
 name = "Tethers"
 uuid = "9fc261b7-0902-4839-ada8-9390617e313c"
-version = "1.2.2"
+version = "1.2.3"
 authors = ["Uwe Fechner <uwe.fechner.msc@gmail.com> and contributors"]
 
 [workspace]
