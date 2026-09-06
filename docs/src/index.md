@@ -1,0 +1,143 @@
+## Introduction
+This package provides a tether component, and many tutorial scripts on tether modelling in Julia and Python.
+
+A few examples where tether models can be useful:
+
+- cranes
+- undersea cables
+- mooring lines of floating wind turbines
+- airborne wind energy systems
+- launching of sailplanes
+
+![Tether](docs/images/Tether.gif)
+
+Modeling of tethers and cables is difficult for several reasons. One of them is the high stiffness of the equation systems that need to be solved. I tried to implement these models with Simulink and Modelica and failed. It is possible to implement these models with Julia or Python. How to do this is explained in this tutorial. Tethers that are reeled in and out from
+a winch are even more challenging to model than constant-length tethers.
+
+A series of examples, from a simple falling mass towards a tether model, consisting of point masses connected by spring damper elements with the support of reel-out and reel-in and aerodynamic drag attached is presented.
+
+#### Status
+
+- all examples are of good quality and well-documented and tested
+- the exported tether component is beta quality and needs further testing
+
+## Installation
+
+Make sure you are running a `bash` terminal (shell) and you have at least 16GB RAM (MAC, Linux and Windows supported).  
+   On Windows, you can use [git for windows](https://gitforwindows.org/) which provides git AND a bash shell, but for using Julia from a `bash` terminal you must also install either  [Installation and usage of VSCode](https://ufechner7.github.io/Tethers.jl/dev/vscode/) or [Windows Terminal](https://learn.microsoft.com/en-us/windows/terminal/install). `Windows Terminal` is the simple and clean solution, `VSCode` the comfortable, fancy solution.
+
+Check out from git:
+```bash
+cd repos # any folder of your choice, but without spaces in the folder name
+git clone https://github.com/ufechner7/Tethers.jl
+```
+
+Build the system image:
+
+```bash
+cd repos/Tethers.jl
+cd bin
+./install
+./create_sys_image
+```
+
+## Basic example
+
+Use the provided script to start Julia from the `Tethers.jl` folder:
+
+```bash
+cd repos/Tethers.jl
+./bin/run_julia
+```
+
+From the Julia prompt, run the simulation:
+
+```julia
+include("src/Tether_01.jl")
+```
+
+You should see a plot similar to:
+
+![Falling mass](docs/images/FallingMass.png)
+
+This example shows a mass that is thrown upwards, slows down and then falls.
+
+**HINT**  
+You get a menu from which you can run any of the examples by typing
+
+```julia
+menu()
+```
+
+at the Julia prompt.
+
+**Julia code:** [Tether_01.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_01.jl)
+
+## Python version as comparison
+
+From the Julia prompt execute:
+
+```julia
+include("src/RunTether_01.jl")
+```
+
+This will install Python, Matplotlib and Assimulo and execute the script `Tether_01.py`.
+
+**Python code:** [Tether_01.py](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_01.py)
+
+**HINT**  
+You get a menu from which you can run any of the Python examples by typing
+
+```julia
+menu2()
+```
+
+at the Julia prompt.
+
+If you compare the Python and the Julia scripts you can see that:
+
+- the Julia script is shorter and easier to read
+- Julia is about 16 times faster when running the simulation  
+For a stiff, segmented tether (example 6 and 7) the Julia solvers are 13 to 30 times faster than Python.
+
+Have a look at the [Examples](https://ufechner7.github.io/Tethers.jl/dev/examples/) that teach you how to construct a full tether model step by step.
+
+## Overall comparison
+
+Execution time for a simulation of 10s duration with logging the state every 20ms.
+Relative and absolute tolerance: $1.0^{-6}$. CPU: Ryzen 9 7950X.
+LOC counts exclude blank lines and comment lines.
+
+| Test-case                   | Lines of code (LOC) Julia | LOC Python | Time Julia [ms] | Time Python [ms] |
+|:----------------------------------|:-------------------:|:----------:|:---------------:|:---:|
+|Falling mass (1)                   |     36              | 49         | 0.17            | 2.6 |
+|Non-linear Spring damper (3)       |     45              | 80         | 0.64            | 20  |
+|ditto with callbacks (3b, 3c)      |     53              | 97         | 1.0             | 25  |
+|swinging tether, 5 segments (5)    |    103              | 153        | 2.7             | 47  |
+|Dyneema tether, reeling out (6)    |    115              | 240        | 2.4             | 37   |
+|ditto with callbacks       (6c)    |    201              | 271        | 4.2             | 56   |
+|Dyneema, reeling out with drag (7) |    169              | 282        | 2.4             | 70   |  
+
+**Tradeoff Julia vs Python:** In Julia, the code is compiled before it is executed, which can cause about 5 to 30 seconds delay when running a simulation the first time, but speeds up the execution a lot afterward. In addition,
+the Julia code is much more compact and better readable due to the use of symbolic differential equations.
+
+In Python, the IDA solver needs an analytic Jacobian to handle a simulation with the very
+stiff Dyneema tether at all, which increases code size and complexity. Even then, the Julia solvers achieve 13 to 30 times the performance. On the other hand, installing the required packages in Python takes less
+than a minute, while installing and compiling the Julia software might take half an hour. The reason is,
+that currently Julia packages are only distributed as source code and have to be compiled locally.
+
+See also: [Why Julia?](https://ufechner7.github.io/2022/08/13/why-julia.html) and read the [documentation](https://ufechner7.github.io/Tethers.jl/dev/) or go straight to the [examples](https://ufechner7.github.io/Tethers.jl/dev/examples/).
+
+## Citing
+
+If you use Tethers.jl in your research, please cite it using the metadata in [CITATION.cff](https://github.com/ufechner7/Tethers.jl/blob/main/CITATION.cff) or the following BibTeX entry:
+
+```bibtex
+@software{fechner_tethers_jl,
+  author  = {Fechner, Uwe},
+  title   = {{Tethers.jl}},
+  url     = {https://github.com/ufechner7/Tethers.jl},
+  version = {1.2.1},
+  date    = {2026-03-20},
+}
+```

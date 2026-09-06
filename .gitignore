@@ -9,7 +9,6 @@ docs/build/
 docs/src/src
 docs/src/docs
 docs/src/docs/src
-docs/src/index.md
 video/*.png
 video/*.gif
 .venv
