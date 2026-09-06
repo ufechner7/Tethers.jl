@@ -35,10 +35,8 @@ function linear_positions(se; p1, p2)
     y = sin(se.α0) * se.l0
     if isnothing(p2)
         p2 = [p1[1], p1[2] - y, p1[3] - z]
-        println("p2: ", p2)
     elseif isnothing(p1)
         p1 = [p2[1], p2[2] + y, p2[3] + z]
-        println("p1: ", p1)
     end
     POS0 = zeros(3, se.segments+1)
     VEL0 = zeros(3, se.segments+1)
