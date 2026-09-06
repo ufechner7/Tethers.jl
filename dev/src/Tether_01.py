@@ -3,6 +3,7 @@
 Tutorial example showing how to use the implicit solver RADAU. 
 It simulates a falling mass.
 """
+import os
 import numpy as np
 import pylab as plt
 from assimulo.problem import Implicit_Problem # Imports the problem formulation from Assimulo
@@ -42,15 +43,30 @@ def run_example():
     # plot the result
     pos_z = y[:,2]
     vel_z = y[:,5]
-    plt.ax1 = plt.subplot(111) 
+
+    # saving the result for comparison with the Julia implementation
+    os.makedirs("output", exist_ok=True)
+    with open(os.path.join("output", "Tether_01_python.csv"), "w") as f:
+        f.write("time,pos_z,vel_z\n")
+        for t_i, pz_i, vz_i in zip(time, pos_z, vel_z):
+            f.write(f"{t_i},{pz_i},{vz_i}\n")
+
+    plt.gcf().canvas.manager.set_window_title("falling mass")
+    plt.ax1 = plt.subplot(111)
     plt.ax1.set_xlabel('time [s]')
     plt.plot(time, pos_z, color="green")
-    plt.ax1.set_ylabel('pos_z [m]')  
-    plt.ax1.grid(True) 
-    plt.ax2 = plt.twinx()  
-    plt.ax2.set_ylabel('vel_z [m/s]')   
-    plt.plot(time, vel_z, color="red")    
-    plt.show()
+    plt.ax1.set_ylabel('pos_z [m]')
+    plt.ax1.grid(True)
+    plt.ax2 = plt.twinx()
+    plt.ax2.set_ylabel('vel_z [m/s]')
+    plt.plot(time, vel_z, color="red")
+
+    if os.environ.get("TETHERS_BRIEF_PLOT") == "1":
+        # show briefly and close automatically, e.g. when running the tests
+        plt.pause(1)
+        plt.close('all')
+    else:
+        plt.show()
 
 if __name__ == '__main__':
     run_example()

@@ -3,8 +3,9 @@
 Tutorial example simulating a 3D mass-spring system with a nonlinear spring (no spring forces
 for l < l_0).
 """
+import os
 import numpy as np
-import pylab as plt
+import matplotlib.pyplot as plt
 
 from assimulo.problem import Implicit_Problem # Imports the problem formulation from Assimulo
 from assimulo.solvers.sundials import IDA # Imports the solver IDA from Assimulo
@@ -33,16 +34,20 @@ class ExtendedProblem(Implicit_Problem):
     # Derivative   yd  = mass0.vel, mass1.vel, mass1.acc
     # Residual     res = (yd.mass0.vel), (y.mass1.vel - yd.mass1.vel), (yd.mass1.acc - G_EARTH)
     def res(self, t, y, yd):
-        res_0 = y[0:3]              # the velocity of mass0 shall be zero
+        res_0 = y[0:3]              # mass0 is fixed, its position must stay zero
         res_1 = y[6:9]  - yd[3:6]   # the derivative of the position of mass1 must be equal to its velocity
         rel_vel = yd[3:6] - yd[0:3] # calculate the relative velocity of mass1 with respect to mass 0
-        segment = y[3:6] - y[0:3]   # calculate the vector from mass1 to mass0
-        if np.linalg.norm(segment) > L_0:               # if the segment is not loose, calculate spring and damping force
+        segment = y[3:6] - y[0:3]   # calculate the vector from mass0 to mass1
+        norm = np.linalg.norm(segment)
+        unit_vector = segment / norm
+        if norm > L_0:              # if the segment is not loose, calculate the spring force
             c_spring = C_SPRING
         else:
             c_spring = 0.0
-        force = c_spring * (np.linalg.norm(segment) - L_0) * segment / np.linalg.norm(segment) \
-                + DAMPING * rel_vel
+        # spring and damper act in parallel along the segment, therefore the damping
+        # force uses the component of the relative velocity along the segment
+        spring_vel = np.dot(rel_vel, unit_vector)
+        force = (c_spring * (norm - L_0) + DAMPING * spring_vel) * unit_vector
         acc = force / MASS                # create the vector of the spring acceleration
         res_2 = yd[6:9] - (G_EARTH - acc) # the derivative of the velocity must be equal to the total acceleration
         return np.append(res_0, np.append(res_1, res_2))
@@ -68,6 +73,15 @@ def run_example():
         else:
             c_spring = 0.0
         C_SPRINGS[i] = c_spring
+
+    # saving the result for comparison with the Julia implementation
+    os.makedirs("output", exist_ok=True)
+    with open(os.path.join("output", "Tether_03_python.csv"), "w") as f:
+        f.write("time,pos_z,vel_z\n")
+        for t_i, pz_i, vz_i in zip(time, pos_z, vel_z):
+            f.write(f"{t_i},{pz_i},{vz_i}\n")
+
+    plt.gcf().canvas.manager.set_window_title("falling mass, non-linear spring")
     plt.ax1 = plt.subplot(111)
     plt.ax1.set_xlabel('time [s]')
     plt.plot(time, pos_z, color="green")
@@ -77,7 +91,13 @@ def run_example():
     plt.ax2 = plt.twinx()
     plt.ax2.set_ylabel('vel_z [m/s]')
     plt.plot(time, vel_z, color="red")
-    plt.show()
+
+    if os.environ.get("TETHERS_BRIEF_PLOT") == "1":
+        # show briefly and close automatically, e.g. when running the tests
+        plt.pause(1)
+        plt.close('all')
+    else:
+        plt.show()
 
 if __name__ == '__main__':
     run_example()

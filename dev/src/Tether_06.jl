@@ -1,9 +1,9 @@
 # Tutorial example simulating a 3D mass-spring system with a nonlinear spring (1% spring forces
-# for l < l_0), n tether segments and reel-in and reel-out. The compression stiffness is hardcoded
-# to 1% of the spring stiffness.
+# for l < l_0, smoothly blended in near l_0), n tether segments and reel-in and reel-out. 
 using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, MakieControlPlots
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using MakieControlPlots
+using Tethers: display_if_interactive
 
 G_EARTH::Vector{Float64} = [0.0, 0.0, -9.81]    # gravitational acceleration     [m/s²]
 L0::Float64 = 50.0                              # initial tether length             [m]
@@ -17,8 +17,16 @@ SEGMENTS::Int64 = 5                             # number of tether segments     
 duration = 10                                   # duration of the simulation        [s]
 SAVE = false                                    # save png files in folder video
 mass_per_meter::Float64 = RHO_TETHER * π * (D_TETHER/2000.0)^2
+SMOOTH_REL_WIDTH::Float64 = 1e-3                # width of the taut/slack blend, as a
+                                                 # fraction of the segment length; must
+                                                 # match Tether_06.py
 
-# calculating consistant initial conditions
+# 0 for x<=0, 1 for x>=1, cubic (C1) ramp in between. Blending the taut/slack switch
+# this way (instead of a hard step) keeps the spring force differentiable, which
+# matters once a solver relies on an exact analytic Jacobian there (see Tether_06.py).
+smoothstep(x) = (xc = clamp(x, 0.0, 1.0); xc^2 * (3 - 2xc))
+
+# calculating consistent initial conditions
 POS0 = zeros(3, SEGMENTS+1)
 VEL0 = zeros(3, SEGMENTS+1)
 for i in 1:SEGMENTS+1
@@ -56,7 +64,7 @@ for i in SEGMENTS:-1:1
            unit_vector[:, i]  ~ -segment[:, i]/norm1[i],
            rel_vel[:, i]      ~ vel[:, i+1] - vel[:, i],
            spring_vel[i]      ~ -unit_vector[:, i] ⋅ rel_vel[:, i],
-           c_spr[i]           ~ c_spring/1.01 * (0.01 + (norm1[i] > len/SEGMENTS)),
+           c_spr[i]           ~ c_spring/1.01 * (0.01 + smoothstep((norm1[i] - len/SEGMENTS) / (SMOOTH_REL_WIDTH * len/SEGMENTS))),
            spring_force[:, i] ~ (c_spr[i] * (norm1[i] - (len/SEGMENTS)) + damping * spring_vel[i]) * unit_vector[:, i]]
     eqs2 = vcat(eqs2, reduce(vcat, eqs))
 end
@@ -94,12 +102,25 @@ tspan = (0.0, duration)
 ts    = 0:dt:duration
 
 prob = ODEProblem(simple_sys, nothing, tspan)
+# first call triggers JIT compilation; call again so @time measures only execution time
 solve(prob, FBDF(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
 @time sol = solve(prob, FBDF(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
 
+# saving the result of the lowest mass for comparison with the Python implementation
+X     = sol.t
+POS_Z = stack(sol[pos], dims=1)[:,3,SEGMENTS+1]
+VEL_Z = stack(sol[vel], dims=1)[:,3,SEGMENTS+1]
+mkpath("output")
+open(joinpath("output", "Tether_06_julia.csv"), "w") do io
+    println(io, "time,pos_z,vel_z")
+    for i in eachindex(X)
+        println(io, "$(X[i]),$(POS_Z[i]),$(VEL_Z[i])")
+    end
+end
+
 # plotting the result
-function play()
-    dt = 0.151
+function play1()
+    dt = 0.05
     ylim=(-1.2*(L0+V_RO*duration), 0.5)
     xlim=(-L0/2, L0/2)
     z_max = 0.0
@@ -113,9 +134,13 @@ function play()
         while sol.t[i] < time
             i += 1
         end
-        plot2d(sol[pos][i], time; segments=SEGMENTS, xlim, ylim, xy)
+        display_if_interactive(plot2d, sol[pos][i], time; segments=SEGMENTS, xlim, ylim, xy)
+        if time <= dt
+            sleep(0.001)
+            start = time_ns()
+        end
         wait_until(start + 0.5*time*1e9)
     end
     nothing
 end
-play()
+play1()

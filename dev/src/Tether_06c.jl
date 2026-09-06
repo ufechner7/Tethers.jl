@@ -3,6 +3,8 @@
 using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, Parameters, MakieControlPlots
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using MakieControlPlots
+using ADTypes: AutoFiniteDiff
+using Tethers: display_if_interactive
 
 @with_kw mutable struct Settings2 @deftype Float64
     g_earth::Vector{Float64} = [0.0, 0.0, -9.81] # gravitational acceleration     [m/s²]
@@ -117,8 +119,8 @@ function simulate(se, simple_sys)
     ts    = 0:se.dt:se.duration
     prob = ODEProblem(simple_sys, nothing, tspan)
     solve_kwargs = (; dt=se.dt, abstol=tol, reltol=tol, saveat=ts)
-    sol = solve(prob, KenCarp4(autodiff=false); solve_kwargs...)
-    elapsed_time = @elapsed sol = solve(prob, KenCarp4(autodiff=false); solve_kwargs...)
+    sol = solve(prob, KenCarp4(autodiff=AutoFiniteDiff()); solve_kwargs...)
+    elapsed_time = @elapsed sol = solve(prob, KenCarp4(autodiff=AutoFiniteDiff()); solve_kwargs...)
     sol, elapsed_time
 end
 
@@ -138,11 +140,15 @@ function play(se, sol, pos)
         while sol.t[i] < time
             i += 1
         end
-        plot2d(sol[pos][i], time; segments=se.segments, xlim, ylim, xy)
+        display_if_interactive(plot2d, sol[pos][i], time; segments=se.segments, xlim, ylim, xy)
         if se.save
             savefig("video/"*"img-"*lpad(j,4,"0")*".png")
         end
         j += 1
+        if time <= dt
+            sleep(0.001)
+            start = time_ns()
+        end
         wait_until(start + 0.5*time*1e9)
     end
     if se.save
@@ -155,6 +161,19 @@ function main(se = Settings2(); play_=true)
     simple_sys, pos, vel = model(se)
     sol, elapsed_time = simulate(se, simple_sys)
     println("Elapsed time: $(elapsed_time) s")
+
+    # saving the result of the lowest mass for comparison with the Python implementation
+    X     = sol.t
+    POS_Z = stack(sol[pos], dims=1)[:,3,se.segments+1]
+    VEL_Z = stack(sol[vel], dims=1)[:,3,se.segments+1]
+    mkpath("output")
+    open(joinpath("output", "Tether_06c_julia.csv"), "w") do io
+        println(io, "time,pos_z,vel_z")
+        for i in eachindex(X)
+            println(io, "$(X[i]),$(POS_Z[i]),$(VEL_Z[i])")
+        end
+    end
+
     if play_
         play(se, sol, pos)
     end

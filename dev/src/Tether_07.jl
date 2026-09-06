@@ -3,6 +3,8 @@
 using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, Parameters, MakieControlPlots
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using MakieControlPlots
+using ADTypes: AutoForwardDiff
+using Tethers: display_if_interactive
 
 @with_kw mutable struct Settings3 @deftype Float64
     g_earth::Vector{Float64} = [0.0, 0.0, -9.81] # gravitational acceleration     [m/s²]
@@ -118,13 +120,13 @@ function simulate(se, simple_sys)
     tspan = (0.0, se.duration)
     ts    = 0:dt:se.duration
     prob = ODEProblem(simple_sys, nothing, tspan)
-    elapsed_time = @elapsed sol = solve(prob, FBDF(autodiff=true); dt, abstol=tol, reltol=tol, saveat=ts)
-    elapsed_time = @elapsed sol = solve(prob, FBDF(autodiff=true); dt, abstol=tol, reltol=tol, saveat=ts)
+    elapsed_time = @elapsed sol = solve(prob, FBDF(autodiff=AutoForwardDiff()); dt, abstol=tol, reltol=tol, saveat=ts)
+    elapsed_time = @elapsed sol = solve(prob, FBDF(autodiff=AutoForwardDiff()); dt, abstol=tol, reltol=tol, saveat=ts)
     sol, elapsed_time
 end
 
 function play(se, sol, pos)
-    dt = 0.151
+    dt = 0.05
     ylim = (-1.2 * (se.l0 + se.v_ro*se.duration), 0.5)
     xlim = (-se.l0/2, se.l0/2)
     mkpath("video")
@@ -139,11 +141,15 @@ function play(se, sol, pos)
         while sol.t[i] < time
             i += 1
         end
-        plot2d(sol[pos][i], time; segments=se.segments, xlim, ylim, xy)
+        display_if_interactive(plot2d, sol[pos][i], time; segments=se.segments, xlim, ylim, xy)
         if se.save
             savefig("video/"*"img-"*lpad(j, 4, "0")*".png")
         end
         j += 1
+        if time <= dt
+            sleep(0.001)
+            start = time_ns()
+        end
         wait_until(start + 0.5 * time * 1e9)
     end
     if se.save
@@ -158,6 +164,18 @@ function main()
     set_tether_diameter!(se, se.d_tether) # adapt spring and damping constants to tether diameter
     sys, simple_sys, pos, vel, len, c_spr = model(se)
     sol, elapsed_time = simulate(se, simple_sys)
+    # saving the z position and velocity of the last particle for comparison
+    # with the Python implementation
+    X     = sol.t
+    POS_Z = stack(sol[pos], dims=1)[:, 3, se.segments+1]
+    VEL_Z = stack(sol[vel], dims=1)[:, 3, se.segments+1]
+    mkpath("output")
+    open(joinpath("output", "Tether_07_julia.csv"), "w") do io
+        println(io, "time,pos_z,vel_z")
+        for i in eachindex(X)
+            println(io, "$(X[i]),$(POS_Z[i]),$(VEL_Z[i])")
+        end
+    end
     play(se, sol, pos)
     println("Elapsed time: $(elapsed_time) s, speed: $(round(se.duration/elapsed_time)) times real-time")
     println("Number of evaluations per step: ", round(sol.stats.nf/(se.duration/0.02), digits=1))

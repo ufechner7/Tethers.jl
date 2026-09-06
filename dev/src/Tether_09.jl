@@ -6,6 +6,8 @@ using ModelingToolkit, OrdinaryDiffEq, SteadyStateDiffEq, LinearAlgebra, Timers,
 tic()
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using MakieControlPlots, GLMakie, LaTeXStrings, StatsBase
+using ADTypes: AutoFiniteDiff
+using Tethers: display_if_interactive
 
 @with_kw mutable struct Settings3 @deftype Float64
     g_earth::Vector{Float64} = [0.0, 0.0, -9.81] # gravitational acceleration     [m/s²]
@@ -72,7 +74,7 @@ function model(se; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
     tspan = (0.0, se.duration)
     prob = ODEProblem(simple_sys, nothing, tspan)
     prob1 = SteadyStateProblem(prob)
-    sol1 = solve(prob1, DynamicSS(KenCarp4(autodiff=false)))
+    sol1 = solve(prob1, DynamicSS(KenCarp4(autodiff=AutoFiniteDiff())))
     POS0 = sol1[pos]
     # create the real model
     se.v_ro = v_ro
@@ -166,8 +168,8 @@ function simulate(se, simple_sys)
     ts    = 0:dt:se.duration
     prob = ODEProblem(simple_sys, nothing, tspan)
     toc()
-    elapsed_time = @elapsed sol = solve(prob, KenCarp4(autodiff=false); dt, abstol=tol, reltol=tol, saveat=ts)
-    elapsed_time = @elapsed sol = solve(prob, KenCarp4(autodiff=false); dt, abstol=tol, reltol=tol, saveat=ts)
+    elapsed_time = @elapsed sol = solve(prob, KenCarp4(autodiff=AutoFiniteDiff()); dt, abstol=tol, reltol=tol, saveat=ts)
+    elapsed_time = @elapsed sol = solve(prob, KenCarp4(autodiff=AutoFiniteDiff()); dt, abstol=tol, reltol=tol, saveat=ts)
     sol, elapsed_time
 end
 
@@ -214,7 +216,7 @@ for (label, lx, lz) in labels
 end
 hidedecorations!(ax)
 hidespines!(ax)
-display(fig)
+display_if_interactive(fig)
 
 nothing
 

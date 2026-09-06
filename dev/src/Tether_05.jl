@@ -2,6 +2,8 @@
 # for l < l_0) and n tether segments. 
 using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, MakieControlPlots
 using ModelingToolkit: t_nounits as t, D_nounits as D
+using ADTypes: AutoFiniteDiff
+using Tethers: display_if_interactive
 
 G_EARTH::Vector{Float64} = [0.0, 0.0, -9.81]    # gravitational acceleration     [m/s²]
 L0::Float64 = 5.0                               # initial segment length            [m]
@@ -77,12 +79,24 @@ tspan = (0.0, duration)
 ts    = 0:dt:duration
 
 prob = ODEProblem(simple_sys, nothing, tspan)
-elapsed_time = @elapsed sol = solve(prob, KenCarp4(autodiff=false); dt, abstol=tol, reltol=tol, saveat=ts)
-elapsed_time = @elapsed sol = solve(prob, KenCarp4(autodiff=false); dt, abstol=tol, reltol=tol, saveat=ts)
+elapsed_time = @elapsed sol = solve(prob, KenCarp4(autodiff=AutoFiniteDiff()); dt, abstol=tol, reltol=tol, saveat=ts)
+elapsed_time = @elapsed sol = solve(prob, KenCarp4(autodiff=AutoFiniteDiff()); dt, abstol=tol, reltol=tol, saveat=ts)
 println("Elapsed time: $(elapsed_time) s, speed: $(round(duration/elapsed_time)) times real-time")
 
+# saving the result of the lowest mass for comparison with the Python implementation
+X     = sol.t
+POS_Z = stack(sol[pos], dims=1)[:,3,segments+1]
+VEL_Z = stack(sol[vel], dims=1)[:,3,segments+1]
+mkpath("output")
+open(joinpath("output", "Tether_05_julia.csv"), "w") do io
+    println(io, "time,pos_z,vel_z")
+    for i in eachindex(X)
+        println(io, "$(X[i]),$(POS_Z[i]),$(VEL_Z[i])")
+    end
+end
+
 function play()
-    dt = 0.15
+    dt = 0.05
     ylim = (-1.2 * segments * L0, 0.5)
     xlim = (-segments * L0/2, segments * L0/2)
     z_max = 0.0
@@ -96,7 +110,11 @@ function play()
         while sol.t[i] < time
             i += 1
         end
-        plot2d(sol[pos][i], time; segments, xlim, ylim, xy)
+        if time <= dt
+            sleep(0.001)
+            start = time_ns()
+        end
+        display_if_interactive(plot2d, sol[pos][i], time; segments, xlim, ylim, xy)
         wait_until(start + 0.5 * time * 1e9)
     end
     nothing
