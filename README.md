@@ -23,6 +23,7 @@ A series of examples, from a simple falling mass towards a tether model, consist
 #### Status
 
 - all examples are of good quality and well-documented and tested
+- the exported tether component is beta quality and needs further testing
 
 ## Installation
 
