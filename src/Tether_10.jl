@@ -12,7 +12,9 @@ using ModelingToolkit, OrdinaryDiffEq, SteadyStateDiffEq, LinearAlgebra, Timers,
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using ADTypes: AutoFiniteDiff, AutoForwardDiff
 using Tethers: display_if_interactive
-include(joinpath(@__DIR__, "TetherComponent.jl"))
+# the re-usable component, see src/TetherComponent.jl; imported by name, so that including
+# this example cannot collide with the globals defined by the other examples
+using Tethers.TetherComponents: TetherSettings, set_diameter!, Tether, FixedEnd, FreeEnd
 
 """
     linear_positions(se; p1, p2)

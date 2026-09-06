@@ -16,8 +16,22 @@
 # Therefore **every node must have exactly one component that defines its kinematics**,
 # i.e. every `Tether` connector must be connected to a `FixedEnd` or a `FreeEnd` (two
 # tethers are joined by connecting both of them to the same `FreeEnd`).
+#
+# This is a submodule of `Tethers`, so that its names do not end up in `Main`: `runtests.jl`
+# includes all examples into the same `Main`, and `Tether_06.jl` defines a global
+# `mass_per_meter` there, which a top-level `mass_per_meter(se)` here would collide with.
+# Use it with `using Tethers.TetherComponents`.
+module TetherComponents
+
 using ModelingToolkit, LinearAlgebra, Parameters
 using ModelingToolkit: t_nounits as t, D_nounits as D
+
+# Only distinctive names are exported. `mass_per_meter` and `l_spring` are deliberately not:
+# `Tether_06.jl` defines a global `mass_per_meter` in `Main`, and a name exported here that
+# collides with one of the other examples breaks `runtests.jl`, which includes all of them
+# into the same `Main`. Use `TetherComponents.mass_per_meter(se)` to reach them.
+export TetherSettings, set_diameter!, m_end
+export Point3D, Tether, FixedEnd, FreeEnd
 
 """
     TetherSettings
@@ -316,3 +330,5 @@ the same settings `se` as for those tethers. `m_extra` is the payload mass, e.g.
                mass => m_extra + 0.5 * n_tethers * mass_per_meter(se) * se.l0/se.segments]
     System(reduce(vcat, Symbolics.scalarize.(eqs)), t; name, systems=[flange], guesses)
 end
+
+end # module TetherComponents
