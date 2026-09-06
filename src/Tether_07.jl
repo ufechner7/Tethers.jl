@@ -160,6 +160,18 @@ function main()
     set_tether_diameter!(se, se.d_tether) # adapt spring and damping constants to tether diameter
     sys, simple_sys, pos, vel, len, c_spr = model(se)
     sol, elapsed_time = simulate(se, simple_sys)
+    # saving the z position and velocity of the last particle for comparison
+    # with the Python implementation
+    X     = sol.t
+    POS_Z = stack(sol[pos], dims=1)[:, 3, se.segments+1]
+    VEL_Z = stack(sol[vel], dims=1)[:, 3, se.segments+1]
+    mkpath("output")
+    open(joinpath("output", "Tether_07_julia.csv"), "w") do io
+        println(io, "time,pos_z,vel_z")
+        for i in eachindex(X)
+            println(io, "$(X[i]),$(POS_Z[i]),$(VEL_Z[i])")
+        end
+    end
     play(se, sol, pos)
     println("Elapsed time: $(elapsed_time) s, speed: $(round(se.duration/elapsed_time)) times real-time")
     println("Number of evaluations per step: ", round(sol.stats.nf/(se.duration/0.02), digits=1))
