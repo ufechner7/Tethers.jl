@@ -2,7 +2,7 @@
 
 julia_version = "1.12.7"
 manifest_format = "2.0"
-project_hash = "382e358bed374d5b3a3c7cdb9d393fc1e0870f78"
+project_hash = "ce18440054f92d841f29f2bee3aa02398c3d9c9e"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "f7304359109c768cf32dc5fa2d371565bb63b68a"
@@ -1568,9 +1568,9 @@ version = "0.24.14"
 
 [[deps.MakieControlPlots]]
 deps = ["CairoMakie", "GLMakie", "GridLayoutBase", "JLD2", "LaTeXStrings", "Makie", "Pkg", "PrecompileTools", "Printf", "StaticArraysCore"]
-git-tree-sha1 = "4ecdff65473591f3320bdaa4d6c4d4cd8b88ba58"
+git-tree-sha1 = "fbf7b3dd02367637a9876bc25313506dfc8e0fba"
 uuid = "6d616b69-6563-4f6e-8472-6f6c706c6f74"
-version = "0.1.16"
+version = "0.1.18"
 
     [deps.MakieControlPlots.extensions]
     MakieControlPlotsControlSystemsBaseExt = "ControlSystemsBase"

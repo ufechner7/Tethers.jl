@@ -4,6 +4,8 @@
 # given pair of endpoints, which is then used as the initial condition for the simulation.
 using ModelingToolkit, OrdinaryDiffEq, SteadyStateDiffEq, LinearAlgebra, Timers, Parameters, MakieControlPlots
 using ModelingToolkit: t_nounits as t, D_nounits as D
+using ADTypes: AutoFiniteDiff, AutoForwardDiff
+using Tethers: display_if_interactive
 
 """
     Settings3
@@ -143,7 +145,7 @@ function model(se; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
         tspan = (0.0, se.duration)
         prob = ODEProblem(simple_sys, nothing, tspan)
         prob1 = SteadyStateProblem(prob)
-        sol1 = solve(prob1, DynamicSS(KenCarp4(autodiff=false)))
+        sol1 = solve(prob1, DynamicSS(KenCarp4(autodiff=AutoFiniteDiff())))
     finally
         se.v_ro = v_ro  # restore the reel-out speed, also if the steady state solver failed
     end
@@ -256,8 +258,8 @@ function simulate(se, simple_sys)
     tspan = (0.0, se.duration)
     ts    = 0:dt:se.duration
     prob = ODEProblem(simple_sys, nothing, tspan)
-    elapsed_time = @elapsed sol = solve(prob, FBDF(autodiff=true); dt, abstol=tol, reltol=tol, saveat=ts)
-    elapsed_time = @elapsed sol = solve(prob, FBDF(autodiff=true); dt, abstol=tol, reltol=tol, saveat=ts)
+    elapsed_time = @elapsed sol = solve(prob, FBDF(autodiff=AutoForwardDiff()); dt, abstol=tol, reltol=tol, saveat=ts)
+    elapsed_time = @elapsed sol = solve(prob, FBDF(autodiff=AutoForwardDiff()); dt, abstol=tol, reltol=tol, saveat=ts)
     sol, elapsed_time
 end
 
@@ -270,7 +272,7 @@ the symbolic variable `pos` every 151ms of simulated time, at half of real-time 
 If `se.save` is `true`, one PNG file per frame is written to the `video` folder.
 """
 function play(se, sol, pos)
-    dt = 0.151
+    dt = 0.05
     ylim = (-1.2 * (se.l0 + se.v_ro*se.duration), 0.5)
     xlim = (-se.l0, se.l0)
     if se.save
@@ -287,11 +289,15 @@ function play(se, sol, pos)
         while i < length(sol.t) && sol.t[i] < time
             i += 1
         end
-        plot2d(POS[i], time; segments=se.segments, xlim, ylim, xy)
+        display_if_interactive(plot2d, POS[i], time; segments=se.segments, xlim, ylim, xy)
         if se.save
             savefig("video/"*"img-"*lpad(j, 4, "0")*".png")
         end
         j += 1
+        if time <= dt
+            sleep(0.001)
+            start = time_ns()
+        end
         wait_until(start + 0.5 * time * 1e9)
     end
     if se.save
@@ -317,6 +323,18 @@ function main(; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
     set_tether_diameter!(se, se.d_tether) # adapt spring and damping constants to tether diameter
     simple_sys, sys, pos, vel, len, c_spr = model(se; p1, p2, fix_p1, fix_p2)
     sol, elapsed_time = simulate(se, simple_sys)
+    # saving the z position and velocity of the last (free) particle for comparison
+    # with the Python implementation
+    X     = sol.t
+    POS_Z = stack(sol[pos], dims=1)[:, 3, se.segments+1]
+    VEL_Z = stack(sol[vel], dims=1)[:, 3, se.segments+1]
+    mkpath("output")
+    open(joinpath("output", "Tether_08_julia.csv"), "w") do io
+        println(io, "time,pos_z,vel_z")
+        for i in eachindex(X)
+            println(io, "$(X[i]),$(POS_Z[i]),$(VEL_Z[i])")
+        end
+    end
     if @isdefined __PC
         return sol, pos, vel, simple_sys
     end

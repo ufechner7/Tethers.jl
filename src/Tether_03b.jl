@@ -2,6 +2,7 @@
 # with callback, initially moving upwards with 4 m/s.
 using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, MakieControlPlots
 using ModelingToolkit: t_nounits as t, D_nounits as D
+using Tethers: display_if_interactive
 
 G_EARTH::Vector{Float64} = [0.0, 0.0, -9.81]    # gravitational acceleration     [m/s²]
 L0::Float64 = -10.0                             # initial spring length      [m]
@@ -53,6 +54,16 @@ X = sol.t
 POS_Z = stack(sol[pos], dims=1)[:,3]
 VEL_Z = stack(sol[vel], dims=1)[:,3]
 
-p = plot(X, [POS_Z, L0.+0.005 .* sol[c_spring]], VEL_Z; xlabel="time [s]", ylabels=["pos_z [m]", "vel_z [m/s]"], 
-         labels=["pos_z [m]", "c_spring", "vel_z [m/s]"], fig="falling mass, non-linear spring, callback")
-display(p)
+p = plot(X, [POS_Z, L0.+0.005 .* sol[c_spring]], VEL_Z; xlabel="time [s]", ylabels=["pos_z [m]", "vel_z [m/s]"],
+         labels=["pos_z [m]", "c_spring", "vel_z [m/s]"], xticks=0:2:duration, yticks=(0.2, 1),
+         fig="falling mass, non-linear spring, callback")
+display_if_interactive(p)
+
+# saving the result for comparison with the Python implementation
+mkpath("output")
+open(joinpath("output", "Tether_03b_julia.csv"), "w") do io
+    println(io, "time,pos_z,vel_z")
+    for i in eachindex(X)
+        println(io, "$(X[i]),$(POS_Z[i]),$(VEL_Z[i])")
+    end
+end

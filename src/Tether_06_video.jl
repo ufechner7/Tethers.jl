@@ -4,6 +4,7 @@
 using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, MakieControlPlots
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using MakieControlPlots
+using Tethers: display_if_interactive
 
 G_EARTH::Vector{Float64} = [0.0, 0.0, -9.81]    # gravitational acceleration     [m/s²]
 L0::Float64 = 50.0                              # initial tether length             [m]
@@ -112,7 +113,7 @@ function play()
         while sol.t[i] < time
             i += 1
         end
-        plot2d(sol[pos][i], time; segments=SEGMENTS, xlim, ylim, xy, fig="Tether_08", figsize=(8.54, 6.4), dpi=150)
+        display_if_interactive(plot2d, sol[pos][i], time; segments=SEGMENTS, xlim, ylim, xy, fig="Tether_08", figsize=(8.54, 6.4), dpi=150)
         if SAVE
             savefig("video/"*"img-"*lpad(j, 4, "0")*".png")
         end

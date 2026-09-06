@@ -10,6 +10,7 @@ projects = ["docs", "test"]
 precompile_workload = false
 
 [deps]
+ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
 CondaPkg = "992eb4ea-22a4-4c89-a5bb-47a3300528ab"
 GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
 LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
@@ -29,11 +30,12 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Timers = "21f18d07-b854-4dab-86f0-c15a3821819a"
 
 [compat]
+ADTypes = "1.21"
 CondaPkg = "0.2.23"
 GLMakie = "0.12, 0.13"
 LinearSolve = "3.66.0"
 LiveServer = "1.3.1"
-MakieControlPlots = "0.1.16"
+MakieControlPlots = "0.1.18"
 ModelingToolkit = "11"
 OrdinaryDiffEq = "6.108"
 PackageCompiler = "2.1.17"
