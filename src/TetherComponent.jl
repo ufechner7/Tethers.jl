@@ -37,7 +37,7 @@ export Point3D, Tether, FixedEnd, FreeEnd
     TetherSettings
 
 Simulation parameters of the composable tether model; same physics and same units as
-`Settings3` of [`Tether_08.jl`](Tether_08.jl).
+`Settings3` of [`Tether_08.jl`](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_08.jl).
 
 # Fields
 - `g_earth::Vector{Float64}`: gravitational acceleration vector [m/s²]

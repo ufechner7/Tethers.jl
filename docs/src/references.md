@@ -5,6 +5,31 @@
 display_if_interactive
 ```
 
+### Tether component
+The composable components used by [Tether_10.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_10.jl),
+explained in [Re-usable tether component](@ref). They live in the submodule
+`Tethers.TetherComponents`.
+
+```@meta
+CurrentModule = Tethers.TetherComponents
+```
+
+```@docs
+TetherSettings
+set_diameter!
+mass_per_meter
+l_spring
+m_end
+Point3D
+Tether
+FixedEnd
+FreeEnd
+```
+
+```@meta
+CurrentModule = Tethers
+```
+
 ## Python
 [Assimulo](https://jmodelica.org/assimulo/) offers 14 solvers
 with good documentation for explicit and implicit problems.
