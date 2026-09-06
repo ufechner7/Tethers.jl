@@ -5,6 +5,7 @@ for l < l_0) and n tether segments, using the implicit solver Rodas5.
 
 using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, MakieControlPlots
 using ModelingToolkit: t_nounits as t, D_nounits as D
+using Tethers: display_if_interactive
 
 G_EARTH::Vector{Float64} = [0.0, 0.0, -9.81]    # gravitational acceleration     [m/s²]
 L0::Float64 = 10.0                              # initial segment length            [m]
@@ -77,7 +78,7 @@ function plt(sol, particle)
     p = plot(X, [POS_Z, -(particle-1)*L0 .+ 0.005 .* C_SPRING], VEL_Z; xlabel="time [s]", ylabels=["pos_z [m]", "vel_z [m/s]"],
              labels=["pos_z [m]", "c_spring", "vel_z [m/s]"], xticks=0:2:duration, yticks=(0.25, 2),
              fig="segmented tether")
-    display(p)
+    display_if_interactive(p)
     nothing
 end
 

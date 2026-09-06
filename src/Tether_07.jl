@@ -3,6 +3,7 @@
 using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, Parameters, MakieControlPlots
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using MakieControlPlots
+using Tethers: display_if_interactive
 
 @with_kw mutable struct Settings3 @deftype Float64
     g_earth::Vector{Float64} = [0.0, 0.0, -9.81] # gravitational acceleration     [m/s²]
@@ -139,7 +140,7 @@ function play(se, sol, pos)
         while sol.t[i] < time
             i += 1
         end
-        plot2d(sol[pos][i], time; segments=se.segments, xlim, ylim, xy)
+        display_if_interactive(plot2d, sol[pos][i], time; segments=se.segments, xlim, ylim, xy)
         if se.save
             savefig("video/"*"img-"*lpad(j, 4, "0")*".png")
         end

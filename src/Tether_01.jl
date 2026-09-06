@@ -3,6 +3,7 @@ using Timers
 tic()
 using ModelingToolkit, OrdinaryDiffEq, MakieControlPlots
 using ModelingToolkit: t_nounits as t, D_nounits as D
+using Tethers: display_if_interactive
 toc()
 
 G_EARTH::Vector{Float64} = [0.0, 0.0, -9.81]    # gravitational acceleration     [m/s²]
@@ -37,7 +38,7 @@ VEL_Z = stack(sol[vel], dims=1)[:,3]
 p = plot(X, POS_Z, VEL_Z; xlabel="time [s]", ylabels=["pos_z [m]", "vel_z [m/s]"],
          labels=["pos_z [m]", "vel_z [m/s]"], fig="falling mass", xticks=0:2:duration,
          yticks=20)
-display(p)
+display_if_interactive(p)
 
 # saving the result for comparison with the Python implementation
 mkpath("output")

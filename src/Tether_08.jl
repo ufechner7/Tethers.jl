@@ -4,6 +4,7 @@
 # given pair of endpoints, which is then used as the initial condition for the simulation.
 using ModelingToolkit, OrdinaryDiffEq, SteadyStateDiffEq, LinearAlgebra, Timers, Parameters, MakieControlPlots
 using ModelingToolkit: t_nounits as t, D_nounits as D
+using Tethers: display_if_interactive
 
 """
     Settings3
@@ -287,7 +288,7 @@ function play(se, sol, pos)
         while i < length(sol.t) && sol.t[i] < time
             i += 1
         end
-        plot2d(POS[i], time; segments=se.segments, xlim, ylim, xy)
+        display_if_interactive(plot2d, POS[i], time; segments=se.segments, xlim, ylim, xy)
         if se.save
             savefig("video/"*"img-"*lpad(j, 4, "0")*".png")
         end

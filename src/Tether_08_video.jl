@@ -8,6 +8,7 @@ using ModelingToolkit, OrdinaryDiffEq, SteadyStateDiffEq, LinearAlgebra, Timers,
 tic()
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using MakieControlPlots
+using Tethers: display_if_interactive
 close("all")
 
 @with_kw mutable struct Settings3 @deftype Float64
@@ -190,7 +191,7 @@ function play(se, sol, pos)
         while sol.t[i] < time
             i += 1
         end
-        plot2d(sol[pos][i], time; segments=se.segments, xlim, ylim, xy, fig="Tether_08", figsize=(8.54, 6.4), dpi=150)
+        display_if_interactive(plot2d, sol[pos][i], time; segments=se.segments, xlim, ylim, xy, fig="Tether_08", figsize=(8.54, 6.4), dpi=150)
         if se.save
             savefig("video/"*"img-"*lpad(j, 4, "0")*".png")
         end

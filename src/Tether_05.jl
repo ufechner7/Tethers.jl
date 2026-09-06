@@ -2,6 +2,7 @@
 # for l < l_0) and n tether segments. 
 using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, MakieControlPlots
 using ModelingToolkit: t_nounits as t, D_nounits as D
+using Tethers: display_if_interactive
 
 G_EARTH::Vector{Float64} = [0.0, 0.0, -9.81]    # gravitational acceleration     [m/s²]
 L0::Float64 = 5.0                               # initial segment length            [m]
@@ -108,7 +109,7 @@ function play()
         while sol.t[i] < time
             i += 1
         end
-        plot2d(sol[pos][i], time; segments, xlim, ylim, xy)
+        display_if_interactive(plot2d, sol[pos][i], time; segments, xlim, ylim, xy)
         wait_until(start + 0.5 * time * 1e9)
     end
     nothing

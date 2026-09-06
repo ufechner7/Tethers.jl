@@ -6,6 +6,7 @@ using ModelingToolkit, OrdinaryDiffEq, SteadyStateDiffEq, LinearAlgebra, Timers,
 tic()
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using MakieControlPlots, GLMakie, LaTeXStrings, StatsBase
+using Tethers: display_if_interactive
 
 @with_kw mutable struct Settings3 @deftype Float64
     g_earth::Vector{Float64} = [0.0, 0.0, -9.81] # gravitational acceleration     [m/s²]
@@ -214,7 +215,7 @@ for (label, lx, lz) in labels
 end
 hidedecorations!(ax)
 hidespines!(ax)
-display(fig)
+display_if_interactive(fig)
 
 nothing
 
