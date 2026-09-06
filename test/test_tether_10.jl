@@ -50,14 +50,13 @@ include(joinpath(@__DIR__, "test_utils.jl"))
     # system as one tether of the full length: same segment length, stiffness and damping,
     # and the knot has exactly the mass of an inner particle. So composing the same
     # component twice must give the same trajectory.
-    simple_sys2, = cd(pkg_dir) do
+    simple_sys2, sol2 = cd(pkg_dir) do
         ssys2, _, _, _ = Base.invokelatest(model2, se; p1=[0,0,0], p2=[-40,0,-47])
-        sol2, _ = Base.invokelatest(simulate, se, ssys2)
-        global _sol2 = sol2
-        (ssys2,)
+        s2, _ = Base.invokelatest(simulate, se, ssys2)
+        ssys2, s2
     end
     POS2 = stack([hcat(a, b[:, 2:end]) for (a, b) in
-                  zip(_sol2[simple_sys2.tether1.pos], _sol2[simple_sys2.tether2.pos])], dims=1)
+                  zip(sol2[simple_sys2.tether1.pos], sol2[simple_sys2.tether2.pos])], dims=1)
     @test size(POS2) == size(POS)
     @test maximum(abs.(POS2 - POS)) < 1e-3
 end
