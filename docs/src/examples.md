@@ -12,6 +12,7 @@ a full segmented tether model with real-out and aerodynamic drag attached.
 | Tether_06  | [Multi-segment tether reeling out](@ref)  | Learn to model a tether with changing unstretched length |
 | Tether_07  | [Segmented tether with aerodynamic drag](@ref) | Learn how to model tether drag |
 | Tether_08  | [Tether with arbitrary endpoints](@ref) | Learn how to use a steady state solver |
+| Tether_10  | [Re-usable tether component](@ref) | Learn how to build composable, acausal components |
 
 **Nomenclature:**
 - ODE: Ordinary differential equations
@@ -434,4 +435,103 @@ model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0)
 The following call was used to create this video: `main(p2=[-40,0,-47], fix_p2=false)`, with a setting of `v_ro = 0.3` m/s. 
 
 In the video, you can at the beginning nicely see the catenary line which is a result of the steady state solver, and then the normal dynamic simulation, which results in a line that is pushed to the right by the wind.
+
+## Re-usable tether component
+The last example builds the whole system in one function. That works, but you cannot re-use
+it: if you want two tethers, or a different boundary condition at one of the end points, you
+have to change the model itself.
+
+This example packages the same physics as an *acausal component* with two end points, which
+is wired to its boundary conditions with `connect`, as described in
+[Composing Models](https://docs.sciml.ai/ModelingToolkit/stable/basics/Composition/).
+
+See: [TetherComponent.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/TetherComponent.jl)
+and [Tether_10.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_10.jl)
+
+### The connector
+A connector defines what two components exchange when they are connected. For a point in 3D
+space that is the position (an *across* variable, equal for everything connected to the same
+node) and the force (a *flow* variable, summing up to zero over all components connected to
+the same node):
+
+```julia
+@connector function Point3D(; name, pos0=zeros(3))
+    @variables pos(t)[1:3]
+    @variables force(t)[1:3], [connect = Flow]
+    guesses = [pos => collect(pos0), force => zeros(3)]
+    System(Equation[], t, vcat(collect(pos), collect(force)), []; name, guesses)
+end
+```
+
+The velocity is deliberately *not* part of the connector: it is the derivative of the
+position, so a component that needs it uses `D(pos)`. This keeps the connector balanced
+(three across and three flow variables); an unbalanced connector makes ModelingToolkit warn
+about models that are hard to debug.
+
+### The components
+- `Tether(; name, se, POS0, VEL0)`: `se.segments` non-linear spring-damper segments with
+  aerodynamic drag and reel-out, with the two end points exposed as the connectors `p1`
+  and `p2`
+- `FixedEnd(; name, pos0)`: holds the node it is connected to at a fixed position
+- `FreeEnd(; name, se, m_extra, n_tethers, pos0)`: a point mass, falling under gravity and
+  the forces flowing in through its connector
+
+The tether owns the equations of motion of its inner particles only. At `p1` and `p2` it has
+no inertia; it only reports the force it exerts there:
+
+```julia
+# the end points carry no mass here, so the force the tether exerts on them
+# (total_force) has to be balanced by the force flowing in through the connector
+eqs = [total_force[:, 1]   ~ -spring_force[:, 1] + half_drag_force[:, 1],
+       total_force[:, n+1] ~  spring_force[:, n] + half_drag_force[:, n],
+       p1.force            ~ -total_force[:, 1],
+       p2.force            ~ -total_force[:, n+1]]
+```
+
+That is why **every connector of a tether must be connected to a `FixedEnd` or a
+`FreeEnd`**: exactly one component per node has to define the kinematics of that node, and
+it has to carry the half particle mass of each tether attached to it (`m_end(se)`).
+
+### Composing a system
+The model of example 8 is then one `connect` per end point:
+
+```julia
+@named tether = Tether(; se, POS0, VEL0)
+end1 = FixedEnd(; name=:end1, pos0=p1)
+end2 = FreeEnd(; name=:end2, se, m_extra=m2, pos0=p2)
+eqs = [connect(end1.flange, tether.p1),
+       connect(tether.p2, end2.flange)]
+@named sys = System(eqs, t; systems=[tether, end1, end2])
+simple_sys = mtkcompile(sys)
+```
+
+Swapping `FixedEnd` for `FreeEnd` is now all it takes to release an end point, and the same
+component can be instantiated more than once. `main2()` connects two tethers of half the
+length to one shared point mass:
+
+```julia
+eqs = [connect(end1.flange, tether1.p1),
+       connect(tether1.p2, knot.flange, tether2.p1),  # the knot joins both tethers
+       connect(tether2.p2, end2.flange)]
+```
+
+With a knot mass of zero this is physically the same system as one tether of the full
+length, and it is simulated as such: `main()` and `main2()` agree to less than 0.1 mm after
+30 s of simulated time, and `main()` agrees with the monolithic model of example 8 to about
+10 µm. Both are checked in `test/test_tether_10.jl`.
+
+### Initial conditions
+Only the inner particles are states of the `Tether` component, and only they get a default
+value. Everything else -- the end points, the segment lengths, the forces -- gets a *guess*
+instead, passed to the `System` constructor:
+
+```julia
+System(eqs, t; name, systems=[p1, p2], guesses)
+```
+
+This matters: if an algebraic variable has neither a default nor a guess, the initialization
+of the composed system fails with `Cyclic guesses detected in the system`, and if the end
+points get a default *and* are fixed by a `FixedEnd`, the initialization problem is
+overdetermined. Note that ModelingToolkit treats a symbolic array as atomic, so a guess has
+to be given for the whole array (`pos => POS0`), not element by element.
 

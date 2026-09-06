@@ -12,6 +12,7 @@ __BENCH__ = true;
     include("test_tether_06.jl")
     include("test_tether_07.jl")
     include("test_tether_08.jl")
+    include("test_tether_10.jl")
     include("test_tether_06c.jl")
 end
 nothing
