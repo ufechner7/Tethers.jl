@@ -79,6 +79,9 @@ if [[ $julia_major != "1.11" ]] && [[ $julia_major != "1.12" ]]; then
     exit 1
 fi
 
+echo "Updating Julia registry..."
+julia -e 'using Pkg; Pkg.Registry.update()'
+
 # Copy the appropriate default manifest
 DEFAULT_MANIFEST="Manifest-v${julia_major}.toml.default"
 VERSIONED_MANIFEST="Manifest-v${julia_major}.toml"

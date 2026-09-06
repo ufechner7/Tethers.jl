@@ -119,7 +119,7 @@ open(joinpath("output", "Tether_06_julia.csv"), "w") do io
 end
 
 # plotting the result
-function play()
+function play1()
     dt = 0.151
     ylim=(-1.2*(L0+V_RO*duration), 0.5)
     xlim=(-L0/2, L0/2)
@@ -139,4 +139,4 @@ function play()
     end
     nothing
 end
-play()
+play1()
