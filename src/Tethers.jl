@@ -2,6 +2,9 @@ module Tethers
 
 export docu, display_if_interactive
 
+# the re-usable, composable tether component of example 10
+include("TetherComponent.jl")
+
 LAUNCH_BROWSER = true
 
 """

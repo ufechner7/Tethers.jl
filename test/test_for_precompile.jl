@@ -5,7 +5,8 @@ let
     include("../src/Tether_02.jl")
     include("../src/Tether_03.jl")
     include("../src/Tether_08.jl")
-    
+    include("../src/Tether_10.jl")
+
     GC.gc(true)
     let mem = Sys.free_memory() / 1024^2
         @info "Free memory: $(round(mem; digits=1)) MB"

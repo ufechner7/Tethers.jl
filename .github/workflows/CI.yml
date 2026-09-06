@@ -29,10 +29,10 @@ jobs:
         include:
           - os: windows-latest
             arch: x64
-            version: 1
+            version: '1.12'
           - os: macOS-latest
             arch: aarch64
-            version: 1
+            version: '1.12'
     steps:
       - uses: actions/checkout@v6
       - uses: julia-actions/setup-julia@v3
@@ -56,6 +56,20 @@ jobs:
           sudo apt-get install -y xvfb
           Xvfb :99 -screen 0 1024x768x24 &
           echo "DISPLAY=:99" >> "$GITHUB_ENV"
+      # Use the checked-in manifest for this Julia version, so that the tests run against
+      # the package versions the examples were written for, instead of whatever resolves
+      # newest on the day. Julia versions without a `.default` file resolve normally.
+      - name: Use the pinned manifest, if there is one for this Julia version
+        shell: bash
+        run: |
+          v=$(julia -e 'print(VERSION.major, ".", VERSION.minor)')
+          src="Manifest-v$v.toml.default"
+          if [ -f "$src" ]; then
+            cp "$src" "Manifest-v$v.toml"
+            echo "using pinned $src"
+          else
+            echo "no pinned manifest for Julia $v, resolving the latest versions"
+          fi
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
   docs:

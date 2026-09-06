@@ -2,7 +2,7 @@
 
 julia_version = "1.12.7"
 manifest_format = "2.0"
-project_hash = "ce18440054f92d841f29f2bee3aa02398c3d9c9e"
+project_hash = "1c97a8bb6f8ff2745ad5f4171bbec0e7e7ee3f36"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "f7304359109c768cf32dc5fa2d371565bb63b68a"
@@ -869,10 +869,10 @@ version = "2.29.0"
     StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [[deps.FixedPointNumbers]]
-deps = ["Statistics"]
-git-tree-sha1 = "05882d6995ae5c12bb5f36dd2ed3f61c98cbb172"
+deps = ["Random", "Statistics"]
+git-tree-sha1 = "59af96b98217c6ef4ae0dfe065ac7c20831d1a84"
 uuid = "53c48c17-4a7d-5ca2-90c5-79b7896eea93"
-version = "0.8.5"
+version = "0.8.6"
 
 [[deps.Fontconfig_jll]]
 deps = ["Artifacts", "Bzip2_jll", "Expat_jll", "FreeType2_jll", "JLLWrappers", "Libdl", "Libuuid_jll", "Zlib_jll"]
@@ -2963,7 +2963,7 @@ uuid = "1e6cf692-eddd-4d53-88a5-2d735e33781b"
 version = "1.103.6"
 
 [[deps.Tethers]]
-deps = ["CondaPkg", "GLMakie", "LaTeXStrings", "LinearAlgebra", "LinearSolve", "LiveServer", "MakieControlPlots", "ModelingToolkit", "OrdinaryDiffEq", "PackageCompiler", "Parameters", "Pkg", "StatsBase", "SteadyStateDiffEq", "Symbolics", "Test", "Timers"]
+deps = ["ADTypes", "CondaPkg", "GLMakie", "LaTeXStrings", "LinearAlgebra", "LinearSolve", "LiveServer", "MakieControlPlots", "ModelingToolkit", "OrdinaryDiffEq", "PackageCompiler", "Parameters", "Pkg", "StatsBase", "SteadyStateDiffEq", "Symbolics", "Test", "Timers"]
 path = "."
 uuid = "9fc261b7-0902-4839-ada8-9390617e313c"
 version = "1.2.2"

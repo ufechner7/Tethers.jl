@@ -15,7 +15,8 @@ examples = [("Tether_01",  "include(\"src/Tether_01.jl\")",  "Falling mass throw
             ("Tether_06c", "include(\"src/Tether_06c.jl\")", "Reel-out tether with continuous callback"),
             ("Tether_07",  "include(\"src/Tether_07.jl\")",  "Segmented tether with aerodynamic drag"),
             ("Tether_08",  "include(\"src/Tether_08.jl\")",  "Tether with arbitrary/free endpoints"),
-            ("Tether_09",  "include(\"src/Tether_09.jl\")",  "Labeled tether shape diagram for docs")]
+            ("Tether_09",  "include(\"src/Tether_09.jl\")",  "Labeled tether shape diagram for docs"),
+            ("Tether_10",  "include(\"src/Tether_10.jl\")",  "Re-usable tether component with two end points")]
 
 name_width = maximum(length(name) for (name, _, _) in examples)
 options = [rpad(name, name_width) * "  " * descr for (name, _, descr) in examples]
