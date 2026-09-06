@@ -101,7 +101,7 @@ If you compare the Python and the Julia scripts you can see that:
 
 - the Julia script is shorter and easier to read
 - Julia is about 16 times faster when running the simulation  
-For a stiff, segmented tether (example 6 and 7) the Julia solvers are 20 to 80 times faster than Python.
+For a stiff, segmented tether (example 6 and 7) the Julia solvers are 13 to 30 times faster than Python.
 
 Have a look at the [Examples](https://ufechner7.github.io/Tethers.jl/dev/examples/) that teach you how to construct a full tether model step by step.
 
@@ -119,12 +119,13 @@ LOC counts exclude blank lines and comment lines.
 |swinging tether, 5 segments (5)    |    103              | 153        | 2.7             | 47  |
 |Dyneema tether, reeling out (6)    |    115              | 240        | 2.4             | 37   |
 |ditto with callbacks       (6c)    |    201              | 271        | 4.2             | 56   |
-|Dyneema, reeling out with drag (7) |    169              | 186        | 2.4             | 159  |  
+|Dyneema, reeling out with drag (7) |    169              | 282        | 2.4             | 70   |  
 
-**Tradeoff Julia vs Python:** In Julia, the code is compiled before it is executed, which can cause about 5 to 30 seconds delay when running a simulation the first time, but speeds up the execution a lot afterward.
+**Tradeoff Julia vs Python:** In Julia, the code is compiled before it is executed, which can cause about 5 to 30 seconds delay when running a simulation the first time, but speeds up the execution a lot afterward. In addition,
+the Julia code is much more compact and better readable due to the use of symbolic differential equations.
 
 In Python, the IDA solver needs an analytic Jacobian to handle a simulation with the very
-stiff Dyneema tether at all, which increases code size and complexity. Even then, the Julia solvers achieve 20 to 80 times the performance. On the other hand, installing the required packages in Python takes less
+stiff Dyneema tether at all, which increases code size and complexity. Even then, the Julia solvers achieve 13 to 30 times the performance. On the other hand, installing the required packages in Python takes less
 than a minute, while installing and compiling the Julia software might take half an hour. The reason is,
 that currently Julia packages are only distributed as source code and have to be compiled locally.
 

@@ -2,8 +2,9 @@
 """
 Tutorial example simulating a 3D mass-spring system with a nonlinear spring (1%
 stiffness for l < l_0), five tether segments, tether drag and reel-out.
-The DAE is solved with Assimulo's IDA. This is the Python counterpart of
-Tether_07.jl, extending Tether_06.py with an aerodynamic drag force per segment.
+The DAE is solved with Assimulo's IDA, using an analytic Jacobian. This is the Python
+counterpart of Tether_07.jl, extending Tether_06.py with an aerodynamic drag force per
+segment, in the residual as well as in the Jacobian.
 """
 import numpy as np
 import matplotlib.pyplot as plt
@@ -72,6 +73,69 @@ def calc_particle_mass(i, m_tether_particle):
     if i == SEGMENTS:
         return 0.5 * m_tether_particle
     return m_tether_particle
+
+def calc_spring_force_jac(pos1, pos2, vel1, vel2, l_seg, c_spring0, damping):
+    """ Force of calc_spring_force plus its analytic Jacobians w.r.t. pos1, pos2,
+        vel1 and vel2 (each a 3x3 matrix, dF_i/dx_j). Unlike Tether_06.py, where the
+        taut/slack transition is blended, the stiffness here is a hard step at
+        norm == l_seg; that jump is ignored, so this is the Jacobian of the branch
+        the segment is currently on. """
+    segment     = pos2 - pos1
+    norm        = np.linalg.norm(segment)
+    unit_vector = segment / norm
+    c_spring    = calc_c_spring(norm, l_seg, c_spring0)
+    rel_vel     = vel2 - vel1
+    spring_vel  = np.dot(rel_vel, unit_vector)
+    force_mag   = c_spring * (norm - l_seg) + damping * spring_vel
+    force       = force_mag * unit_vector
+
+    # M = d(unit_vector)/d(pos2) = -d(unit_vector)/d(pos1)
+    uu = np.outer(unit_vector, unit_vector)
+    M  = (np.eye(3) - uu) / norm
+    m_relvel = M @ rel_vel  # = d(spring_vel)/d(pos2) = -d(spring_vel)/d(pos1)
+
+    d_force_mag_dpos1 = -c_spring * unit_vector - damping * m_relvel
+    d_force_mag_dpos2 =  c_spring * unit_vector + damping * m_relvel
+
+    dF_dpos1 = np.outer(unit_vector, d_force_mag_dpos1) - force_mag * M
+    dF_dpos2 = np.outer(unit_vector, d_force_mag_dpos2) + force_mag * M
+    dF_dvel1 = -damping * uu
+    dF_dvel2 =  damping * uu
+    return force, dF_dpos1, dF_dpos2, dF_dvel1, dF_dvel2
+
+def calc_drag_force_jac(pos1, pos2, vel1, vel2):
+    """ Force of calc_drag_force plus its analytic Jacobians (each a 3x3 matrix):
+        dD_dpos1, dD_dpos2 and dD_dvel, the last one being d(drag)/d(vel1) and
+        d(drag)/d(vel2) at once - the drag depends on the mean of the two velocities
+        only, therefore both derivatives are the same matrix. """
+    segment     = pos2 - pos1
+    norm        = np.linalg.norm(segment)
+    unit_vector = segment / norm
+    v_apparent  = V_WIND_TETHER - (vel1 + vel2) / 2.0
+    v_app_along = np.dot(v_apparent, unit_vector)
+    v_app_perp  = v_apparent - v_app_along * unit_vector
+    norm_v_app  = np.linalg.norm(v_app_perp)
+    k_drag      = 0.25 * RHO * CD_TETHER * D_TETHER / 1000.0
+    drag        = k_drag * norm * norm_v_app * v_app_perp
+    if norm_v_app == 0.0:
+        # d(norm_v_app * v_app_perp) vanishes together with v_app_perp
+        zero = np.zeros((3, 3))
+        return drag, zero, zero, zero
+
+    uu = np.outer(unit_vector, unit_vector)
+    M  = (np.eye(3) - uu) / norm    # d(unit_vector)/d(pos2) = -d(unit_vector)/d(pos1)
+    # G = d(norm_v_app * v_app_perp)/d(v_app_perp)
+    G = norm_v_app * np.eye(3) + np.outer(v_app_perp, v_app_perp) / norm_v_app
+    # A = -d(v_app_perp)/d(pos2) = d(v_app_perp)/d(pos1): turning the segment turns
+    # the direction the drag is projected onto
+    A = np.outer(unit_vector, M @ v_apparent) + v_app_along * M
+    # the drag also grows with the length of the segment, d(norm)/d(pos2) = unit_vector
+    d_len = np.outer(k_drag * norm_v_app * v_app_perp, unit_vector)
+    dD_dpos2 =  d_len - k_drag * norm * (G @ A)
+    dD_dpos1 = -d_len + k_drag * norm * (G @ A)
+    # d(v_app_perp)/d(vel1) = d(v_app_perp)/d(vel2) = -(I - uu)/2
+    dD_dvel  = -0.5 * k_drag * norm * (G @ (np.eye(3) - uu))
+    return drag, dD_dpos1, dD_dpos2, dD_dvel
 
 # State vector y   = mass0.pos, mass1.pos, mass1.vel
 # Derivative   yd  = mass0.vel, mass1.vel, mass1.acc
@@ -152,6 +216,68 @@ class ExtendedProblem(Implicit_Problem):
         RESULT[2] = res_2
         return RESULT.flatten()
 
+    def jac(self, c, t, y, yd):
+        """ Analytic Jacobian J = d(res)/dy + c * d(res)/dyd, replacing the
+            finite-difference approximation IDA would otherwise use. Note that the
+            velocities the forces depend on are the position derivatives yd, which is
+            why every velocity derivative below is multiplied by c. """
+        y1  = y.reshape((-1, 3))
+        yd1 = yd.reshape((-1, 3))
+        l_seg = (L0 + V_RO*t) / SEGMENTS
+        c_spring1 = C_SPRING / l_seg
+        damping  = DAMPING / l_seg
+        m_tether_particle = mass_per_meter * l_seg
+        n = SEGMENTS
+        size = 3 * (2*n + 1)
+        J = np.zeros((size, size))
+        eye3 = np.eye(3)
+
+        def blk(i):
+            return slice(3*i, 3*i + 3)
+
+        def pos_block(k):   # index (in the 3-vector blocks) of the position of mass k
+            return 0 if k == 0 else 2*k - 1
+
+        def vel_block(k):   # index of the velocity of mass k (k >= 1)
+            return 2*k
+
+        # mass0 is fixed: res = y[pos0]
+        J[blk(0), blk(0)] = eye3
+
+        for k in range(1, n + 1):
+            pb, vb = pos_block(k), vel_block(k)
+            # velocity/position consistency: y[vel_k] - yd[pos_k] = 0
+            J[blk(pb), blk(vb)] += eye3
+            J[blk(pb), blk(pb)] += -c * eye3
+
+            # acceleration equation: yd[vel_k] - (G - acc) = 0, with
+            # acc = (spring_forces - drag_forces) / mass
+            J[blk(vb), blk(vb)] += c * eye3
+            mass = calc_particle_mass(k, m_tether_particle)
+
+            # segment below (between mass k-1 and mass k): its spring force is added
+            # to spring_forces, its half drag is added to drag_forces
+            p1b = pos_block(k - 1)
+            _, dF_dp1, dF_dp2, dF_dv1, dF_dv2 = calc_spring_force_jac(
+                y1[p1b], y1[pb], yd1[p1b], yd1[pb], l_seg, c_spring1, damping)
+            _, dD_dp1, dD_dp2, dD_dv = calc_drag_force_jac(
+                y1[p1b], y1[pb], yd1[p1b], yd1[pb])
+            J[blk(vb), blk(p1b)] += (dF_dp1 + c * dF_dv1 - dD_dp1 - c * dD_dv) / mass
+            J[blk(vb), blk(pb)]  += (dF_dp2 + c * dF_dv2 - dD_dp2 - c * dD_dv) / mass
+
+            # segment above (between mass k and mass k+1): its spring force is
+            # subtracted from spring_forces, but its half drag is added to drag_forces
+            if k < n:
+                p2b = pos_block(k + 1)
+                _, dF_dp1, dF_dp2, dF_dv1, dF_dv2 = calc_spring_force_jac(
+                    y1[pb], y1[p2b], yd1[pb], yd1[p2b], l_seg, c_spring1, damping)
+                _, dD_dp1, dD_dp2, dD_dv = calc_drag_force_jac(
+                    y1[pb], y1[p2b], yd1[pb], yd1[p2b])
+                J[blk(vb), blk(pb)]  -= (dF_dp1 + c * dF_dv1 + dD_dp1 + c * dD_dv) / mass
+                J[blk(vb), blk(p2b)] -= (dF_dp2 + c * dF_dv2 + dD_dp2 + c * dD_dv) / mass
+
+        return J
+
 def plot2d(fig, t_sol, y, reltime, segments, line, sc, txt):
     index = min(np.searchsorted(t_sol, reltime), len(t_sol) - 1)
     x, z = np.zeros(segments+1), np.zeros(segments+1)
@@ -207,6 +333,7 @@ def run_example():
     sim.algvar = model.algvar
     sim.suppress_alg = True
     sim.maxord = 3
+    sim.usejac = True
 
     start = time.perf_counter()
     t_raw, y_raw, _ = sim.simulate(DURATION, round(DURATION*50)) # 50 communication points per second
