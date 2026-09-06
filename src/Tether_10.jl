@@ -75,21 +75,26 @@ function build(se; p1, p2, fix_p1, fix_p2, m1=0.0, m2=0.0, POS0, VEL0)
 end
 
 """
-    steady_state(se, simple_sys, p1, p2)
+    steady_state(se, simple_sys)
 
 Solve `simple_sys` for its steady state and return the tether shape `POS0`, a
-`3 × (se.segments+1)` matrix. Only meaningful if both end points are fixed at `p1` and
-`p2` and `se.v_ro` is zero.
-
-Only the inner particles `tether.pos_in` are states of the model; the two end points are
-constant and are added back here.
+`3 × (se.segments+1)` matrix. Only meaningful if both end points are fixed and `se.v_ro`
+is zero.
 """
-function steady_state(se, simple_sys, p1, p2)
+function steady_state(se, simple_sys)
     prob = SteadyStateProblem(ODEProblem(simple_sys, nothing, (0.0, se.duration)))
     sol = solve(prob, DynamicSS(KenCarp4(autodiff=AutoFiniteDiff())))
     SciMLBase.successful_retcode(sol) ||
         error("Steady state solver failed with return code $(sol.retcode)!")
-    hcat(p1, sol[simple_sys.tether.pos_in], p2)
+    # `DynamicSS` integrates the model until it stops changing, and `sol.original` is that
+    # `ODESolution`. Read the tether shape from it, and not from `sol` itself: which
+    # variables `mtkcompile` keeps as unknowns differs between ModelingToolkit versions
+    # (`tether.pos` in some, `tether.pos_in` in others), and a variable that ends up being
+    # observed cannot be read from a steady state solution at all, because the observed
+    # function needs the time argument that such a solution does not carry
+    # ("ArgumentError: Expected 3 arguments, got 2"). An `ODESolution` has a time, so
+    # reading from it works whichever way the unknowns were chosen.
+    sol.original[simple_sys.tether.pos][end]
 end
 
 """
@@ -124,7 +129,7 @@ function model(se; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false, m1=0.0, m2
     se.v_ro = 0
     try
         simple_sys, _, _ = build(se; p1, p2, fix_p1=true, fix_p2=true, POS0, VEL0)
-        POS0 = steady_state(se, simple_sys, p1, p2)
+        POS0 = steady_state(se, simple_sys)
     finally
         se.v_ro = v_ro  # restore the reel-out speed, also if the steady state solver failed
     end
@@ -154,7 +159,7 @@ function model2(se; p1=[0,0,0], p2=nothing, m_knot=0.0, m2=0.0)
     se.v_ro = 0
     try
         ss, _, _ = build(se; p1, p2, fix_p1=true, fix_p2=true, POS0, VEL0)
-        POS0 = steady_state(se, ss, p1, p2)
+        POS0 = steady_state(se, ss)
     finally
         se.v_ro = v_ro
     end
