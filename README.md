@@ -1,7 +1,7 @@
 # Tethers.jl
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://ufechner7.github.io/Tethers.jl/dev)
 [![Build Status](https://github.com/ufechner7/Tethers.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/ufechner7/Tethers.jl/actions/workflows/CI.yml?query=branch%3Amain)
-[![DOI](https://zenodo.org/badge/729036178.svg)](https://doi.org/10.5281/zenodo.19220561)
+[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.19220561-blue.svg)](https://doi.org/10.5281/zenodo.19220561)
 
 ## Introduction
 This package provides a tether component, and many tutorial scripts on tether modelling in Julia and Python.
