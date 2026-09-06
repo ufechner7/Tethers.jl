@@ -10,14 +10,6 @@ dst="docs/src/docs/images"
 mkpath(dst)
 cp(src, dst; force=true)
 
-src="README.md"
-dst="docs/src/index.md"
-if ! isfile(dst)
-    cp(src, dst)
-elseif readlines(src) != readlines(dst)
-    cp(src, dst; force=true)
-end
-
 makedocs(;
     authors="Uwe Fechner <fechner@aenarete.eu>",
     sitename = "Tethers.jl", 
