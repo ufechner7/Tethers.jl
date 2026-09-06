@@ -145,6 +145,10 @@ function play(se, sol, pos)
             savefig("video/"*"img-"*lpad(j,4,"0")*".png")
         end
         j += 1
+        if time <= dt
+            sleep(0.001)
+            start = time_ns()
+        end
         wait_until(start + 0.5*time*1e9)
     end
     if se.save

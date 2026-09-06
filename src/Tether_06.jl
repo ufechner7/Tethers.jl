@@ -120,7 +120,7 @@ end
 
 # plotting the result
 function play1()
-    dt = 0.151
+    dt = 0.05
     ylim=(-1.2*(L0+V_RO*duration), 0.5)
     xlim=(-L0/2, L0/2)
     z_max = 0.0
@@ -135,6 +135,10 @@ function play1()
             i += 1
         end
         display_if_interactive(plot2d, sol[pos][i], time; segments=SEGMENTS, xlim, ylim, xy)
+        if time <= dt
+            sleep(0.001)
+            start = time_ns()
+        end
         wait_until(start + 0.5*time*1e9)
     end
     nothing

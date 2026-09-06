@@ -96,7 +96,7 @@ open(joinpath("output", "Tether_05_julia.csv"), "w") do io
 end
 
 function play()
-    dt = 0.15
+    dt = 0.05
     ylim = (-1.2 * segments * L0, 0.5)
     xlim = (-segments * L0/2, segments * L0/2)
     z_max = 0.0
@@ -109,6 +109,10 @@ function play()
         # therefore we have to skip some steps of the result
         while sol.t[i] < time
             i += 1
+        end
+        if time <= dt
+            sleep(0.001)
+            start = time_ns()
         end
         display_if_interactive(plot2d, sol[pos][i], time; segments, xlim, ylim, xy)
         wait_until(start + 0.5 * time * 1e9)
