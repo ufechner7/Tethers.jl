@@ -5,6 +5,10 @@ include(joinpath(@__DIR__, "test_utils.jl"))
     pkg_dir = dirname(@__DIR__)
     cd(pkg_dir) do
         # Julia implementation, using ModelingToolkit and the implicit solver FBDF
+        # Tether_07.jl only runs main() (which writes the CSV) when __BENCH__ is
+        # false; runtests.jl sets it to true for the Tether_06c testset, so it
+        # must be reset here.
+        global __BENCH__ = false
         include(joinpath(pkg_dir, "src", "Tether_07.jl"))
         sleep(1)
         Base.invokelatest() do

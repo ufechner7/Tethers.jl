@@ -97,7 +97,7 @@ simple_sys = mtkcompile(sys)
 
 # running the simulation
 dt = 0.02
-tol = 1e-5
+tol = 1e-6
 tspan = (0.0, duration)
 ts    = 0:dt:duration
 

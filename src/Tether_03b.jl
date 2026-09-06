@@ -58,3 +58,12 @@ p = plot(X, [POS_Z, L0.+0.005 .* sol[c_spring]], VEL_Z; xlabel="time [s]", ylabe
          labels=["pos_z [m]", "c_spring", "vel_z [m/s]"], xticks=0:2:duration, yticks=(0.2, 1),
          fig="falling mass, non-linear spring, callback")
 display_if_interactive(p)
+
+# saving the result for comparison with the Python implementation
+mkpath("output")
+open(joinpath("output", "Tether_03b_julia.csv"), "w") do io
+    println(io, "time,pos_z,vel_z")
+    for i in eachindex(X)
+        println(io, "$(X[i]),$(POS_Z[i]),$(VEL_Z[i])")
+    end
+end

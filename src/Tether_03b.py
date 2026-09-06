@@ -3,6 +3,7 @@
 Tutorial example simulating a 3D mass-spring system with a nonlinear spring (no spring forces
 for l < l_0).
 """
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -92,6 +93,15 @@ def run_example():
         else:
             c_spring = 0.0
         C_SPRINGS[i] = c_spring
+
+    # saving the result for comparison with the Julia implementation
+    os.makedirs("output", exist_ok=True)
+    with open(os.path.join("output", "Tether_03b_python.csv"), "w") as f:
+        f.write("time,pos_z,vel_z\n")
+        for t_i, pz_i, vz_i in zip(time, pos_z, vel_z):
+            f.write(f"{t_i},{pz_i},{vz_i}\n")
+
+    plt.gcf().canvas.manager.set_window_title("falling mass, non-linear spring, callback")
     plt.ax1 = plt.subplot(111)
     plt.ax1.set_xlabel('time [s]')
     plt.plot(time, pos_z, color="green")
@@ -101,7 +111,13 @@ def run_example():
     plt.ax2 = plt.twinx()
     plt.ax2.set_ylabel('vel_z [m/s]')
     plt.plot(time, vel_z, color="red")
-    plt.show()
+
+    if os.environ.get("TETHERS_BRIEF_PLOT") == "1":
+        # show briefly and close automatically, e.g. when running the tests
+        plt.pause(1)
+        plt.close('all')
+    else:
+        plt.show()
 
 if __name__ == '__main__':
     run_example()

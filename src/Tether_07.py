@@ -202,8 +202,8 @@ def run_example():
 
     sim = IDA(model) # Create the solver, using the default dense direct linear solver
     sim.verbosity = 0
-    sim.atol = 1.0e-5
-    sim.rtol = 1.0e-5
+    sim.atol = 1.0e-6
+    sim.rtol = 1.0e-6
     sim.algvar = model.algvar
     sim.suppress_alg = True
     sim.maxord = 3

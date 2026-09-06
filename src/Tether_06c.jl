@@ -161,6 +161,19 @@ function main(se = Settings2(); play_=true)
     simple_sys, pos, vel = model(se)
     sol, elapsed_time = simulate(se, simple_sys)
     println("Elapsed time: $(elapsed_time) s")
+
+    # saving the result of the lowest mass for comparison with the Python implementation
+    X     = sol.t
+    POS_Z = stack(sol[pos], dims=1)[:,3,se.segments+1]
+    VEL_Z = stack(sol[vel], dims=1)[:,3,se.segments+1]
+    mkpath("output")
+    open(joinpath("output", "Tether_06c_julia.csv"), "w") do io
+        println(io, "time,pos_z,vel_z")
+        for i in eachindex(X)
+            println(io, "$(X[i]),$(POS_Z[i]),$(VEL_Z[i])")
+        end
+    end
+
     if play_
         play(se, sol, pos)
     end
