@@ -112,18 +112,20 @@ Relative and absolute tolerance: $1.0^{-6}$. CPU: Ryzen 9 7950X.
 
 | Test-case                   | Lines of code (LOC) Julia | LOC Python | Time Julia [ms] | Time Python [ms] |
 |:----------------------------------|:-------------------:|:----------:|:---------------:|:---:|
-|Falling mass (1)                   |     35              | 56         | 0.17            | 2.6 |
-|Non-linear Spring damper (3)       |     49              | 83         | 0.64            | 20  |
-|ditto with callbacks (3b, 3c)      |     58              | 103        | 0.8             | 31  |
-|swinging tether, 5 segments (5)    |    105              | 150        | 2.7             | 47  |
-|Dyneema tether, reeling out (6)    |    142              | 313        | 2.1             | 45   |
-|ditto with callbacks       (6c)    |    167              |            | 4.2             |      |
-|Dyneema, reeling out with drag (7) |    185              | 239        | 1.8             | 139  |  
+|Falling mass (1)                   |     36              | 49         | 0.17            | 2.6 |
+|Non-linear Spring damper (3)       |     45              | 80         | 0.64            | 20  |
+|ditto with callbacks (3b, 3c)      |     53              | 97         | 1.0             | 25  |
+|swinging tether, 5 segments (5)    |    103              | 153        | 2.7             | 47  |
+|Dyneema tether, reeling out (6)    |    115              | 240        | 2.4             | 37   |
+|ditto with callbacks       (6c)    |    201              | 271        | 4.2             | 56   |
+|Dyneema, reeling out with drag (7) |    169              | 186        | 2.4             | 159  |  
 
-**Tradeoff Julia vs Python:** In Julia, the code is compiled before it is executed, which can cause about one to 10 seconds delay when running a simulation the first time, but speeds up the execution a lot afterward. In addition, Julia can run fully multithreaded, Python cannot make use of multiple CPU cores with multithreading because of the global interpreter lock. 
+**Tradeoff Julia vs Python:** In Julia, the code is compiled before it is executed, which can cause about 5 to 30 seconds delay when running a simulation the first time, but speeds up the execution a lot afterward.
 
-Furthermore, the IDA solver needs an analytic Jacobian to handle a simulation with the very
-stiff Dyneema tether at all. Even then, the Julia solvers achieve 20 to 80 times the performance.
+In Python, the IDA solver needs an analytic Jacobian to handle a simulation with the very
+stiff Dyneema tether at all, which increases code size and complexity. Even then, the Julia solvers achieve 20 to 80 times the performance. On the other hand, installing the required packages in Python takes less
+than a minute, while installing and compiling the Julia software might take half an hour. The reason is,
+that currently Julia packages are only distributed as source code and have to be compiled locally.
 
 See also: [Why Julia?](https://ufechner7.github.io/2022/08/13/why-julia.html) and read the [documentation](https://ufechner7.github.io/Tethers.jl/dev/) or go straight to the [examples](https://ufechner7.github.io/Tethers.jl/dev/examples/).
 
