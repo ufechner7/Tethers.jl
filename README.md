@@ -4,6 +4,7 @@
 [![DOI](https://zenodo.org/badge/729036178.svg)](https://doi.org/10.5281/zenodo.19220561)
 
 ## Introduction
+This package provides a tether component, and many tutorial scripts on tether modelling in Julia and Python.
 
 A few examples where tether models can be useful:
 
