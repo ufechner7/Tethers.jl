@@ -1,5 +1,10 @@
 # References
 
+## API
+```@docs
+display_if_interactive
+```
+
 ## Python
 [Assimulo](https://jmodelica.org/assimulo/) offers 14 solvers
 with good documentation for explicit and implicit problems.
