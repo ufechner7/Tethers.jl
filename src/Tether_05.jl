@@ -13,6 +13,7 @@ segments::Int64 = 5                             # number of tether segments     
 duration = 10.0                                 # duration of the simulation        [s]
 POS0 = zeros(3, segments+1)
 VEL0 = zeros(3, segments+1)
+ACC0 = zeros(3, segments+1)
 for i in 1:segments+1
     local l0
     l0 = -(i-1) * L0
@@ -23,9 +24,9 @@ end
 
 # defining the model, Z component upwards
 @parameters mass=M0 c_spring0=C_SPRING damping=0.5 l_seg=L0
-@variables pos(t)[1:3, 1:segments+1]  = POS0
+@variables pos(t)[1:3, 1:segments+1]
 @variables vel(t)[1:3, 1:segments+1]  = VEL0
-@variables acc(t)[1:3, 1:segments+1]
+@variables acc(t)[1:3, 1:segments+1]  = ACC0
 @variables segment(t)[1:3, 1:segments]
 @variables unit_vector(t)[1:3, 1:segments]
 @variables norm1(t)[1:segments]
@@ -35,40 +36,54 @@ end
 @variables spring_force(t)[1:3, 1:segments]
 @variables total_force(t)[1:3, 1:segments+1]
 
-# basic differential equations
-eqs1 = vcat(D.(pos) .~ vel,
-            D.(vel) .~ acc)
-eqs2 = vcat(eqs1...)
-# loop over all segments to calculate the spring forces
-for i in segments:-1:1
-    global eqs2; local eqs
-    eqs = [segment[:, i]      ~ pos[:, i+1] - pos[:, i],
-           norm1[i]           ~ norm(segment[:, i]),
-           unit_vector[:, i]  ~ -segment[:, i]/norm1[i],
-           rel_vel[:, i]      ~ vel[:, i+1] - vel[:, i],
-           spring_vel[i]      ~ -unit_vector[:, i] ⋅ rel_vel[:, i],
-           c_spring[i]           ~ c_spring0 * (norm1[i] > l_seg),
-           spring_force[:, i] ~ (c_spring[i] * (norm1[i] - l_seg) + damping * spring_vel[i]) * unit_vector[:, i]]
-    eqs2 = vcat(eqs2, reduce(vcat, eqs))
-end
-# loop over all tether particles to apply the forces and calculate the accelerations
-for i in 1:(segments+1)
-    global eqs2; local eqs
+function model()
     eqs = []
-    if i == segments+1
-        push!(eqs, total_force[:, i] ~ spring_force[:, i-1])
-        push!(eqs, acc[:, i]         ~ G_EARTH + total_force[:, i] / (0.5 * mass))
-    elseif i == 1
-        push!(eqs, total_force[:, i] ~ spring_force[:, i])
-        push!(eqs, acc[:, i]         ~ zeros(3))
-    else
-        push!(eqs, total_force[:, i] ~ spring_force[:, i-1] - spring_force[:, i])
-        push!(eqs, acc[:, i]         ~ G_EARTH + total_force[:, i] / mass)
+    # loop over all segments to calculate the spring forces
+    for i in segments:-1:1
+        eqs = [
+            eqs
+            segment[:, i]      ~ pos[:, i+1] - pos[:, i]
+            norm1[i]           ~ norm(segment[:, i])
+            unit_vector[:, i]  ~ -segment[:, i]/norm1[i]
+            rel_vel[:, i]      ~ vel[:, i+1] - vel[:, i]
+            spring_vel[i]      ~ -unit_vector[:, i] ⋅ rel_vel[:, i]
+            c_spring[i]           ~ c_spring0 * (norm1[i] > l_seg)
+            spring_force[:, i] ~ (c_spring[i] * (norm1[i] - l_seg) + damping * spring_vel[i]) * unit_vector[:, i]
+        ]
     end
-    eqs2 = vcat(eqs2, reduce(vcat, eqs))
+    # loop over all tether particles to apply the forces and calculate the accelerations
+    for i in 1:(segments+1)
+        if i == segments+1
+            eqs = [
+                eqs
+                total_force[:, i] ~ spring_force[:, i-1]
+                acc[:, i]         ~ G_EARTH + total_force[:, i] / (100 * mass)
+                D(pos[:, i])      ~ vel[:, i]
+                D(vel[:, i])      ~ acc[:, i]
+            ]
+        elseif i == 1
+            eqs = [
+                eqs
+                total_force[:, i] ~ spring_force[:, i]
+                acc[:, i]         ~ zeros(3)
+                pos[:, i]         ~ zeros(3)
+                vel[:, i]         ~ zeros(3)
+            ]
+        else
+            eqs = [
+                eqs
+                total_force[:, i] ~ spring_force[:, i-1] - spring_force[:, i]
+                acc[:, i]         ~ G_EARTH + total_force[:, i] / mass
+                D(pos)[:, i]         ~ zeros(3)
+                vel[:, i]         ~ zeros(3)
+            ]
+        end
+    end
+    return eqs
 end
+
      
-@named sys = ODESystem(reduce(vcat, Symbolics.scalarize.(eqs2)), t)
+@named sys = ODESystem(reduce(vcat, Symbolics.scalarize.(model())), t)
 simple_sys = structural_simplify(sys)
 
 # running the simulation
@@ -77,9 +92,13 @@ tol = 1e-6
 tspan = (0.0, duration)
 ts    = 0:dt:duration
 
-prob = ODEProblem(simple_sys, nothing, tspan)
-elapsed_time = @elapsed sol = solve(prob, KenCarp4(autodiff=false); dt, abstol=tol, reltol=tol, saveat=ts)
-elapsed_time = @elapsed sol = solve(prob, KenCarp4(autodiff=false); dt, abstol=tol, reltol=tol, saveat=ts)
+guesses = [
+    [pos[j, i] => POS0[j, i] for j in 1:3 for i in 1:segments+1]
+    [segment[j, i] => POS0[j, i+1] - POS0[j, i] for j in 1:3 for i in 1:segments]
+]
+prob = ODEProblem(simple_sys, nothing, tspan; guesses)
+elapsed_time = @elapsed sol = solve(prob, Rodas4(autodiff=ModelingToolkit.AutoFiniteDiff()); dt, abstol=tol, reltol=tol, saveat=ts)
+elapsed_time = @elapsed sol = solve(prob, Rodas4(autodiff=ModelingToolkit.AutoFiniteDiff()); dt, abstol=tol, reltol=tol, saveat=ts)
 println("Elapsed time: $(elapsed_time) s, speed: $(round(duration/elapsed_time)) times real-time")
 
 function play()
