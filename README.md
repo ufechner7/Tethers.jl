@@ -134,6 +134,7 @@ If you compare the Python and the Julia scripts you can see that:
 
 - the Julia script is shorter and easier to read
 - Julia is about 16 times faster when running the simulation  
+
 For a stiff, segmented tether (example 6 and 7) the Julia solvers are 13 to 30 times faster than Python.
 
 Have a look at the [Examples](https://ufechner7.github.io/Tethers.jl/dev/examples/) that teach you how to construct a full tether model step by step.
