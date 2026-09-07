@@ -19,17 +19,20 @@ Furthermore, the plot shall use a logarithmic axis for the force.
 Both points are implemented in [examples/test_compression.jl](examples/test_compression.jl)
 and the script is reachable from `examples/menu.jl`.
 
-- `main()` (point 1): 6 segments of 1 m, `l_tether` swept from 1.01 to 0.90 of the
-  unstretched length on the non-uniform grid `rels_around_zero`. Plots `|segment force|`
-  for every segment and `|anchor force|` for both anchors over the relative extension,
-  both with a logarithmic y axis.
-- `main2()` (points 2 and 3): the same sweep for the unstretched lengths 1, 3, 10 and 30 m
-  and the wind speeds 10, 20 and 30 m/s, with `l_tether_unstretched / l_tether` swept over
-  0.99 … 1.10, always with 6 segments — 168 operating points. Plots `|mean axial force|`
-  over the relative compression with a logarithmic y axis, one panel per wind speed and one
-  curve per length, all panels sharing their axes so the wind can be read off by comparing
-  them. The ratio grid (`ratios_around_one`) is geometric in the distance from one, not
-  uniform — see below.
+`main()` covers all three points at once: the unstretched lengths 1, 3, 10 and 30 m and the
+wind speeds 10, 20 and 30 m/s, with `l_tether_unstretched / l_tether` swept over
+0.99 … 1.10, always with 6 segments — 168 operating points. There is no separate function
+for point 1 any more: point 2 is a superset of it, and its CSV carries the same columns, so
+a dedicated 6 m run added a `mtkcompile` and a file without adding information.
+
+- `plot_lengths` plots `|mean axial force|` over the relative compression with a
+  logarithmic y axis, one panel per wind speed and one curve per length, all panels sharing
+  their axes so the wind can be read off by comparing them.
+- `plot_distance` drills into one `(length, wind)` slice and plots `|segment force|` for
+  every segment and `|anchor force|` for both anchors, also logarithmic. This is what
+  showed the six segments carry the same force to within 0.3%.
+- The ratio grid (`ratios_around_one`) is geometric in the distance from one, not uniform —
+  see below.
 
   It is the **unstretched** length that is held at 1, 3, 10 and 30 m, and the distance
   `l_tether = l0 / ratio` between the end points that varies, not the other way round. The
@@ -37,19 +40,19 @@ and the script is reachable from `examples/menu.jl`.
   one `mtkcompile` per length instead of one per operating point. The swept ratios are
   identical either way and both lengths are in the CSV file, so nothing is lost.
 
-Both grids are built from the same two lists of strain steps, `EXTENSION_STEPS` and
-`COMPRESSION_STEPS`, so the two sweeps measure the same strains and their CSV files can be
-fitted together. Neither figure uses `MakieControlPlots`: version 0.1.16 has `xscale` but
+The grid is built from two lists of strain steps, `EXTENSION_STEPS` and
+`COMPRESSION_STEPS`. Neither figure uses `MakieControlPlots`: version 0.1.16 has `xscale` but
 no `yscale`, so both are built with Makie directly — via `import GLMakie` with every call
 qualified, because `using` it as well as `MakieControlPlots` makes their common export
 `plot` ambiguous in `Main`, which breaks every example included afterwards.
 
-Both write the same CSV schema, so step two can fit all operating points together:
+`main()` writes `data/compression_force_vs_length.csv` with the columns
 
     v_wind, l_tether_unstretched, l_tether, f_top, f_bot, f_mean, f_seg_1 … f_seg_6
 
-- `main()`  → `output/compression_force.csv`
-- `main2()` → `output/compression_force_vs_length.csv`
+It goes to `data` and not to `output`, which is in `.gitignore`: this file is the input of
+step two, so it has to survive and be diffable. `data/compression_force.csv` is the
+original point-1 run (6 m, 10 m/s) that the table below quotes; nothing regenerates it now.
 
 Open questions and decisions:
 
@@ -71,14 +74,14 @@ Open questions and decisions:
   `se.v_wind_tether`. Only those two, plus the initial states `tether.pos_in` / `vel_in`,
   change between operating points, so the whole run is 5 `mtkcompile` calls for its 182
   operating points. Both parameters still default to what was passed in, so nothing else
-  changes.
+  changes. With point 1 folded into point 2 this is 4 calls for 168 points.
 - Only the unstretched length still forces a rebuild, because `l_spring(se)` puts `se.l0`
   into the equations as a literal. That is why point 2 holds `l_tether_unstretched` fixed
   and varies the distance, and it is the obvious next parameter if more lengths are wanted.
 
 ### First results (point 1, 6 x 1 m, 10 m/s)
 
-`output/compression_force.csv`, mean axial force per segment, tension positive, with
+`data/compression_force.csv`, mean axial force per segment, tension positive, with
 `r = l_tether_unstretched / l_tether`:
 
 | r | 0.990 | 0.995 | 1.000 | 1.005 | 1.010 | 1.111 |
@@ -99,8 +102,8 @@ Two things follow from this.
    resolves none of the interesting part, so the steps shrink towards one instead:
    `EXTENSION_STEPS = [0.01, 0.005, 0.002, 0.001, 0.0005, 0.0002]` and
    `COMPRESSION_STEPS = [0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1]`, giving 14 points per
-   `l_tether`. Point 1 uses the same steps, and its force plots are logarithmic too — on a
-   linear axis the single 6146 N point flattens everything else onto the zero line.
+   `l_tether`. The force plots are logarithmic for the same reason — on a linear axis the
+   single 6146 N point flattens everything else onto the zero line.
 
 ## Step two: Derive the formula
 

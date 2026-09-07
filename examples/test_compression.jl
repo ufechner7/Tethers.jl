@@ -7,24 +7,21 @@
 # segments. The question this script prepares is whether that force keeps its sign, i.e.
 # whether the tether always stays in compression as long as the wind is significant.
 #
-# `main()`  (point 1): a vertical tether with 6 segments of 1 m unstretched length each,
-#           no gravity, 10 m/s of horizontal wind, both end points fixed. The distance
-#           between the end points is varied from 1% extension to 10% compression, on the
-#           non-uniform grid of `rels_around_zero`.
-# `main2()` (points 2 and 3): the same experiment for the unstretched lengths 1, 3, 10 and
-#           30 m and the wind speeds 10, 20 and 30 m/s, with `l_tether_unstretched /
-#           l_tether` swept from 0.99 to 1.10 on the matching grid of `ratios_around_one`.
+# `main()` runs the whole investigation: vertical tethers of 6 segments with the unstretched
+# lengths 1, 3, 10 and 30 m, no gravity, both end points fixed, at 10, 20 and 30 m/s of
+# horizontal wind, with `l_tether_unstretched / l_tether` swept from 0.99 (1% extension) to
+# 1.10 (10% compression) on the non-uniform grid of `ratios_around_one` — 168 operating
+# points, written to `data/compression_force_vs_length.csv`.
 #
-# Both plot the force on a logarithmic axis, which shows directly whether it ever passes
-# through zero; `report_sign` answers the same question in numbers.
-#
-# Both write their operating points to a CSV file in `output/` with the same columns, so
-# that step two can fit an analytical formula to all of them together.
+# `plot_lengths` plots the mean axial force of each length, one panel per wind speed;
+# `plot_distance` drills into one of those curves and shows the individual segments and the
+# two anchors. Both use a logarithmic force axis, which shows directly whether the force
+# ever passes through zero; `report_sign` answers the same question in numbers.
 #
 # The unstretched length is baked into the model, but the anchor positions and the wind are
 # not: they are the parameters `end2.pos_fix` of `FixedEnd` and `v_wind` of `Tether`. A whole
-# strain and wind sweep therefore runs on one compiled model, so the full run needs 5
-# `mtkcompile` calls for its 182 operating points.
+# strain and wind sweep therefore runs on one compiled model, so the full run needs only
+# 4 `mtkcompile` calls, one per length.
 using ModelingToolkit, OrdinaryDiffEq, SteadyStateDiffEq, LinearAlgebra
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using ADTypes: AutoFiniteDiff
@@ -85,11 +82,15 @@ reciprocal view of [`compression`](@ref).
 extension(op::OperatingPoint) = op.l_tether / op.l_unstretched - 1
 
 # Magnitude of the strain steps of both sweeps, geometric and dense towards zero strain,
-# because that is how the force behaves: the first run of `main()` measured 6146 N at 1%
+# because that is how the force behaves: the first run, at 6 m and 10 m/s, measured 6146 N at 1%
 # extension, 3073 N at 0.5% extension, 37 N at zero strain and 4 N at 0.5% compression, but
 # then only creeps from 2.8 N at 1% compression down to 0.8 N at 10% compression. A uniform
 # grid spends almost all of its points on that flat tail and resolves none of the four
 # decades around zero strain, so the steps shrink towards zero instead.
+# The results go to `data` and not to `output`, which is in .gitignore: these CSV files are
+# the input of step two, so they have to survive and be diffable.
+const DATA_DIR = "data"
+
 const EXTENSION_STEPS   = [0.01, 0.005, 0.002, 0.001, 0.0005, 0.0002]
 const COMPRESSION_STEPS = [0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1]
 
@@ -317,11 +318,10 @@ end
 """
     sweep_distance(se; rels=rels_around_zero(), v_winds=[10.0])
 
-The sweep both points are built from: keep the unstretched length `se.l0` and set the
+The inner sweep of one compiled model: keep the unstretched length `se.l0` and set the
 distance between the end points to `(1 + rel) * se.l0` for every `rel` in `rels` and every
-wind speed in `v_winds` [m/s]; a
-positive `rel` extends the tether, a negative one compresses it. See
-[`rels_around_zero`](@ref) for the default, non-uniform grid.
+wind speed in `v_winds` [m/s]; a positive `rel` extends the tether, a negative one
+compresses it. See [`rels_around_zero`](@ref) for the default, non-uniform grid.
 
 The whole sweep runs on a single compiled model: the unstretched length is fixed by `se`,
 and the only things that change between operating points are the position of the lower
@@ -390,25 +390,36 @@ function sweep_lengths(; l_unstretched=[1.0, 3.0, 10.0, 30.0], ratios=ratios_aro
 end
 
 """
-    plot_distance(se, ops; min_force=1e-4)
+    plot_distance(ops; min_force=1e-4)
 
-Plot the result of [`sweep_distance`](@ref): the axial force of every segment and the two
+Drill-down into one operating condition: the axial force of every segment and the two
 anchor forces over the relative extension of the tether, both on a logarithmic axis.
+
+`ops` must all share one unstretched length and one wind speed, e.g. one slice of the
+result of [`main`](@ref):
+
+    plot_distance(filter(op -> op.l_unstretched == 3.0 && op.v_wind == 10.0, ops))
+
+[`plot_lengths`](@ref) shows only the mean axial force, so this is the plot to reach for
+when the question is how the segments differ from each other, or how much of the anchor
+force is drag rather than tension.
 
 The force spans four decades over the swept range, so a linear axis shows nothing but the
 single point at 1% extension; the magnitude is plotted and clamped at `min_force` [N] for
 the same reason as in [`plot_lengths`](@ref).
 """
-function plot_distance(se, ops; min_force=1e-4)
+function plot_distance(ops; min_force=1e-4)
     # the sweep runs from extension to compression, the plot needs an increasing x axis
     ops = sort(ops, by=extension)
+    n   = length(first(ops).f_axial)
     X = [100 * extension(op) for op in ops]
     clamped(f) = [max(abs(f(op)), min_force) for op in ops]
     fig = GLMakie.Figure()
     ax1 = GLMakie.Axis(fig[1, 1]; ylabel="|segment force| [N]", yscale=log10,
-                       title="Equilibrium force of a $(se.segments)-segment, $(se.l0) m " *
-                             "tether at $(se.v_wind_tether[1]) m/s wind, no gravity")
-    for i in 1:se.segments
+                       title="Equilibrium force of a $n-segment, " *
+                             "$(first(ops).l_unstretched) m tether at " *
+                             "$(first(ops).v_wind) m/s wind, no gravity")
+    for i in 1:n
         GLMakie.lines!(ax1, X, clamped(op -> op.f_axial[i]); label="S$i")
     end
     GLMakie.axislegend(ax1; position=:rb)
@@ -467,25 +478,6 @@ function plot_lengths(ops; min_force=1e-4)
 end
 
 """
-    main(; segments=6, l_seg=1.0, v_wind=10.0, rels=rels_around_zero())
-
-Point 1: sweep the distance between the end points of a `segments` × `l_seg` m tether,
-plot the segment and anchor forces and write the operating points to
-`output/compression_force.csv`.
-
-Returns `(se, ops)`.
-"""
-function main(; segments=6, l_seg=1.0, v_wind=10.0, rels=rels_around_zero())
-    se = compression_settings(; segments, l0=segments*l_seg, v_wind)
-    t0 = time_ns()
-    ops = sweep_distance(se; rels, v_winds=[v_wind])
-    println("Elapsed time: $(round((time_ns()-t0)/1e9, digits=1)) s for $(length(ops)) operating points")
-    println("Result written to: ", save_csv(ops; filename=joinpath("output", "compression_force.csv")))
-    plot_distance(se, ops)
-    se, ops
-end
-
-"""
     report_sign(ops)
 
 Check the claim of PlanCompression.md that the force never changes its sign, by printing
@@ -508,29 +500,30 @@ function report_sign(ops)
 end
 
 """
-    main2(; l_unstretched=[1,3,10,30], ratios=ratios_around_one(), v_winds=[10,20,30],
-            segments=6)
+    main(; l_unstretched=[1,3,10,30], ratios=ratios_around_one(), v_winds=[10,20,30],
+           segments=6)
 
-Points 2 and 3: sweep the strain for each of the unstretched tether lengths `l_unstretched`
-and each of the wind speeds `v_winds`, plot the magnitude of the mean axial force on a
-logarithmic axis, one panel per wind speed, and write the operating points to
-`output/compression_force_vs_length.csv`.
+Sweep the strain for each of the unstretched tether lengths `l_unstretched` and each of
+the wind speeds `v_winds`, plot the magnitude of the mean axial force on a logarithmic
+axis, one panel per wind speed, and write the operating points to
+`data/compression_force_vs_length.csv`.
+
+Use [`plot_distance`](@ref) on a slice of the result to see the individual segments.
 
 Returns the vector of [`OperatingPoint`](@ref)s.
 """
-function main2(; l_unstretched=[1.0, 3.0, 10.0, 30.0], ratios=ratios_around_one(),
-                 v_winds=[10.0, 20.0, 30.0], segments=6)
+function main(; l_unstretched=[1.0, 3.0, 10.0, 30.0], ratios=ratios_around_one(),
+                v_winds=[10.0, 20.0, 30.0], segments=6)
     t0 = time_ns()
     ops = sweep_lengths(; l_unstretched, ratios, v_winds, segments)
     println("Elapsed time: $(round((time_ns()-t0)/1e9, digits=1)) s for $(length(ops)) operating points")
     println("Result written to: ",
-            save_csv(ops; filename=joinpath("output", "compression_force_vs_length.csv")))
+            save_csv(ops; filename=joinpath(DATA_DIR, "compression_force_vs_length.csv")))
     report_sign(ops)
     plot_lengths(ops)
     ops
 end
 
-se, ops = main();
-ops2 = main2();
+ops = main();
 
 nothing
