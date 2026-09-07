@@ -162,8 +162,8 @@ extension to pull the exponent away from 2 towards 1.
 
 ## Step two: Derive the formula
 
-Done. `analytic_force` in [examples/plot_compression.jl](examples/plot_compression.jl)
-reproduces the measured mean axial force of all 672 operating points with a **median error
+Done, and written up in [docs/segment_force.md](docs/segment_force.md). `analytic_force`
+in [examples/plot_compression.jl](examples/plot_compression.jl) reproduces the measured mean axial force of all 672 operating points with a **median error
 of 0.003% and a worst case of 0.61%**, with no fitted constant.
 
 ### Derivation
@@ -195,6 +195,11 @@ branch when all three roots are real).
 polyline through a parabola is that much shorter than the smooth curve, so it needs that
 much more sag, and hence less force, to take up the same slack. For `n = 6` it is `35/36`.
 Dropping it costs a factor of about 1.4% — exactly the residual that was left without it.
+
+Dropping it deliberately is the **continuum limit**, `(r/EA)F³ + (r-1)F² = w²L²/24`, which
+is the formula for a real tether rather than for a chain of segments; `analytic_force`
+gives it for `segments=Inf`. The gap between the two dies as `1/n²` and is under 0.2% from
+20 segments on.
 
 ### The three regimes fall out of the cubic
 

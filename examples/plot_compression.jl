@@ -114,7 +114,13 @@ The `1 - 1/n²` is the only discretisation term: an `n`-segment polyline through
 is that much shorter than the smooth curve, so it needs that much more sag — and hence less
 force — to take up the same slack. It is derived, not fitted.
 
+Pass `segments=Inf` for the continuum limit, i.e. the formula for a real tether rather than
+for a chain of `n` segments — `1 - 1/Inf^2` is exactly `1`, so the term simply drops out.
+On a 6-segment model that over-predicts by about `1/(2n²)`, 1.4%; by 20 segments it is
+0.13%.
+
 Reproduces the measured force to 0.6% over the whole sweep; see [`check_formula`](@ref).
+The derivation is in `docs/segment_force.md`.
 """
 function analytic_force(; v_wind, d_tether, l_unstretched, l_tether, segments=6,
                           rho=1.225, cd_tether=0.958, c_spring_4mm=614600.0)
