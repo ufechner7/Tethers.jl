@@ -2,9 +2,10 @@
 # reading it back from the CSV file that `test_compression.jl` writes.
 #
 # This is deliberately separate from the simulation: it needs nothing but GLMakie, so it
-# loads in a second and lets the plots and the analytical formula be reworked without
-# re-running the 3 minute sweep. `test_compression.jl` includes this file at the end, so
-# there is exactly one implementation of the formula and of the figures.
+# loads in a second and lets the plots be reworked without re-running the 3 minute sweep.
+# `test_compression.jl` includes this file at the end, so there is exactly one
+# implementation of the figures. The analytical formula itself, `analytic_force`, lives in
+# the package (`src/analytic_force.jl`), so that it can be reused outside the examples too.
 #
 #     include("examples/plot_compression.jl")    # replot data/compression_force_vs_length.csv
 #
@@ -17,7 +18,8 @@
 # makes that name ambiguous in `Main` for every example included afterwards. Everything
 # from Makie is therefore qualified below.
 import GLMakie
-using Tethers: display_if_interactive
+using Tethers: display_if_interactive, analytic_force
+using Tethers.TetherComponents: TetherSettings
 
 """
     Result
@@ -89,68 +91,16 @@ function read_results(filename=joinpath("data", "compression_force_vs_length.csv
 end
 
 """
-    analytic_force(; v_wind, d_tether, l_unstretched, l_tether, segments=6,
-                     rho=1.225, cd_tether=0.958, c_spring_4mm=614600.0)
-
-Step two of PlanCompression.md: the analytical prediction of the mean axial force [N],
-tension positive, without solving the model.
-
-A tether under a transverse load that is uniform along the chord hangs in a parabola, and a
-chain of straight segments under uniform point loads is exactly that parabola sampled at
-its nodes. Three relations close the system, with `L` the distance between the anchors,
-`L0` the unstretched length, `EA = c_spring` the axial stiffness and `w` the drag per unit
-length:
-
-- sag from the force balance,        `s  = w L² / (8F)`
-- arc length of the sampled parabola `ΔS = (1 - 1/n²) · 8s²/(3L)`
-- and the elastic law,               `ΔS = L0 (1 + F/EA) - L`
-
-Eliminating `s` and `ΔS` leaves a cubic in `F` with exactly one positive root, solved here
-in closed form:
-
-    (r/EA) F³ + (r-1) F² = (1 - 1/n²) w² L² / 24,   r = L0/L
-
-The `1 - 1/n²` is the only discretisation term: an `n`-segment polyline through a parabola
-is that much shorter than the smooth curve, so it needs that much more sag — and hence less
-force — to take up the same slack. It is derived, not fitted.
-
-Pass `segments=Inf` for the continuum limit, i.e. the formula for a real tether rather than
-for a chain of `n` segments — `1 - 1/Inf^2` is exactly `1`, so the term simply drops out.
-On a 6-segment model that over-predicts by about `1/(2n²)`, 1.4%; by 20 segments it is
-0.13%.
-
-Reproduces the measured force to 0.6% over the whole sweep; see [`check_formula`](@ref).
-The derivation is in `docs/segment_force.md`.
-"""
-function analytic_force(; v_wind, d_tether, l_unstretched, l_tether, segments=6,
-                          rho=1.225, cd_tether=0.958, c_spring_4mm=614600.0)
-    EA = c_spring_4mm * (d_tether/4)^2               # axial stiffness              [N]
-    w  = 0.5 * rho * cd_tether * (d_tether/1000) * v_wind^2   # drag per meter    [N/m]
-    r  = l_unstretched / l_tether
-    cn = 1 - 1/segments^2
-    # F³ + a₂F² + a₀ = 0; a₁ vanishes, which is what makes the closed form short
-    a2 = EA * (r - 1) / r
-    a0 = -cn * EA * w^2 * l_tether^2 / (24r)
-    p  = -a2^2/3
-    q  = 2a2^3/27 + a0
-    D  = q^2/4 + p^3/27
-    if D > 0            # one real root
-        return cbrt(-q/2 + sqrt(D)) + cbrt(-q/2 - sqrt(D)) - a2/3
-    end                 # three real roots, the physical one is the positive one
-    m  = 2sqrt(-p/3)
-    th = acos(clamp(3q/(p*m), -1, 1))/3
-    maximum(m*cos(th - 2π*k/3) - a2/3 for k in 0:2)
-end
-
-"""
-    analytic_force(res::Result)
+    analytic_force(se, res::Result)
 
 [`analytic_force`](@ref) for the operating point `res`, so that it can be compared with its
-measured `f_mean`.
+measured `f_mean`. `se` only needs to hold `rho`, `cd_tether`, `d_tether` and `c_spring`; a
+plain `TetherSettings()` reproduces the sweep's defaults, since `res.d_tether` is passed
+through explicitly.
 """
-analytic_force(res::Result) =
-    analytic_force(; v_wind=res.v_wind, d_tether=res.d_tether,
-                     l_unstretched=res.l_unstretched, l_tether=res.l_tether,
+analytic_force(se, res::Result) =
+    analytic_force(se; v_wind_perp=res.v_wind, d_segment=res.d_tether,
+                     l_unstretched=res.l_unstretched, l_segment=res.l_tether,
                      segments=length(res.f_seg))
 
 """
@@ -182,15 +132,15 @@ function report_sign(results)
 end
 
 """
-    check_formula(results)
+    check_formula(results, se=TetherSettings())
 
 Compare [`analytic_force`](@ref) with the measured mean axial force of every operating
 point and print the median, 90th percentile and worst relative error.
 
 Returns the vector of relative errors.
 """
-function check_formula(results)
-    err = [analytic_force(res)/res.f_mean - 1 for res in results]
+function check_formula(results, se=TetherSettings())
+    err = [analytic_force(se, res)/res.f_mean - 1 for res in results]
     a = sort(abs.(err))
     println("Analytical formula vs $(length(results)) measured points: " *
             "median $(round(100*a[cld(end,2)], digits=3))%, " *
@@ -200,7 +150,7 @@ function check_formula(results)
 end
 
 """
-    plot_lengths(results; min_force=1e-4)
+    plot_lengths(results, se=TetherSettings(); min_force=1e-4)
 
 The overview plot: the magnitude of the mean axial force over the relative compression, on
 a logarithmic axis, as a grid of panels — one row per wind speed, one column per tether
@@ -212,7 +162,7 @@ The magnitude is plotted so that a sign change cannot break the logarithmic axis
 that dives towards the clamp `min_force` [N] is a force that passes through zero, which is
 exactly what the plot is meant to reveal ([`report_sign`](@ref) says whether that happened).
 """
-function plot_lengths(results; min_force=1e-4)
+function plot_lengths(results, se=TetherSettings(); min_force=1e-4)
     v_winds   = sort(unique(res.v_wind for res in results))
     d_tethers = sort(unique(res.d_tether for res in results))
     l0s       = sort(unique(res.l_unstretched for res in results))
@@ -233,7 +183,7 @@ function plot_lengths(results; min_force=1e-4)
             GLMakie.lines!(ax, X, Y; label="l0 = $l0 m")
             GLMakie.scatter!(ax, X, Y; markersize=6)
             # the analytical formula of step two, over the measured points
-            GLMakie.lines!(ax, X, [max(abs(analytic_force(res)), min_force) for res in sel];
+            GLMakie.lines!(ax, X, [max(abs(analytic_force(se, res)), min_force) for res in sel];
                            linestyle=:dash, color=:black, linewidth=1)
         end
         row == 1 && col == 1 && GLMakie.axislegend(ax; position=:rb)

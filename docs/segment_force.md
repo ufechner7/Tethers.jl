@@ -8,8 +8,8 @@ compression.
 It reproduces the segmented model of [`TetherComponent.jl`](../src/TetherComponent.jl) to
 within **0.6%** over 672 operating points spanning a 30x range of lengths, 4x of diameters
 and 3x of wind speeds, with no fitted constant. It is implemented as `analytic_force` in
-[`examples/plot_compression.jl`](../examples/plot_compression.jl); the data it is checked
-against is produced by [`examples/test_compression.jl`](../examples/test_compression.jl).
+[`src/analytic_force.jl`](../src/analytic_force.jl); the data it is checked against is
+produced by [`examples/test_compression.jl`](../examples/test_compression.jl).
 
 For the physics on its own — the continuum solution, without any of the discretisation or
 validation detail below — see [segment_force_summary.md](segment_force_summary.md).
@@ -135,7 +135,8 @@ This is the form to use for a physical tether, or for a segmented model with eno
 segments. `analytic_force` produces it directly, because `1 - 1/Inf^2` is exactly `1`:
 
 ```julia
-analytic_force(; v_wind=10.0, d_tether=4.0, l_unstretched=6.6, l_tether=6.0, segments=Inf)
+se = TetherSettings()
+analytic_force(se; v_wind_perp=10.0, d_segment=4.0, l_unstretched=6.6, l_segment=6.0, segments=Inf)
 ```
 
 **How much the factor is worth.** A model with `n` segments carries less arc length for the
@@ -255,7 +256,8 @@ first, in order:
 ```julia
 include("examples/plot_compression.jl")
 
-analytic_force(; v_wind=10.0, d_tether=4.0, l_unstretched=6.6, l_tether=6.0, segments=6)
+se = TetherSettings()
+analytic_force(se; v_wind_perp=10.0, d_segment=4.0, l_unstretched=6.6, l_segment=6.0, segments=6)
 ```
 
 To reproduce the validation, run the sweep and check the formula against it:
