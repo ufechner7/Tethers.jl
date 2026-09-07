@@ -5,7 +5,7 @@ include(joinpath(@__DIR__, "test_utils.jl"))
     pkg_dir = dirname(@__DIR__)
     cd(pkg_dir) do
         # the composed model: one Tether component, connected to a FixedEnd and a FreeEnd
-        include(joinpath(pkg_dir, "src", "Tether_10.jl"))
+        include(joinpath(pkg_dir, "examples", "Tether_10.jl"))
         sleep(1)
         Base.invokelatest() do
             MakieControlPlots.close("all")

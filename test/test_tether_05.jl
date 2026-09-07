@@ -5,7 +5,7 @@ include(joinpath(@__DIR__, "test_utils.jl"))
     pkg_dir = dirname(@__DIR__)
     cd(pkg_dir) do
         # Julia implementation, using ModelingToolkit and the implicit solver KenCarp4
-        include(joinpath(pkg_dir, "src", "Tether_05.jl"))
+        include(joinpath(pkg_dir, "examples", "Tether_05.jl"))
         sleep(1)
         Base.invokelatest() do
             MakieControlPlots.close("all")

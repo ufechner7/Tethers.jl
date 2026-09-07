@@ -53,7 +53,7 @@ cd repos/Tethers.jl
 From the Julia prompt, run the simulation:
 
 ```julia
-include("src/Tether_01.jl")
+include("examples/Tether_01.jl")
 ```
 
 You should see a plot similar to:
@@ -71,7 +71,7 @@ menu()
 
 at the Julia prompt.
 
-**Julia code:** [Tether_01.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_01.jl)
+**Julia code:** [Tether_01.jl](https://github.com/ufechner7/Tethers.jl/blob/main/examples/Tether_01.jl)
 
 ## Python version as comparison
 

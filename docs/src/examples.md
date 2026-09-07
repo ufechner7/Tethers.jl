@@ -26,7 +26,7 @@ cd repos/Tethers.jl
 ```
 From the Julia prompt, run the simulation:
 ```julia
-include("src/Tether_01.jl")
+include("examples/Tether_01.jl")
 ```
 You should see a plot similar to:
 
@@ -34,7 +34,7 @@ You should see a plot similar to:
 
 This example shows a mass that is thrown upwards, slows down and then falls.
 
-**Julia code:** [Tether_01.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_01.jl)
+**Julia code:** [Tether_01.jl](https://github.com/ufechner7/Tethers.jl/blob/main/examples/Tether_01.jl)
 
 These differential equations define the model:
 ```julia
@@ -87,7 +87,7 @@ If you compare the Python and the Julia scripts you can see that:
 ## Mass, attached to a spring-damper
 From the Julia prompt, run the simulation:
 ```julia
-include("src/Tether_02.jl")
+include("examples/Tether_02.jl")
 ```
 ![Spring damper](docs/images/SpringDamper.png)
 
@@ -95,18 +95,18 @@ Mass, attached to a spring-damper element. One end of the spring is attached at 
 
 After running it, type `sys` and `simple_sys` in the REPL to see the representation of the system and the simplified system. You can see that the original system has 17 equations, which have been automatically simplified to 6 equations in simple_sys.
 
-**Julia code:** [Tether_02.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_02.jl)
+**Julia code:** [Tether_02.jl](https://github.com/ufechner7/Tethers.jl/blob/main/examples/Tether_02.jl)
 
 ## Mass, with non-linear spring damper
 ```julia
-include("src/Tether_03.jl")
+include("examples/Tether_03.jl")
 ```
 ![Non-linear Spring damper](docs/images/Nonlinear.png)
 
 Mass, attached to a non-linear spring-damper element. One end of the spring is attached at the origin, and the second end is attached to the mass. Mass initially below the origin, spring un-stretched. Z-axis pointing upwards. 
 
 Initial velocity $4 m/s$ upwards. The compression stiffness is zero. The grey line shows that
-the stiffness is zero at the beginning, and has the nominal value at the end. **Example:** [Tether_03.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_03.jl).
+the stiffness is zero at the beginning, and has the nominal value at the end. **Example:** [Tether_03.jl](https://github.com/ufechner7/Tethers.jl/blob/main/examples/Tether_03.jl).
 
 Thanks to the package [ModelingToolkit.jl](https://docs.sciml.ai/ModelingToolkit/stable/) the system description is very compact and readable:
 ```Julia
@@ -124,7 +124,7 @@ The same in Python: **Python code:** [Tether_03.py](https://github.com/ufechner7
 
 ### Using a callback
 By using a callback to detect exactly when the transition from a stiff tether segment to a loose
-tether segment happens we can increase the accuracy of the simulation. **Julia code:** [Tether_03b.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_03b.jl).
+tether segment happens we can increase the accuracy of the simulation. **Julia code:** [Tether_03b.jl](https://github.com/ufechner7/Tethers.jl/blob/main/examples/Tether_03b.jl).
 
 We only have to add the following lines of code:
 ```julia
@@ -175,7 +175,7 @@ after the simulation.
 ## Benchmarking non-linear simulation
 Using a callback slows the simulation down, but not much. Try it out:
 ```julia
-include("src/Tether_03c.jl")
+include("examples/Tether_03c.jl")
 ```
 Output on a fast PC:
 ```
@@ -224,11 +224,11 @@ for i in 1:segments+1
     VEL0[:, i] .= [0.0, 0, (i-1)*V0/segments]
 end
 ```
-The first example of such a model is the script [Tether_04.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_04.jl) which is derived from the last example.
+The first example of such a model is the script [Tether_04.jl](https://github.com/ufechner7/Tethers.jl/blob/main/examples/Tether_04.jl) which is derived from the last example.
 
 ## Segmented tether with correct force distribution
 
-In the script [Tether_05.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_05.jl#L61), the spring force is distributed correctly on the two masses attached to the spring as shown here:
+In the script [Tether_05.jl](https://github.com/ufechner7/Tethers.jl/blob/main/examples/Tether_05.jl#L61), the spring force is distributed correctly on the two masses attached to the spring as shown here:
 ```julia
 # loop over all tether particles to apply the forces and calculate the accelerations
 for i in 1:(segments+1)
@@ -251,7 +251,7 @@ We loop over the particles. On the first and the last particle only one spring f
 On the other particles, two spring forces are acting in the opposite direction. Because the first particle is fixed
 we set its acceleration to zero.
 
-**Julia code:** [Tether_05.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_05.jl)
+**Julia code:** [Tether_05.jl](https://github.com/ufechner7/Tethers.jl/blob/main/examples/Tether_05.jl)
  
 **Python code:** [Tether_05.py](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_05.py)
 
@@ -275,7 +275,7 @@ damping           ~ DAMPING  / (length/segments)
 ```
 where `L0` is the unstretched length of the complete tether at $t=0$. 
 
-**Julia code:** [Tether_06.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_06.jl)
+**Julia code:** [Tether_06.jl](https://github.com/ufechner7/Tethers.jl/blob/main/examples/Tether_06.jl)
 
 The IDA solver, used for Python has a very high numerical damping. Therefore we had to multiply
 the damping coefficient with a factor of $0.045$ to achieve a more-or-less realistic result.
@@ -283,7 +283,7 @@ the damping coefficient with a factor of $0.045$ to achieve a more-or-less reali
 **Python code:** [Tether_06.py](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_06.py)
 
 ### Refactoring the code, add a Settings struct and splitting it into functions
-**Julia code:** [Tether_06b.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_06b.jl).
+**Julia code:** [Tether_06b.jl](https://github.com/ufechner7/Tethers.jl/blob/main/examples/Tether_06b.jl).
 
 If you want to have fast code, that can be reused and tested using unit tests, then it is better
 to put your code in functions and to avoid global variables. We demonstrate that in this example.
@@ -328,7 +328,7 @@ end
 
 ### Using a callback
 By using a callback to detect exactly when the transition from a stiff tether segment to a loose
-tether segment happens we can increase the accuracy of the simulation. **Julia code:** [Tether_06c.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_06c.jl).
+tether segment happens we can increase the accuracy of the simulation. **Julia code:** [Tether_06c.jl](https://github.com/ufechner7/Tethers.jl/blob/main/examples/Tether_06c.jl).
 
 The following lines had to be added:
 ```julia
@@ -352,7 +352,7 @@ spring_force[:, i]   ~ (c_spr[i] * (norm1[i] - (length/se.segments))
 ```
 
 ## Segmented tether with aerodynamic drag
-In the script [Tether_07.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_07.jl), the tether drag has been added.
+In the script [Tether_07.jl](https://github.com/ufechner7/Tethers.jl/blob/main/examples/Tether_07.jl), the tether drag has been added.
 
 The following lines calculate the tether drag force:
 ```julia
@@ -390,7 +390,7 @@ A steady-state solver is used to solve the initial tether shape, based on the en
 If both endpoints are fixed you get a catenary line, deformed by the wind.
 This is useful for model verification.
 
-See: [Tether_08.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_08.jl)
+See: [Tether_08.jl](https://github.com/ufechner7/Tethers.jl/blob/main/examples/Tether_08.jl)
 
 Two versions of the model are implemented, with the signatures:
 ```julia
@@ -446,7 +446,7 @@ is wired to its boundary conditions with `connect`, as described in
 [Composing Models](https://docs.sciml.ai/ModelingToolkit/stable/basics/Composition/).
 
 See: [TetherComponent.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/TetherComponent.jl)
-and [Tether_10.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_10.jl)
+and [Tether_10.jl](https://github.com/ufechner7/Tethers.jl/blob/main/examples/Tether_10.jl)
 
 ### The connector
 A connector defines what two components exchange when they are connected. For a point in 3D

@@ -9,7 +9,7 @@ include(joinpath(@__DIR__, "test_utils.jl"))
         # false; runtests.jl sets it to true for the Tether_06c testset, so it
         # must be reset here.
         global __BENCH__ = false
-        include(joinpath(pkg_dir, "src", "Tether_07.jl"))
+        include(joinpath(pkg_dir, "examples", "Tether_07.jl"))
         sleep(1)
         Base.invokelatest() do
             MakieControlPlots.close("all")

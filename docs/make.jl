@@ -5,6 +5,10 @@ src="src"
 dst="docs/src/src"
 mkpath(dst)
 cp(src, dst; force=true)
+src="examples"
+dst="docs/src/examples"
+mkpath(dst)
+cp(src, dst; force=true)
 src="docs/images"
 dst="docs/src/docs/images"
 mkpath(dst)

@@ -6,7 +6,7 @@ include(joinpath(@__DIR__, "test_utils.jl"))
     cd(pkg_dir) do
         # Julia implementation: a SteadyStateDiffEq solve for the initial tether shape,
         # followed by a time simulation with the implicit solver FBDF
-        include(joinpath(pkg_dir, "src", "Tether_08.jl"))
+        include(joinpath(pkg_dir, "examples", "Tether_08.jl"))
         sleep(1)
         Base.invokelatest() do
             MakieControlPlots.close("all")

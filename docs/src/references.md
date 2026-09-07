@@ -6,7 +6,7 @@ display_if_interactive
 ```
 
 ### Tether component
-The composable components used by [Tether_10.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_10.jl),
+The composable components used by [Tether_10.jl](https://github.com/ufechner7/Tethers.jl/blob/main/examples/Tether_10.jl),
 explained in [Re-usable tether component](@ref). They live in the submodule
 `Tethers.TetherComponents`.
 
