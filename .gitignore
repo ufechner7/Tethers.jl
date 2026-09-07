@@ -24,3 +24,4 @@ Manifest-v1.12.toml
 bin/kps-image-1.12.so
 bin/kps-image-.so
 .markdownlint.json
+*.pdf
