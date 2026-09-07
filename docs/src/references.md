@@ -3,6 +3,10 @@
 ## API
 ```@docs
 display_if_interactive
+run_python
+Tethers.copy_bin
+Tethers.copy_examples
+install_examples
 ```
 
 ### Tether component
