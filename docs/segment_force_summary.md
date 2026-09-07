@@ -11,7 +11,7 @@ chain of discrete segments.
 ## Symbols
 
 | symbol | meaning | unit |
-|---|---|---|
+|:------|:--------------------------------------------|:-----|
 | `L`  | distance between the two anchor points | m |
 | `L₀` | unstretched tether length | m |
 | `r`  | `L₀/L`, the length ratio | – |
@@ -126,14 +126,14 @@ enters twice and differently — `EA ∝ d²` through the cross section, `w ∝ 
 frontal area — so each regime carries a different power of `d`.
 
 | regime | condition | force | dimensionless |
-|---|---|---|---|
-| **extension** | `δ < 0`, `\|δ\| ≫ Λ^(2/3)` | `F = EA·(1-r)/r` | `f → -δ/r` |
+|:-------------|:-------------------|:---------------------|:-------------|
+| **extension** | `δ < 0`, `-δ ≫ Λ^(2/3)` | `F = EA·(1-r)/r` | `f → -δ/r` |
 | **crossover** | `δ = 0` | `F = ∛(EA·w²L²/24)` | `f → Λ^(2/3)` |
 | **compression** | `δ > 0`, `δ ≫ Λ^(2/3)` | `F = wL/√(24δ)` | `f → Λ/√δ` |
 
 | regime | `d` | `v` | `L` | `δ` |
 |---|---|---|---|---|
-| extension | `d²` | — | — | `\|δ\|` |
+| extension | `d²` | — | — | `-δ` |
 | crossover | `d⁴ᐟ³` | `v⁴ᐟ³` | `L²ᐟ³` | — |
 | compression | `d¹` | `v²` | `L¹` | `δ^(-1/2)` |
 
