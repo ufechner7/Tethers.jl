@@ -11,6 +11,9 @@ and 3x of wind speeds, with no fitted constant. It is implemented as `analytic_f
 [`examples/plot_compression.jl`](../examples/plot_compression.jl); the data it is checked
 against is produced by [`examples/test_compression.jl`](../examples/test_compression.jl).
 
+For the physics on its own — the continuum solution, without any of the discretisation or
+validation detail below — see [segment_force_summary.md](segment_force_summary.md).
+
 ## The setup
 
 A tether of `n` segments hangs between two anchors, `L` apart on the vertical axis. Its
