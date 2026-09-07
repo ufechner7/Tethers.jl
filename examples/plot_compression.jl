@@ -18,6 +18,7 @@
 # makes that name ambiguous in `Main` for every example included afterwards. Everything
 # from Makie is therefore qualified below.
 import GLMakie
+import Tethers
 using Tethers: display_if_interactive, analytic_force
 using Tethers.TetherComponents: TetherSettings
 
@@ -98,7 +99,7 @@ measured `f_mean`. `se` only needs to hold `rho`, `cd_tether`, `d_tether` and `c
 plain `TetherSettings()` reproduces the sweep's defaults, since `res.d_tether` is passed
 through explicitly.
 """
-analytic_force(se, res::Result) =
+Tethers.analytic_force(se, res::Result) =
     analytic_force(se; v_wind_perp=res.v_wind, d_segment=res.d_tether,
                      l_unstretched=res.l_unstretched, l_segment=res.l_tether,
                      segments=length(res.f_seg))
