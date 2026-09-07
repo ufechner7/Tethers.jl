@@ -8,11 +8,11 @@ if [[ $(basename $(pwd)) == "bin" ]]; then
 fi
 
 # Build the startup expression; optionally include a user-provided script
+JCODE='function menu() include("examples/menu.jl") end; function menu2() include("examples/menu2.jl") end'
 if [[ -n "${1:-}" ]]; then
-    EX="-e include(\"src/init.jl\");include(\"${1}\")"
-else
-    EX='-e include("src/init.jl")'
+    JCODE="${JCODE};include(\"${1}\")"
 fi
+EX=(-e "$JCODE")
 
 julia_version=$(julia --version | awk '{print($3)}')
 julia_major=${julia_version:0:3} 
@@ -33,16 +33,16 @@ fi
 if test -f "bin/kps-image-${julia_major}.so"; then
     echo "Found system image!"
     if [[ $HOSTNAME == "TUD262682" ]]; then
-        julia -J  bin/kps-image-${julia_major}.so --project -i -q -t 10 $GCT $EX
+        julia -J  bin/kps-image-${julia_major}.so --project -i -q -t 10 $GCT "${EX[@]}"
     elif [[ $HOSTNAME == "ufryzen" ]]; then
-        julia -J  bin/kps-image-${julia_major}.so --project -i -q -t 16 $GCT $EX
+        julia -J  bin/kps-image-${julia_major}.so --project -i -q -t 16 $GCT "${EX[@]}"
     else
-        julia -J  bin/kps-image-${julia_major}.so --project -i -q -t 8 $GCT $EX
+        julia -J  bin/kps-image-${julia_major}.so --project -i -q -t 8 $GCT "${EX[@]}"
     fi
 else
     if [[ $HOSTNAME == "ufryzen" ]]; then
-        julia --project -i -q -t 16 $GCT $EX
+        julia --project -i -q -t 16 $GCT "${EX[@]}"
     else
-        julia --project -i -q -t 8 $GCT $EX
+        julia --project -i -q -t 8 $GCT "${EX[@]}"
     fi
 fi

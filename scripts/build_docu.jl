@@ -9,4 +9,4 @@ if !("Documenter" ∈ keys(Pkg.project().dependencies))
     using Pkg
     Pkg.activate("docs")
 end
-using LiveServer; servedocs(launch_browser=true, skip_dirs=["docs/src/src", "docs/src/docs", "docs/build"])
+using LiveServer; servedocs(launch_browser=true, skip_dirs=["docs/src/src", "docs/src/docs", "docs/src/examples", "docs/build"])

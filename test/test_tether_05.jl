@@ -1,18 +1,19 @@
 using Test
+using Tethers: run_python
 include(joinpath(@__DIR__, "test_utils.jl"))
 
 @testset "Tether_05" begin
     pkg_dir = dirname(@__DIR__)
     cd(pkg_dir) do
         # Julia implementation, using ModelingToolkit and the implicit solver KenCarp4
-        include(joinpath(pkg_dir, "src", "Tether_05.jl"))
+        include(joinpath(pkg_dir, "examples", "Tether_05.jl"))
         sleep(1)
         Base.invokelatest() do
             MakieControlPlots.close("all")
         end
         # Python implementation, using the implicit solver IDA
         withenv("TETHERS_BRIEF_PLOT" => "1") do
-            include(joinpath(pkg_dir, "src", "RunTether_05.jl"))
+            run_python("Tether_05")
         end
     end
 

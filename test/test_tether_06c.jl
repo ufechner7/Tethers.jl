@@ -1,9 +1,10 @@
 using Test, LinearAlgebra
+using Tethers: run_python
 include(joinpath(@__DIR__, "test_utils.jl"))
 
 @testset "Tether_06c" begin
     # without callbacks
-    include("../src/Tether_06c.jl")
+    include("../examples/Tether_06c.jl")
     set = deepcopy(Settings2())
     set.duration = 10.0
     set.callbacks = false
@@ -31,14 +32,14 @@ include(joinpath(@__DIR__, "test_utils.jl"))
         # Tether_06c.jl only runs main() (which writes the CSV) when __BENCH__ is
         # false; runtests.jl sets it to true for this testset, so it must be reset.
         global __BENCH__ = false
-        include(joinpath(pkg_dir, "src", "Tether_06c.jl"))
+        include(joinpath(pkg_dir, "examples", "Tether_06c.jl"))
         sleep(1)
         Base.invokelatest() do
             MakieControlPlots.close("all")
         end
         # Python implementation, using the implicit solver IDA
         withenv("TETHERS_BRIEF_PLOT" => "1") do
-            include(joinpath(pkg_dir, "src", "RunTether_06c.jl"))
+            run_python("Tether_06c")
         end
     end
 

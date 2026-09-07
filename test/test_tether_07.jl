@@ -1,4 +1,5 @@
 using Test, LinearAlgebra
+using Tethers: run_python
 include(joinpath(@__DIR__, "test_utils.jl"))
 
 @testset "Tether_07" begin
@@ -9,14 +10,14 @@ include(joinpath(@__DIR__, "test_utils.jl"))
         # false; runtests.jl sets it to true for the Tether_06c testset, so it
         # must be reset here.
         global __BENCH__ = false
-        include(joinpath(pkg_dir, "src", "Tether_07.jl"))
+        include(joinpath(pkg_dir, "examples", "Tether_07.jl"))
         sleep(1)
         Base.invokelatest() do
             MakieControlPlots.close("all")
         end
         # Python implementation, using the implicit solver IDA
         withenv("TETHERS_BRIEF_PLOT" => "1") do
-            include(joinpath(pkg_dir, "src", "RunTether_07.jl"))
+            run_python("Tether_07")
         end
     end
 

@@ -3,10 +3,14 @@
 ## API
 ```@docs
 display_if_interactive
+run_python
+Tethers.copy_bin
+Tethers.copy_examples
+install_examples
 ```
 
 ### Tether component
-The composable components used by [Tether_10.jl](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_10.jl),
+The composable components used by [Tether_10.jl](https://github.com/ufechner7/Tethers.jl/blob/main/examples/Tether_10.jl),
 explained in [Re-usable tether component](@ref). They live in the submodule
 `Tethers.TetherComponents`.
 

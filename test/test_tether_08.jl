@@ -1,4 +1,5 @@
 using Test, LinearAlgebra
+using Tethers: run_python
 include(joinpath(@__DIR__, "test_utils.jl"))
 
 @testset "Tether_08" begin
@@ -6,7 +7,7 @@ include(joinpath(@__DIR__, "test_utils.jl"))
     cd(pkg_dir) do
         # Julia implementation: a SteadyStateDiffEq solve for the initial tether shape,
         # followed by a time simulation with the implicit solver FBDF
-        include(joinpath(pkg_dir, "src", "Tether_08.jl"))
+        include(joinpath(pkg_dir, "examples", "Tether_08.jl"))
         sleep(1)
         Base.invokelatest() do
             MakieControlPlots.close("all")
@@ -14,7 +15,7 @@ include(joinpath(@__DIR__, "test_utils.jl"))
         # Python implementation: the steady state is found directly with
         # scipy.optimize.least_squares, the time simulation uses SciPy's BDF
         withenv("TETHERS_BRIEF_PLOT" => "1") do
-            include(joinpath(pkg_dir, "src", "RunTether_08.jl"))
+            run_python("Tether_08")
         end
     end
 

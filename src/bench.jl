@@ -1,6 +1,6 @@
 __BENCH__ = true; 
 let
-    include("Tether_06c.jl")
+    include("../examples/Tether_06c.jl")
     set = deepcopy(Settings2())
     set.duration = 10.0
     set.callbacks = false
@@ -12,7 +12,7 @@ end
 
 __BENCH__ = true; 
 let
-    include("Tether_07.jl")
+    include("../examples/Tether_07.jl")
     set = deepcopy(Settings3())
     set.duration = 10.0
     simple_sys, pos, vel = model(set)

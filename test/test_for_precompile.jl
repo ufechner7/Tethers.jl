@@ -1,11 +1,10 @@
 __PC=true
-let 
-    include("../src/init.jl")
-    include("../src/Tether_01.jl")
-    include("../src/Tether_02.jl")
-    include("../src/Tether_03.jl")
-    include("../src/Tether_08.jl")
-    include("../src/Tether_10.jl")
+let
+    include("../examples/Tether_01.jl")
+    include("../examples/Tether_02.jl")
+    include("../examples/Tether_03.jl")
+    include("../examples/Tether_08.jl")
+    include("../examples/Tether_10.jl")
 
     GC.gc(true)
     let mem = Sys.free_memory() / 1024^2
