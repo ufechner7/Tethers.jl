@@ -21,6 +21,7 @@
 #### Changed
 - the position of `FixedEnd` is now the parameter `pos_fix` instead of a literal, so that a compiled model can be re-solved for a different anchor position without calling `mtkcompile` again
 - the wind of `Tether` is now the parameter `v_wind` instead of a literal, so that a compiled model can be re-solved for a different wind speed without calling `mtkcompile` again
+- the tether cross section of `Tether` is now given by the parameters `d_tether`, `c_spring_unit`, `damping_unit` and `mass_per_m` instead of literals, so that a compiled model can be re-solved for a different tether diameter without calling `mtkcompile` again
 - renamed ODESystem to System
 - update the `create_sys_image` script; the GC heap size hint now scales with the available RAM instead of always being 8000M
 - switched the interactive plots from PyPlot/matplotlib to MakieControlPlots; removed the PyCall and Conda dependencies from `Project.toml` and the Conda/matplotlib setup from `bin/run_julia`
