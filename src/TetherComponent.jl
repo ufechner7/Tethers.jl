@@ -7,7 +7,7 @@
 # ----------
 # - `Point3D`      : the connector; across variable `pos`, flow variable `force`
 # - `Tether`       : `segments` spring-damper segments with drag, two connectors `p1`, `p2`
-# - `FixedEnd`     : holds the point it is attached to at a fixed position
+# - `FixedEnd`     : holds the point it is attached to at the position of a parameter
 # - `FreeEnd`      : a point mass, falling under gravity and the tether forces
 #
 # Connection rule
@@ -294,12 +294,18 @@ end
 """
     FixedEnd(; name, pos0)
 
-Holds the node it is connected to at the fixed position `pos0`, e.g. a winch or a ground
-anchor. The force needed to do so is the force flowing through its connector `flange`.
+Holds the node it is connected to at the position of the parameter `pos_fix`, which
+defaults to `pos0`, e.g. a winch or a ground anchor. The force needed to do so is the force
+flowing through its connector `flange`.
+
+The position is a parameter and not a literal, so that a compiled model can be re-solved
+for a different anchor position without calling `mtkcompile` again; pass
+`sys.<name>.pos_fix => [x, y, z]` in the operating point map of the `ODEProblem`.
 """
 @component function FixedEnd(; name, pos0)
     @named flange = Point3D(pos0=pos0)
-    eqs = collect(flange.pos .~ collect(pos0))
+    @parameters pos_fix[1:3] = collect(pos0)
+    eqs = collect(flange.pos .~ collect(pos_fix))
     System(eqs, t; name, systems=[flange])
 end
 

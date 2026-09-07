@@ -19,6 +19,7 @@
 - `install_examples` no longer omits `Symbolics`, which several examples need directly
 - `copy_examples` no longer copies `examples/Project.toml` or leftover `Manifest*.toml` files into the destination directory
 #### Changed
+- the position of `FixedEnd` is now the parameter `pos_fix` instead of a literal, so that a compiled model can be re-solved for a different anchor position without calling `mtkcompile` again
 - renamed ODESystem to System
 - update the `create_sys_image` script; the GC heap size hint now scales with the available RAM instead of always being 8000M
 - switched the interactive plots from PyPlot/matplotlib to MakieControlPlots; removed the PyCall and Conda dependencies from `Project.toml` and the Conda/matplotlib setup from `bin/run_julia`
