@@ -1,4 +1,5 @@
 using Test, LinearAlgebra
+using Tethers: run_python
 include(joinpath(@__DIR__, "test_utils.jl"))
 
 @testset "Tether_08" begin
@@ -14,7 +15,7 @@ include(joinpath(@__DIR__, "test_utils.jl"))
         # Python implementation: the steady state is found directly with
         # scipy.optimize.least_squares, the time simulation uses SciPy's BDF
         withenv("TETHERS_BRIEF_PLOT" => "1") do
-            include(joinpath(pkg_dir, "src", "RunTether_08.jl"))
+            run_python("Tether_08")
         end
     end
 

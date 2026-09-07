@@ -73,7 +73,7 @@ The macro `@time` measures the compilation and execution time of calling the fun
 ### Python version as comparison
 From the Julia prompt execute:
 ```
-include("src/RunTether.jl")
+run_python("Tether_01")
 ```
 This will install Python, Matplotlib and Assimulo and execute the script `Tether_01.py`.
 
@@ -195,12 +195,12 @@ code is compiled, and the second call measures the execution time of the code.
 **Python**
 The script, which executes the Python code with callbacks:
 ```
-include("src/RunTether_03b.jl")
+run_python("Tether_03b")
 ```
 reports 31 ms for solving the problem (without printing).
 Without callbacks:
 ```
-include("src/RunTether_03.jl")
+run_python("Tether_03")
 ```
 still, 20 ms are needed.
 

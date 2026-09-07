@@ -1,4 +1,5 @@
 using Test, LinearAlgebra
+using Tethers: run_python
 include(joinpath(@__DIR__, "test_utils.jl"))
 
 @testset "Tether_07" begin
@@ -16,7 +17,7 @@ include(joinpath(@__DIR__, "test_utils.jl"))
         end
         # Python implementation, using the implicit solver IDA
         withenv("TETHERS_BRIEF_PLOT" => "1") do
-            include(joinpath(pkg_dir, "src", "RunTether_07.jl"))
+            run_python("Tether_07")
         end
     end
 

@@ -1,4 +1,5 @@
 using Test
+using Tethers: run_python
 include(joinpath(@__DIR__, "test_utils.jl"))
 
 @testset "Tether_01" begin
@@ -12,7 +13,7 @@ include(joinpath(@__DIR__, "test_utils.jl"))
         end
         # Python implementation, using the implicit solver RADAU
         withenv("TETHERS_BRIEF_PLOT" => "1") do
-            include(joinpath(pkg_dir, "src", "RunTether_01.jl"))
+            run_python("Tether_01")
         end
     end
 

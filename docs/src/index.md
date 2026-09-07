@@ -78,7 +78,7 @@ at the Julia prompt.
 From the Julia prompt execute:
 
 ```julia
-include("src/RunTether_01.jl")
+run_python("Tether_01")
 ```
 
 This will install Python, Matplotlib and Assimulo and execute the script `Tether_01.py`.
