@@ -1,0 +1,103 @@
+#!/bin/bash
+
+set -euo pipefail
+
+_default_src="docs/segment_force_summary.md"
+
+print_usage() {
+    echo "Usage:"
+    echo "  ./bin/create_pdf              Build $_default_src"
+    echo "  ./bin/create_pdf FILE.md ...  Build the given markdown files instead"
+    echo "  ./bin/create_pdf -h"
+    echo
+    echo "Renders markdown to PDF with pandoc and xelatex, writing each FILE.md to"
+    echo "FILE.pdf next to it. Two things are fixed up on the way:"
+    echo
+    echo "  - GitHub's \`\`\`math fences are not markdown, so pandoc would typeset them"
+    echo "    as code blocks; they are turned into \$\$..\$\$ display math."
+    echo "  - DejaVu Sans Mono has no glyph for the superscript-fraction slash or for"
+    echo "    the much-greater/less signs, and xelatex drops missing glyphs silently."
+    echo "    Inside code spans they are spelled out as ASCII instead."
+    echo
+    echo "Needs: pandoc, xelatex (texlive-xetex) and the DejaVu fonts (fonts-dejavu)."
+}
+
+_srcs=()
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -h|--help) print_usage; exit 0 ;;
+        -*) echo "Unknown option: $1" >&2; print_usage >&2; exit 1 ;;
+        *) _srcs+=("$1"); shift ;;
+    esac
+done
+
+if [[ $(basename "$(pwd)") == "bin" ]]; then
+    cd ..
+fi
+
+if [[ ${#_srcs[@]} -eq 0 ]]; then
+    _srcs=("$_default_src")
+fi
+
+for cmd in pandoc xelatex awk sed; do
+    if ! command -v "$cmd" >/dev/null 2>&1; then
+        echo "Required command not found: $cmd" >&2
+        echo "On Debian/Ubuntu: sudo apt install pandoc texlive-xetex" >&2
+        exit 1
+    fi
+done
+
+if command -v fc-list >/dev/null 2>&1; then
+    # Deliberately not `fc-list | grep -q`: grep exits at the first match, fc-list is then
+    # killed by SIGPIPE, and `set -o pipefail` reports the whole check as failed even
+    # though the font was found. Match on a captured string instead.
+    _fonts=$(fc-list 2>/dev/null || true)
+    case "$_fonts" in
+        *"DejaVu Serif"*) ;;
+        *)
+            echo "The DejaVu fonts were not found; xelatex needs them for the Greek" >&2
+            echo "letters and maths symbols in these documents." >&2
+            echo "On Debian/Ubuntu: sudo apt install fonts-dejavu" >&2
+            exit 1
+            ;;
+    esac
+fi
+
+_tmp=$(mktemp -d)
+trap 'rm -rf "$_tmp"' EXIT
+
+for _src in "${_srcs[@]}"; do
+    if [[ ! -f "$_src" ]]; then
+        echo "No such file: $_src" >&2
+        exit 1
+    fi
+
+    _out="${_src%.md}.pdf"
+    _pre="$_tmp/$(basename "${_src%.md}").md"
+
+    # ```math ... ``` -> $$ ... $$, then the glyphs DejaVu Sans Mono is missing
+    awk '
+        /^```math$/  { print "$$"; m = 1; next }
+        m && /^```$/ { print "$$"; m = 0; next }
+                     { print }
+    ' "$_src" \
+    | sed -e 's|⁴ᐟ³|^(4/3)|g' -e 's|²ᐟ³|^(2/3)|g' -e 's|≫|>>|g' -e 's|≪|<<|g' \
+    > "$_pre"
+
+    pandoc "$_pre" -o "$_out" \
+        --pdf-engine=xelatex \
+        -V mainfont="DejaVu Serif" \
+        -V sansfont="DejaVu Sans" \
+        -V monofont="DejaVu Sans Mono" \
+        -V geometry:"a4paper,margin=2.5cm" \
+        -V fontsize=11pt \
+        -V colorlinks=true \
+        --highlight-style=tango
+
+    if command -v pdfinfo >/dev/null 2>&1; then
+        _pages=$(pdfinfo "$_out" | awk '/^Pages:/ {print $2}')
+        echo "$_src -> $_out ($_pages pages)"
+    else
+        echo "$_src -> $_out"
+    fi
+done

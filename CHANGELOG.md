@@ -5,6 +5,7 @@
 - hand-coded, analytic Jacobians for the Python examples, replacing finite-difference Jacobians
 - test scripts for all tether examples (`test_tether_01.jl` .. `test_tether_08.jl`, `test_tether_10.jl`) that check that the Python and Julia implementations produce the same results
 - `test/test_copy_install.jl`, unit tests for `copy_files`, `copy_examples`, `copy_bin` and `install_examples`
+- `bin/create_pdf`, which renders a markdown document to PDF with pandoc and xelatex
 - `test/test_tether_component.jl`, unit tests for the re-usable tether component, checking its steady state, drag, catenary shape and compression stiffness against analytic results
 - `docs/julia_vs_python.md`, comparing the performance and code size of the Julia and Python implementations
 - `install_examples`, `copy_examples` and `copy_bin` functions in `Tethers.jl`, to install the example scripts and helper scripts (`bin/run_julia`, `bin/install`, `bin/create_sys_image`) into the current working directory, and optionally add the packages they need
