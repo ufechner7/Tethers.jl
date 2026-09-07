@@ -40,7 +40,9 @@ and the script is reachable from `examples/menu.jl`.
 Both grids are built from the same two lists of strain steps, `EXTENSION_STEPS` and
 `COMPRESSION_STEPS`, so the two sweeps measure the same strains and their CSV files can be
 fitted together. Neither figure uses `MakieControlPlots`: version 0.1.16 has `xscale` but
-no `yscale`, so both are built with Makie directly.
+no `yscale`, so both are built with Makie directly — via `import GLMakie` with every call
+qualified, because `using` it as well as `MakieControlPlots` makes their common export
+`plot` ambiguous in `Main`, which breaks every example included afterwards.
 
 Both write the same CSV schema, so step two can fit all operating points together:
 

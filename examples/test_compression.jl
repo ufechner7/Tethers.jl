@@ -28,7 +28,11 @@
 using ModelingToolkit, OrdinaryDiffEq, SteadyStateDiffEq, LinearAlgebra
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using ADTypes: AutoFiniteDiff
-using GLMakie   # both figures need a logarithmic force axis, which MakieControlPlots has not
+# `import`, not `using`: both figures need a logarithmic force axis, which
+# MakieControlPlots has not, but GLMakie and MakieControlPlots both export `plot`, and
+# `using` both of them makes that name ambiguous in `Main` for every example included
+# afterwards. Everything from Makie is therefore qualified below.
+import GLMakie
 using Tethers: display_if_interactive
 using Tethers.TetherComponents: TetherSettings, set_diameter!, Tether, FixedEnd
 
@@ -400,21 +404,21 @@ function plot_distance(se, ops; min_force=1e-4)
     ops = sort(ops, by=extension)
     X = [100 * extension(op) for op in ops]
     clamped(f) = [max(abs(f(op)), min_force) for op in ops]
-    fig = Figure()
-    ax1 = Axis(fig[1, 1]; ylabel="|segment force| [N]", yscale=log10,
-               title="Equilibrium force of a $(se.segments)-segment, $(se.l0) m tether " *
-                     "at $(se.v_wind_tether[1]) m/s wind, no gravity")
+    fig = GLMakie.Figure()
+    ax1 = GLMakie.Axis(fig[1, 1]; ylabel="|segment force| [N]", yscale=log10,
+                       title="Equilibrium force of a $(se.segments)-segment, $(se.l0) m " *
+                             "tether at $(se.v_wind_tether[1]) m/s wind, no gravity")
     for i in 1:se.segments
-        lines!(ax1, X, clamped(op -> op.f_axial[i]); label="S$i")
+        GLMakie.lines!(ax1, X, clamped(op -> op.f_axial[i]); label="S$i")
     end
-    axislegend(ax1; position=:rb)
-    ax2 = Axis(fig[2, 1]; xlabel="relative extension [%], negative = compression",
-               ylabel="|anchor force| [N]", yscale=log10)
-    lines!(ax2, X, clamped(op -> op.f_top); label="upper anchor")
-    lines!(ax2, X, clamped(op -> op.f_bot); label="lower anchor")
-    axislegend(ax2; position=:rb)
-    linkxaxes!(ax1, ax2)
-    hidexdecorations!(ax1; grid=false)
+    GLMakie.axislegend(ax1; position=:rb)
+    ax2 = GLMakie.Axis(fig[2, 1]; xlabel="relative extension [%], negative = compression",
+                       ylabel="|anchor force| [N]", yscale=log10)
+    GLMakie.lines!(ax2, X, clamped(op -> op.f_top); label="upper anchor")
+    GLMakie.lines!(ax2, X, clamped(op -> op.f_bot); label="lower anchor")
+    GLMakie.axislegend(ax2; position=:rb)
+    GLMakie.linkxaxes!(ax1, ax2)
+    GLMakie.hidexdecorations!(ax1; grid=false)
     display_if_interactive(fig)
     fig
 end
@@ -435,14 +439,14 @@ exactly what the plot is meant to reveal (`report_sign` says whether that happen
 function plot_lengths(ops; min_force=1e-4)
     v_winds = sort(unique(op.v_wind for op in ops))
     l0s     = unique(op.l_unstretched for op in ops)
-    fig = Figure()
-    axs = Axis[]
+    fig = GLMakie.Figure()
+    axs = GLMakie.Axis[]
     for (row, v_wind) in pairs(v_winds)
-        ax = Axis(fig[row, 1]; yscale=log10,
-                  ylabel="|mean axial force| [N]\nat $(v_wind) m/s",
-                  xlabel=row == length(v_winds) ? "relative compression [%]" : "",
-                  title=row == 1 ? "Equilibrium force over tether length and wind speed, " *
-                                   "no gravity" : "")
+        ax = GLMakie.Axis(fig[row, 1]; yscale=log10,
+                          ylabel="|mean axial force| [N]\nat $(v_wind) m/s",
+                          xlabel=row == length(v_winds) ? "relative compression [%]" : "",
+                          title=row == 1 ? "Equilibrium force over tether length and " *
+                                           "wind speed, no gravity" : "")
         for l0 in l0s
             sel = sort(filter(op -> op.v_wind == v_wind && op.l_unstretched == l0, ops),
                        by=compression)
@@ -450,14 +454,14 @@ function plot_lengths(ops; min_force=1e-4)
             X = [100 * compression(op) for op in sel]
             # log10(0) is -Inf and would break the axis, so clamp the magnitude from below
             Y = [max(abs(f_mean(op)), min_force) for op in sel]
-            lines!(ax, X, Y; label="l_tether_unstretched = $l0 m")
-            scatter!(ax, X, Y; markersize=6)
+            GLMakie.lines!(ax, X, Y; label="l_tether_unstretched = $l0 m")
+            GLMakie.scatter!(ax, X, Y; markersize=6)
         end
-        row == 1 && axislegend(ax; position=:rb)
+        row == 1 && GLMakie.axislegend(ax; position=:rb)
         push!(axs, ax)
     end
-    linkaxes!(axs...)                        # same scale everywhere, so the panels compare
-    foreach(ax -> hidexdecorations!(ax; grid=false), axs[1:end-1])
+    GLMakie.linkaxes!(axs...)   # same scale everywhere, so the panels compare directly
+    foreach(ax -> GLMakie.hidexdecorations!(ax; grid=false), axs[1:end-1])
     display_if_interactive(fig)
     fig
 end
