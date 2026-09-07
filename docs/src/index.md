@@ -41,6 +41,36 @@ cd bin
 ./create_sys_image
 ```
 
+### Alternative: install as a package
+
+If you don't want to clone the full repository, you can instead add `Tethers` to your own project and copy the examples into it. Create a new project:
+
+```bash
+mkdir test
+cd test
+julia --project="."
+```
+
+Then add `Tethers` from Julia's package manager:
+
+```julia
+using Pkg
+pkg"add Tethers"
+```
+
+Copy the example scripts and the `bin` helper scripts to your project with:
+
+```julia
+using Tethers
+Tethers.install_examples()
+```
+
+This also adds the extra packages needed by the example scripts. You can now run the examples with:
+
+```julia
+include("examples/menu.jl")
+```
+
 ## Basic example
 
 Use the provided script to start Julia from the `Tethers.jl` folder:
