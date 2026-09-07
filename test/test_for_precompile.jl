@@ -1,6 +1,5 @@
 __PC=true
-let 
-    include("../src/init.jl")
+let
     include("../examples/Tether_01.jl")
     include("../examples/Tether_02.jl")
     include("../examples/Tether_03.jl")
