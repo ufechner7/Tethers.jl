@@ -6,7 +6,8 @@
 # Components
 # ----------
 # - `Point3D`      : the connector; across variable `pos`, flow variable `force`
-# - `Tether`       : `segments` spring-damper segments with drag, two connectors `p1`, `p2`
+# - `Tether`       : `segments` spring-damper segments with drag, two connectors `p1`, `p2`;
+#                    the wind is the parameter `v_wind`
 # - `FixedEnd`     : holds the point it is attached to at the position of a parameter
 # - `FreeEnd`      : a point mass, falling under gravity and the tether forces
 #
@@ -159,6 +160,10 @@ all particles; they default to the straight line between the connector defaults 
 
 The particle positions are available as the array variable `pos(t)[1:3, 1:se.segments+1]`,
 the velocities as `vel`, and the segment lengths as `len(t)[1:se.segments]`.
+
+The wind is the parameter `v_wind`, defaulting to `se.v_wind_tether`, so that a compiled
+model can be re-solved for a different wind speed without calling `mtkcompile` again; pass
+`sys.<name>.v_wind => [vx, vy, vz]` in the operating point map of the `ODEProblem`.
 """
 @component function Tether(; name, se, POS0=nothing, VEL0=nothing)
     n = se.segments
@@ -172,6 +177,7 @@ the velocities as `vel`, and the segment lengths as `len(t)[1:se.segments]`.
     @named p2 = Point3D(pos0=POS0[:, end])
 
     @parameters rel_compression_stiffness = se.rel_compression_stiffness
+    @parameters v_wind[1:3] = se.v_wind_tether
     @variables begin
         # the states of this component: the inner particles 2..n
         pos_in(t)[1:3, 1:n-1] = POS0[:, 2:n]
@@ -220,7 +226,7 @@ the velocities as `vel`, and the segment lengths as `len(t)[1:se.segments]`.
                                      * (rel_compression_stiffness+(len[i] > l_seg)),
                spring_force[:, i] ~ (c_spr[i] * (len[i] - l_seg)
                                      + damping * spring_vel[i]) * unit_vector[:, i],
-               v_apparent[:, i]   ~ se.v_wind_tether .- (vel[:, i] + vel[:, i+1])/2,
+               v_apparent[:, i]   ~ collect(v_wind) .- (vel[:, i] + vel[:, i+1])/2,
                v_app_perp[:, i]   ~ v_apparent[:, i] - (v_apparent[:, i] ⋅ unit_vector[:, i]) .* unit_vector[:, i],
                norm_v_app[i]      ~ norm(v_app_perp[:, i]),
                half_drag_force[:, i] ~ 0.25 * se.rho * se.cd_tether * norm_v_app[i] * (len[i]*se.d_tether/1000.0)

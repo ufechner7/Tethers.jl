@@ -11,9 +11,9 @@
 #           no gravity, 10 m/s of horizontal wind, both end points fixed. The distance
 #           between the end points is varied from 1% extension to 10% compression, on the
 #           non-uniform grid of `rels_around_zero`.
-# `main2()` (point 2): the same experiment for the unstretched lengths 1, 3, 10 and 30 m,
-#           with `l_tether_unstretched / l_tether` swept from 0.99 to 1.10 on the matching
-#           grid of `ratios_around_one`.
+# `main2()` (points 2 and 3): the same experiment for the unstretched lengths 1, 3, 10 and
+#           30 m and the wind speeds 10, 20 and 30 m/s, with `l_tether_unstretched /
+#           l_tether` swept from 0.99 to 1.10 on the matching grid of `ratios_around_one`.
 #
 # Both plot the force on a logarithmic axis, which shows directly whether it ever passes
 # through zero; `report_sign` answers the same question in numbers.
@@ -21,9 +21,10 @@
 # Both write their operating points to a CSV file in `output/` with the same columns, so
 # that step two can fit an analytical formula to all of them together.
 #
-# The unstretched length is baked into the model, but the anchor positions are not: they are
-# the parameter `end2.pos_fix` of `FixedEnd`. A whole strain sweep therefore runs on one
-# compiled model, and a full run of both points needs 5 `mtkcompile` calls, not 70.
+# The unstretched length is baked into the model, but the anchor positions and the wind are
+# not: they are the parameters `end2.pos_fix` of `FixedEnd` and `v_wind` of `Tether`. A whole
+# strain and wind sweep therefore runs on one compiled model, so the full run needs 5
+# `mtkcompile` calls for its 182 operating points.
 using ModelingToolkit, OrdinaryDiffEq, SteadyStateDiffEq, LinearAlgebra
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using ADTypes: AutoFiniteDiff
@@ -167,6 +168,12 @@ end
 
 Build one [`Tether`](@ref) with both end points held by a [`FixedEnd`](@ref) and return the
 simplified system.
+
+Everything except the anchor positions and the wind is baked into the model here, so a
+compiled system may only be re-used for settings whose `segments`, `l0`, `d_tether`,
+`c_spring`, `damping`, `rho`, `cd_tether` and `g_earth` are unchanged. `se.v_wind_tether`
+and the anchor distance may vary afterwards; [`steady_state`](@ref) passes both to the
+model as parameters.
 """
 function build(se; p1, p2, POS0, VEL0)
     @named tether = Tether(; se, POS0, VEL0)
@@ -185,13 +192,15 @@ Solve `simple_sys` for its steady state with the lower anchor at `p2` and the in
 shape `POS0`, and return the resulting shape, a `3 × (se.segments+1)` matrix. Both end
 points must be fixed and `se.v_ro` must be zero.
 
-Nothing here is baked into the model: the anchor position is the parameter `end2.pos_fix`
-of [`FixedEnd`](@ref) and the shape is the initial value of the states `tether.pos_in` and
+Nothing that a sweep varies is baked into the model: the anchor position is the parameter
+`end2.pos_fix` of [`FixedEnd`](@ref), the wind is the parameter `tether.v_wind` of
+[`Tether`](@ref), and the shape is the initial value of the states `tether.pos_in` and
 `tether.vel_in`, so one `mtkcompile` serves a whole sweep.
 """
 function steady_state(se, simple_sys; p2, POS0)
     n = se.segments
     op = [simple_sys.end2.pos_fix  => collect(p2),
+          simple_sys.tether.v_wind => collect(se.v_wind_tether),
           simple_sys.tether.pos_in => POS0[:, 2:n],     # the inner particles are the states
           simple_sys.tether.vel_in => zeros(3, n-1)]
     prob = SteadyStateProblem(ODEProblem(simple_sys, op, (0.0, se.duration)))
@@ -249,8 +258,9 @@ end
 Measure one operating point of the compiled model `simple_sys`: move its lower anchor
 `l_tether` [m] below the upper one, solve for the steady state and evaluate the forces.
 
-`simple_sys` must have been built by [`build`](@ref) from the same settings `se`; only the
-distance between the anchors varies, which is a parameter.
+`simple_sys` must have been built by [`build`](@ref) from settings that agree with `se` in
+everything it bakes in; the anchor distance and `se.v_wind_tether` are parameters and may
+differ.
 
 Returns an [`OperatingPoint`](@ref).
 """
@@ -270,7 +280,8 @@ end
 Print one line describing the operating point `op`.
 """
 function report(op::OperatingPoint)
-    println("l0: $(rpad(round(op.l_unstretched, digits=3), 6)) m, " *
+    println("v_wind: $(rpad(round(op.v_wind, digits=1), 4)) m/s, " *
+            "l0: $(rpad(round(op.l_unstretched, digits=3), 6)) m, " *
             "l_tether: $(rpad(round(op.l_tether, digits=3), 6)) m, " *
             "compression: $(rpad(round(100*compression(op), digits=2), 6))%, " *
             "mean axial force: $(rpad(round(f_mean(op), digits=4), 12)) N, " *
@@ -300,48 +311,58 @@ function save_csv(ops; filename)
 end
 
 """
-    sweep_distance(se; rels=rels_around_zero())
+    sweep_distance(se; rels=rels_around_zero(), v_winds=[10.0])
 
-Point 1: keep the unstretched length `se.l0` and set the distance between the end points to
-`(1 + rel) * se.l0` for every `rel` in `rels`; a positive `rel` extends the tether, a
-negative one compresses it. See [`rels_around_zero`](@ref) for the default, non-uniform
-grid.
+The sweep both points are built from: keep the unstretched length `se.l0` and set the
+distance between the end points to `(1 + rel) * se.l0` for every `rel` in `rels` and every
+wind speed in `v_winds` [m/s]; a
+positive `rel` extends the tether, a negative one compresses it. See
+[`rels_around_zero`](@ref) for the default, non-uniform grid.
 
 The whole sweep runs on a single compiled model: the unstretched length is fixed by `se`,
-and the only thing that changes between operating points is the position of the lower
-anchor, which is the parameter `end2.pos_fix`.
+and the only things that change between operating points are the position of the lower
+anchor and the wind, which are the parameters `end2.pos_fix` and `tether.v_wind`. `se` is
+mutated to carry the current wind speed, which after [`build`](@ref) only feeds the
+parameter and the post-processing of [`segment_forces`](@ref), not the model itself.
 
 An operating point whose steady state solver fails is reported and skipped, so that one bad
 point does not abort the whole sweep.
 
 Returns the vector of [`OperatingPoint`](@ref)s.
 """
-function sweep_distance(se; rels=rels_around_zero())
+function sweep_distance(se; rels=rels_around_zero(), v_winds=[10.0])
     p1 = [0.0, 0.0, 0.0]
     p2 = [0.0, 0.0, -se.l0]
     POS0, VEL0 = initial_shape(se; p1, p2, bow=1e-3*se.l0)
     simple_sys = build(se; p1, p2, POS0, VEL0)   # the only mtkcompile of this sweep
     ops = OperatingPoint[]
-    for rel in rels
-        try
-            op = equilibrium(se, simple_sys, (1 + rel) * se.l0)
-            report(op)
-            push!(ops, op)
-        catch e
-            @warn "no steady state for rel=$rel" exception=e
+    for v_wind in v_winds
+        se.v_wind_tether = [v_wind, 0.0, 0.0]
+        for rel in rels
+            try
+                op = equilibrium(se, simple_sys, (1 + rel) * se.l0)
+                report(op)
+                push!(ops, op)
+            catch e
+                @warn "no steady state for v_wind=$v_wind m/s, rel=$rel" exception=e
+            end
         end
     end
     ops
 end
 
 """
-    sweep_lengths(; l_unstretched=[1,3,10,30], ratios=ratios_around_one(), segments=6,
-                    v_wind=10.0)
+    sweep_lengths(; l_unstretched=[1,3,10,30], ratios=ratios_around_one(),
+                    v_winds=[10,20,30], segments=6)
 
-Point 2: for every unstretched tether length `l0` in `l_unstretched`, vary the ratio
-`l_tether_unstretched / l_tether` over `ratios`, i.e. from extension (ratio < 1) to
-compression (ratio > 1); see [`ratios_around_one`](@ref) for the default, non-uniform grid.
-The tether always has `segments` segments.
+Points 2 and 3: for every unstretched tether length `l0` in `l_unstretched` and every wind
+speed in `v_winds` [m/s], vary the ratio `l_tether_unstretched / l_tether` over `ratios`,
+i.e. from extension (ratio < 1) to compression (ratio > 1); see
+[`ratios_around_one`](@ref) for the default, non-uniform grid. The tether always has
+`segments` segments.
+
+The wind is a parameter of the model, so all wind speeds of one length share its compiled
+system; only the length itself costs an `mtkcompile`.
 
 It is the unstretched length that is held at 1, 3, 10 and 30 m here, and the distance
 `l_tether = l0 / ratio` between the end points that varies: the unstretched length is baked
@@ -353,13 +374,13 @@ Returns the vector of [`OperatingPoint`](@ref)s of all lengths, in the order the
 measured.
 """
 function sweep_lengths(; l_unstretched=[1.0, 3.0, 10.0, 30.0], ratios=ratios_around_one(),
-                         segments=6, v_wind=10.0)
+                         v_winds=[10.0, 20.0, 30.0], segments=6)
     ops = OperatingPoint[]
     for l0 in l_unstretched
         println("--- l_tether_unstretched = $l0 m ---")
-        se = compression_settings(; segments, l0, v_wind)
+        se = compression_settings(; segments, l0, v_wind=first(v_winds))
         # l_tether = l0 / ratio, so the relative extension of the distance is 1/ratio - 1
-        append!(ops, sweep_distance(se; rels=1 ./ ratios .- 1))
+        append!(ops, sweep_distance(se; rels=1 ./ ratios .- 1, v_winds))
     end
     ops
 end
@@ -402,7 +423,9 @@ end
     plot_lengths(ops; min_force=1e-4)
 
 Plot the result of [`sweep_lengths`](@ref): the magnitude of the mean axial force over the
-relative compression, on a logarithmic axis, one curve per tether length.
+relative compression, on a logarithmic axis, one panel per wind speed and one curve per
+tether length. All panels share their axes, so the effect of the wind can be read off by
+comparing them.
 
 The magnitude is plotted so that a sign change cannot break the logarithmic axis: a curve
 that dives towards the clamp `min_force` [N] is a force that passes through zero, which is
@@ -410,20 +433,31 @@ exactly what the plot is meant to reveal (`report_sign` says whether that happen
 `MakieControlPlots` has no logarithmic y axis, so the figure is built with Makie directly.
 """
 function plot_lengths(ops; min_force=1e-4)
+    v_winds = sort(unique(op.v_wind for op in ops))
+    l0s     = unique(op.l_unstretched for op in ops)
     fig = Figure()
-    ax = Axis(fig[1, 1]; xlabel="relative compression [%]",
-              ylabel="|mean axial force| [N]", yscale=log10,
-              title="Equilibrium force over tether length, " *
-                    "$(first(ops).v_wind) m/s wind, no gravity")
-    for l0 in unique(op.l_unstretched for op in ops)
-        sel = sort(filter(op -> op.l_unstretched == l0, ops), by=compression)
-        X = [100 * compression(op) for op in sel]
-        # log10(0) is -Inf and would break the axis, so clamp the magnitude from below
-        Y = [max(abs(f_mean(op)), min_force) for op in sel]
-        lines!(ax, X, Y; label="l_tether_unstretched = $l0 m")
-        scatter!(ax, X, Y; markersize=6)
+    axs = Axis[]
+    for (row, v_wind) in pairs(v_winds)
+        ax = Axis(fig[row, 1]; yscale=log10,
+                  ylabel="|mean axial force| [N]\nat $(v_wind) m/s",
+                  xlabel=row == length(v_winds) ? "relative compression [%]" : "",
+                  title=row == 1 ? "Equilibrium force over tether length and wind speed, " *
+                                   "no gravity" : "")
+        for l0 in l0s
+            sel = sort(filter(op -> op.v_wind == v_wind && op.l_unstretched == l0, ops),
+                       by=compression)
+            isempty(sel) && continue
+            X = [100 * compression(op) for op in sel]
+            # log10(0) is -Inf and would break the axis, so clamp the magnitude from below
+            Y = [max(abs(f_mean(op)), min_force) for op in sel]
+            lines!(ax, X, Y; label="l_tether_unstretched = $l0 m")
+            scatter!(ax, X, Y; markersize=6)
+        end
+        row == 1 && axislegend(ax; position=:rb)
+        push!(axs, ax)
     end
-    axislegend(ax; position=:rb)
+    linkaxes!(axs...)                        # same scale everywhere, so the panels compare
+    foreach(ax -> hidexdecorations!(ax; grid=false), axs[1:end-1])
     display_if_interactive(fig)
     fig
 end
@@ -440,7 +474,7 @@ Returns `(se, ops)`.
 function main(; segments=6, l_seg=1.0, v_wind=10.0, rels=rels_around_zero())
     se = compression_settings(; segments, l0=segments*l_seg, v_wind)
     t0 = time_ns()
-    ops = sweep_distance(se; rels)
+    ops = sweep_distance(se; rels, v_winds=[v_wind])
     println("Elapsed time: $(round((time_ns()-t0)/1e9, digits=1)) s for $(length(ops)) operating points")
     println("Result written to: ", save_csv(ops; filename=joinpath("output", "compression_force.csv")))
     plot_distance(se, ops)
@@ -470,18 +504,20 @@ function report_sign(ops)
 end
 
 """
-    main2(; l_unstretched=[1,3,10,30], ratios=ratios_around_one(), segments=6, v_wind=10.0)
+    main2(; l_unstretched=[1,3,10,30], ratios=ratios_around_one(), v_winds=[10,20,30],
+            segments=6)
 
-Point 2: sweep the strain for each of the unstretched tether lengths `l_unstretched`, plot
-the magnitude of the mean axial force on a logarithmic axis and write the operating points
-to `output/compression_force_vs_length.csv`.
+Points 2 and 3: sweep the strain for each of the unstretched tether lengths `l_unstretched`
+and each of the wind speeds `v_winds`, plot the magnitude of the mean axial force on a
+logarithmic axis, one panel per wind speed, and write the operating points to
+`output/compression_force_vs_length.csv`.
 
 Returns the vector of [`OperatingPoint`](@ref)s.
 """
 function main2(; l_unstretched=[1.0, 3.0, 10.0, 30.0], ratios=ratios_around_one(),
-                 segments=6, v_wind=10.0)
+                 v_winds=[10.0, 20.0, 30.0], segments=6)
     t0 = time_ns()
-    ops = sweep_lengths(; l_unstretched, ratios, segments, v_wind)
+    ops = sweep_lengths(; l_unstretched, ratios, v_winds, segments)
     println("Elapsed time: $(round((time_ns()-t0)/1e9, digits=1)) s for $(length(ops)) operating points")
     println("Result written to: ",
             save_csv(ops; filename=joinpath("output", "compression_force_vs_length.csv")))

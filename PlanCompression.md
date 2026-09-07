@@ -12,6 +12,8 @@ l_tether is the distance between the first and the last point, and vary the rati
 l_tether_unstretched / l_tether from 0.99 (1% extension) to 1.10 (10% compression)?
 Furthermore, the plot shall use a logarithmic axis for the force.
 
+3. can you extend the results from step 2. by running the same tests at 20 m/s wind and 30 m/s wind
+
 ### Status
 
 Both points are implemented in [examples/test_compression.jl](examples/test_compression.jl)
@@ -21,11 +23,13 @@ and the script is reachable from `examples/menu.jl`.
   unstretched length on the non-uniform grid `rels_around_zero`. Plots `|segment force|`
   for every segment and `|anchor force|` for both anchors over the relative extension,
   both with a logarithmic y axis.
-- `main2()` (point 2): the same sweep for the unstretched lengths 1, 3, 10 and 30 m, with
-  `l_tether_unstretched / l_tether` swept over 0.99 … 1.10, always with 6 segments. Plots
-  `|mean axial force|` over the relative compression with a logarithmic y axis, one curve
-  per length. The ratio grid (`ratios_around_one`) is geometric in the distance from one,
-  not uniform — see below.
+- `main2()` (points 2 and 3): the same sweep for the unstretched lengths 1, 3, 10 and 30 m
+  and the wind speeds 10, 20 and 30 m/s, with `l_tether_unstretched / l_tether` swept over
+  0.99 … 1.10, always with 6 segments — 168 operating points. Plots `|mean axial force|`
+  over the relative compression with a logarithmic y axis, one panel per wind speed and one
+  curve per length, all panels sharing their axes so the wind can be read off by comparing
+  them. The ratio grid (`ratios_around_one`) is geometric in the distance from one, not
+  uniform — see below.
 
   It is the **unstretched** length that is held at 1, 3, 10 and 30 m, and the distance
   `l_tether = l0 / ratio` between the end points that varies, not the other way round. The
@@ -59,11 +63,16 @@ Open questions and decisions:
 - No gravity means the buckled shape is an unstable equilibrium of the spring forces alone,
   so the steady state solver is seeded with a half sine bow in the wind direction whose
   amplitude takes up the slack exactly (`bow_amplitude`).
-- `FixedEnd` in `src/TetherComponent.jl` now holds its node at the position of the
-  parameter `pos_fix` rather than at a literal, so a whole strain sweep runs on one
-  compiled model: only `end2.pos_fix` and the initial states `tether.pos_in` / `vel_in`
-  change between operating points. A full run of both points is 5 `mtkcompile` calls, not
-  70. The default is still the `pos0` that was passed in, so nothing else changes.
+- Two things in `src/TetherComponent.jl` became parameters, so that a whole strain and wind
+  sweep runs on one compiled model: `FixedEnd` holds its node at the position of `pos_fix`
+  rather than at a literal, and the wind of `Tether` is `v_wind` rather than
+  `se.v_wind_tether`. Only those two, plus the initial states `tether.pos_in` / `vel_in`,
+  change between operating points, so the whole run is 5 `mtkcompile` calls for its 182
+  operating points. Both parameters still default to what was passed in, so nothing else
+  changes.
+- Only the unstretched length still forces a rebuild, because `l_spring(se)` puts `se.l0`
+  into the equations as a literal. That is why point 2 holds `l_tether_unstretched` fixed
+  and varies the distance, and it is the obvious next parameter if more lengths are wanted.
 
 ### First results (point 1, 6 x 1 m, 10 m/s)
 
