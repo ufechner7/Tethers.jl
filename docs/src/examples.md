@@ -77,7 +77,7 @@ include("src/RunTether.jl")
 ```
 This will install Python, Matplotlib and Assimulo and execute the script `Tether_01.py`.
 
-**Python code:** [Tether_01.py](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_01.py)
+**Python code:** [Tether_01.py](https://github.com/ufechner7/Tethers.jl/blob/main/examples/python/Tether_01.py)
 
 If you compare the Python and the Julia scripts you can see that:
 - the Julia script is shorter and easier to read
@@ -120,7 +120,7 @@ eqs = vcat(D.(pos)      ~ vel,
            acc          ~ G_EARTH + spring_force/mass)
 ```
 
-The same in Python: **Python code:** [Tether_03.py](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_03.py). 
+The same in Python: **Python code:** [Tether_03.py](https://github.com/ufechner7/Tethers.jl/blob/main/examples/python/Tether_03.py). 
 
 ### Using a callback
 By using a callback to detect exactly when the transition from a stiff tether segment to a loose
@@ -167,7 +167,7 @@ and the following methods:
             if solver.sw[0]:       # If the switch is True the pendulum bounces
                 print(solver.t)
 ```
-**Example:** [Tether_03b.py](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_03b.py).  
+**Example:** [Tether_03b.py](https://github.com/ufechner7/Tethers.jl/blob/main/examples/python/Tether_03b.py).  
 As you can see, logging of calculated variables is not
 possible with Assimulo (easy with ModelingToolkit in Julia). You need to re-calculate them
 after the simulation.
@@ -253,7 +253,7 @@ we set its acceleration to zero.
 
 **Julia code:** [Tether_05.jl](https://github.com/ufechner7/Tethers.jl/blob/main/examples/Tether_05.jl)
  
-**Python code:** [Tether_05.py](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_05.py)
+**Python code:** [Tether_05.py](https://github.com/ufechner7/Tethers.jl/blob/main/examples/python/Tether_05.py)
 
 Finally, in this example, we plot the result dynamically as 2D video. Screenshot:
 
@@ -280,7 +280,7 @@ where `L0` is the unstretched length of the complete tether at $t=0$.
 The IDA solver, used for Python has a very high numerical damping. Therefore we had to multiply
 the damping coefficient with a factor of $0.045$ to achieve a more-or-less realistic result.
 
-**Python code:** [Tether_06.py](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_06.py)
+**Python code:** [Tether_06.py](https://github.com/ufechner7/Tethers.jl/blob/main/examples/python/Tether_06.py)
 
 ### Refactoring the code, add a Settings struct and splitting it into functions
 **Julia code:** [Tether_06b.jl](https://github.com/ufechner7/Tethers.jl/blob/main/examples/Tether_06b.jl).

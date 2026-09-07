@@ -89,7 +89,7 @@ include("src/RunTether_01.jl")
 
 This will install Python, Matplotlib and Assimulo and execute the script `Tether_01.py`.
 
-**Python code:** [Tether_01.py](https://github.com/ufechner7/Tethers.jl/blob/main/src/Tether_01.py)
+**Python code:** [Tether_01.py](https://github.com/ufechner7/Tethers.jl/blob/main/examples/python/Tether_01.py)
 
 **HINT**  
 You get a menu from which you can run any of the Python examples by typing
