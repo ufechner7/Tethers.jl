@@ -145,7 +145,15 @@ if [ -f "Manifest.toml" ]; then
     echo "Renamed Manifest.toml to $VERSIONED_MANIFEST"
 fi
 
-# Copy the versioned manifest to docs before instantiating it (Julia 1.11 only)
+# Julia 1.11's Pkg does not understand the root [workspace] section, so examples/, test/
+# and docs/ are resolved as fully independent projects there instead of sharing the root
+# manifest (Julia 1.12 shares the manifest natively and needs none of this).
+#
+# docs/ has a small, non-conflicting dependency set, so seeding it from the pinned root
+# manifest keeps versions aligned with root and speeds up its resolve. examples/ and test/
+# pull in a much larger, disjoint dependency tree (e.g. OrdinaryDiffEq, GLMakie); seeding
+# them the same way fixes root's leftover transitive versions in place and can make their
+# resolve unsatisfiable, so they are left to resolve fresh instead.
 if [[ $julia_major == "1.11" ]] && [ -f "$VERSIONED_MANIFEST" ]; then
     cp "$VERSIONED_MANIFEST" "docs/Manifest-v1.11.toml"
     echo "Copied $VERSIONED_MANIFEST to docs/Manifest-v1.11.toml"
@@ -153,6 +161,12 @@ fi
 
 echo "Instantiating docs subproject..."
 julia --project=docs -e 'using Pkg; Pkg.resolve(); Pkg.instantiate(); Pkg.precompile()'
+
+echo "Instantiating examples subproject..."
+julia --project=examples -e 'using Pkg; Pkg.resolve(); Pkg.instantiate(); Pkg.precompile()'
+
+echo "Instantiating test subproject..."
+julia --project=test -e 'using Pkg; Pkg.resolve(); Pkg.instantiate(); Pkg.precompile()'
 
 echo "Precompiling..."
 julia --project -e 'using Pkg; Pkg.precompile()'

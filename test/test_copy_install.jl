@@ -1,5 +1,5 @@
 using Test
-using Tethers: copy_examples, copy_bin, copy_files, install_examples
+using Tethers: copy_examples, copy_bin, copy_files, install_examples, example_packages
 
 pkg_dir = dirname(@__DIR__)
 
@@ -31,10 +31,24 @@ end
         cd(dir) do
             copy_examples()
             @test isdir("examples")
-            src_files = readdir(joinpath(pkg_dir, "examples"))
-            @test sort(readdir("examples")) == sort(src_files)
+            copied = readdir("examples")
+            @test "Project.toml" ∉ copied
+            @test !any(f -> startswith(f, "Manifest"), copied)
+            src_files = filter(readdir(joinpath(pkg_dir, "examples"))) do file
+                file != "Project.toml" && !startswith(file, "Manifest")
+            end
+            @test sort(copied) == sort(src_files)
         end
     end
+end
+
+@testset "example_packages" begin
+    pkgs = example_packages()
+    @test "Tethers" ∉ pkgs
+    @test "LinearAlgebra" ∉ pkgs
+    @test "ModelingToolkit" ∈ pkgs
+    @test "GLMakie" ∈ pkgs
+    @test length(pkgs) == length(unique(pkgs))
 end
 
 @testset "copy_bin" begin
@@ -56,7 +70,13 @@ end
             install_examples(false)
             @test isdir("examples")
             @test isdir("bin")
-            @test sort(readdir("examples")) == sort(readdir(joinpath(pkg_dir, "examples")))
+            copied = readdir("examples")
+            @test "Project.toml" ∉ copied
+            @test !any(f -> startswith(f, "Manifest"), copied)
+            src_files = filter(readdir(joinpath(pkg_dir, "examples"))) do file
+                file != "Project.toml" && !startswith(file, "Manifest")
+            end
+            @test sort(copied) == sort(src_files)
             @test !any(f -> endswith(f, ".so"), readdir("bin"))
         end
     end
