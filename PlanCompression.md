@@ -240,3 +240,185 @@ about 19% of the span and both the parabola and the "drag is uniform along the c
 assumption start to strain — the model's drag uses the component perpendicular to each
 segment, which falls off as the end segments tilt. The residual is one-sided
 (`-0.61% … 0.00%`), so it is a systematic shortfall of the approximation, not scatter.
+
+## Step three: Use the formula as the local force law of a dynamic model
+
+[examples/Tether_07b.jl](examples/Tether_07b.jl) is [examples/Tether_07.jl](examples/Tether_07.jl)
+with one change: the hand-tuned nonlinear spring (1% stiffness for `l < l0`) is replaced by
+`analytic_force`, called per segment and wrapped in `@register_symbolic` so it can appear in
+the ModelingToolkit equations. `hooke_force` and `damping_factor` were added to
+[src/analytic_force.jl](src/analytic_force.jl) alongside it and are exported.
+
+**Status: physically correct, but 20-45x slower than Tether_07 and fragile. Not finished.**
+
+### `segments` must be `Inf`, not `1`
+
+The first attempt passed `segments=1`, reasoning that a single straight segment cannot bow.
+That is wrong twice over. It kills the sag term (`1 - 1/1² = 0`), collapsing the formula to a
+bare `max(0, EA ε)` with a discontinuous derivative; and it double-counts nothing, because
+one segment of the model is a piece of *real* rope between two nodes and that piece does bow
+under the wind. The `1 - 1/n²` correction describes how a *discretised* tether under-sags
+relative to the smooth curve, which is not what a single physical segment does. The continuum
+limit is the right local law, and it is what keeps the force smooth and strictly positive.
+
+### Two conditioning bugs in `analytic_force`, both found this way
+
+Both were invisible to the sweep of step two, which only ever evaluates the formula. They
+only appear once a stiff solver needs `dF/dl` through ForwardDiff — and `@register_symbolic`
+makes the function opaque to ModelingToolkit, so nothing is caught at compile time; the NaN
+surfaces inside the solver as `ReturnCode.Unstable`.
+
+**1. The degenerate cubic at `a0 == 0`** (a single segment, or no transverse load). The cubic
+becomes `F²(F + a2) = 0`, a double root at zero. `D = q²/4 + p³/27` is *analytically* zero
+there, so its floating-point sign is pure round-off and chose at random between the two
+roots. Measured with `l_unstretched = 10`, `EA = 614600`, before the fix:
+
+| `l_segment` | 9.0 | 9.9 | 10.0 | 10.1 | 11.0 |
+|---|---|---|---|---|---|
+| `F` [N]     | **-61460** | 4.5e-13 | 0 | 6146 | 61460 |
+| `dF/dl`     | 61460 | **-Inf** | **NaN** | **NaN** | 61460 |
+
+A 61 kN *compression* force on a slack segment. Fixed by returning the physical root of the
+pair directly, `iszero(a0) && return max(-a2, zero(a2))`.
+
+**2. Catastrophic cancellation in Cardano.** `-q/2 ± sqrt(D)` cancels as `p -> 0`, which is
+exactly `a2 = 0`, i.e. the segment at its unstretched length. One of the two cube roots
+collapses onto zero, and `cbrt` has an infinite derivative there. With `segments=Inf`:
+
+| `l_segment` | 9.9 | 9.999 | 10.0 | 10.001 | 10.1 |
+|---|---|---|---|---|---|
+| `F` [N]  | 0.18877 | 1.88735 | 6.08866 | 61.5197 | 6146.0 |
+| `dF/dl`  | 0.9724 | 902.4 | **NaN** | 61341 | 61460 |
+
+Fixed by taking whichever sign *adds* rather than subtracts and recovering the second root of
+the pair from `u v = -p/3`. This is a pure conditioning change: over 10102 random operating
+points in the well-conditioned region the new and old forms agree to **3.2e-10** relative,
+and `dF/dl` at `l = 10.0` is now 20487, finite and consistent with its neighbours.
+
+Any future user of `analytic_force` inside a solver depends on both fixes.
+
+### `damping_factor`: fading the axial damping with the tension
+
+A slack cable does not damp axial motion either, so leaving the damper at full strength keeps
+pumping force into a segment that carries none. `damping_factor` is
+
+    ζ = min(1, analytic_force / |hooke_force|)
+
+`hooke_force` is the same segment under plain Hooke's law with constant stiffness,
+`EA (l - l0)/l0`, which unlike a real tether also pushes back in compression. The cap is not
+arbitrary: `ΔS >= 0` in the derivation above *is* `F >= F_hooke`, so in tension the quotient
+is always >= 1 and the damping is left untouched; and it removes the singularity at `l == l0`
+where `F_hooke` is zero.
+
+This mattered more than expected. Without it the model is not merely less accurate, it is
+**unstable** — and with it the end state moves from -53.08 m to -69.41 m, i.e. into agreement
+with Tether_07:
+
+| | `pos_z(10s)` | `vel_z(10s)` | `nf` | solve |
+|---|---|---|---|---|
+| Tether_07 (1% hack)      | -69.348 | -2.036 | 1995 | 3.3 ms |
+| Tether_07b, no fade      | -53.080 | -0.482 | 1800 | 3.1 ms |
+| Tether_07b, with fade    | -69.414 | -2.047 | 59041 | 148 ms |
+
+The spurious damper on slack segments was dragging the tether into the collapsed -53 m
+shape. All six stiff solvers tried, at every tolerance that converges, agree on
+`pos_z(10s) ∈ [-69.42, -69.36]`, so the answer is converged and solver-independent.
+
+### The performance problem, and where it comes from
+
+**This reel-out case is slack everywhere, for its whole duration.** At 2 m/s the tether is
+paid out faster than it falls, so every segment bows. Sampled strains
+`ε = (len - l_spring)/l_spring` and the resulting `ζ`, segments 1..5:
+
+| t [s] | ε | ζ |
+|---|---|---|
+| 0.001 | 4.0e-7 … -1.7e-5 | 1.0 … 0.35 |
+| 0.05  | -8.3e-5 … -2.1e-3 | 0.033 … 2.4e-4 |
+| 2.0   | -9.7e-6 … -8.3e-3 | 0.51 … 9.4e-5 |
+| 8.0   | -4.8e-5 … -3.6e-3 | 0.12 … 2.6e-4 |
+
+So the fade does not merely disable damping on the occasional slack segment — it removes
+axial damping from the **entire simulation**. Combined with the second effect, that the
+analytic law is far stiffer than the 1% hack in exactly that slack regime (tangent stiffness
+~20000 N/m near `ε = 0` against a flat 615 N/m), the eigenvalues of the Jacobian at `t = 5 s`
+tell the whole story. `f` and `ζ_mode` are frequency and damping ratio of the fastest
+oscillatory mode:
+
+| configuration | `f` | `ζ_mode` | steps | `nf` | solve |
+|---|---|---|---|---|---|
+| Tether_07 (1% hack)          | **1.9 Hz** | **0.83** | 341 | 1995 | 3.3 ms |
+| 07b, `ζ` as above            | **83.9 Hz** | **0.093** | 17513 | 59041 | 148 ms |
+| 07b, `sqrt(ζ)`               | 35.5 Hz | 0.319 | 8671 | 34697 | 84 ms |
+| 07b, stiffness-proportional  | 83.2 Hz | 0.085 | 18431 | 60307 | 149 ms |
+| 07b, `sqrt` of that          | 110.5 Hz | 0.167 | 9211 | 35174 | 88 ms |
+| 07b, `segments=1` tension    | 141.1 Hz | 0.165 | 14524 | 50241 | 113 ms |
+
+45x more cycles to resolve, each with 9x less damping. The step count tracks `f/ζ_mode`
+almost exactly.
+
+### The 2.4x that is available, and why `sqrt` is principled
+
+Fading with `sqrt(ζ)` rather than `ζ` is not a fudge. For a mode with stiffness `k`,
+`ζ_mode = c/(2 sqrt(km))`, so `c ∝ sqrt(k)` preserves the **damping ratio** while `c ∝ k`
+does not. Constant-modal-damping is the standard treatment of a variable-stiffness element,
+it stays parameter-free, and it measurably restores `ζ_mode` to Tether_07's regime. With
+TRBDF2 instead of FBDF:
+
+| solver | `ζ` | `sqrt(ζ)` |
+|---|---|---|
+| FBDF     | 148 ms | 84 ms |
+| TRBDF2   | 89 ms  | **62 ms** |
+| QNDF     | 141 ms | 65 ms |
+| KenCarp4 | 157 ms | 78 ms |
+
+`Rodas5P` 281 ms, `KenCarp47` 259 ms, `Rodas4P` 300 ms — all far worse. Best combination is
+**TRBDF2 + `sqrt(ζ)` at 62 ms**, still 19x Tether_07.
+
+### Ruled out, with numbers
+
+- **Tolerance.** No win, and non-monotonic: `1e-5` goes **Unstable** while both `1e-4`
+  (103 ms) and `1e-6` (148 ms) succeed. Same for TRBDF2.
+- **Fade shape.** Stiffness-proportional damping — `dF/dL` in closed form by implicit
+  differentiation of the cubic, `dF/dL · L0/EA = (F² + cn w² L²/8) / (F (3F + 2a2))` with
+  `a2 = EA(1 - L/L0)` — is indistinguishable from the force quotient: 60307 vs 59041 `nf`.
+- **More damping makes it worse, not better.** A floor of 0.01 on `ζ` is fine (52974 `nf`),
+  0.05 and 0.2 are **Unstable**, and so are exponents <= 0.25. A deeply slack segment carries
+  ~0.2 N of tension; 0.05 · 47.3 Ns/m against 1 m/s is 2.4 N, so it becomes a **strut** and
+  pushes. This is the bind: deeply slack segments must have almost no damping or they act as
+  struts, while near-taut segments need damping to keep the 84 Hz modes tractable.
+- **Clamping the total axial force at zero** (unilateral Kelvin-Voigt, `max(0, F + c v)`):
+  **Unstable** with full damping, and 177 ms with the fade — worse than the fade alone.
+- **`segments=1` for the tension with the smooth continuum fade for the damping**, on the
+  theory that sub-segment sag double-counts the node-level bowing: works, `pos_z = -69.46`,
+  but 113 ms. No win.
+
+### Fragility — arguably the bigger problem
+
+Two signs that the formulation sits on a marginal-stability edge, where a parameter change
+could tip it over silently:
+
+- `ReturnCode.Unstable` at `abstol = reltol = 1e-5`, while both `1e-4` and `1e-6` succeed.
+- `ReturnCode.Unstable` at `t = 4.46` if the `dt = 0.02` initial-step hint is dropped from
+  `solve`. That run takes 9744 steps with `dt_min = 2.4e-13` at `t = 0` and 6697 of them
+  inside the first second — every segment starts exactly at `ε = 0`, on the sharpest part of
+  the law.
+
+The underlying reason is that `EA = 614600 N` while the actual tether loads here are ~6 N, so
+the whole simulation lives inside a strain band of ~1e-5 across which the tangent stiffness
+swings from ~1 N/m to 61460 N/m.
+
+### State of the code and the open decision
+
+[src/analytic_force.jl](src/analytic_force.jl) and [src/Tethers.jl](src/Tethers.jl) are in
+their final state — both conditioning fixes and both new functions are keepers regardless of
+what happens next.
+
+[examples/Tether_07b.jl](examples/Tether_07b.jl) still carries the experiment scaffolding
+used for the table above, all marked `EXPERIMENT`: settings `damp_mode` (`:ratio` / `:stiff` /
+`:none`), `damp_exp` (an MTK parameter, so it sweeps without recompiling), `clamp_axial`,
+`tension_segs`, and the function `seg_damping_stiff`. Defaults reproduce the 148 ms
+`pos_z = -69.414` run. This has to be stripped down to one configuration.
+
+Open: whether to take the 62 ms and accept 19x, or attack the fragility first. The remaining
+19x is not tuning — it is the cost of a constitutive law whose tangent stiffness varies by
+four orders of magnitude across the strain band this test case operates in.

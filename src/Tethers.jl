@@ -2,7 +2,8 @@ module Tethers
 
 using CondaPkg, Pkg
 
-export docu, display_if_interactive, install_examples, run_python, analytic_force
+export docu, display_if_interactive, install_examples, run_python, analytic_force,
+       hooke_force, damping_factor
 
 # the re-usable, composable tether component of example 10
 include("TetherComponent.jl")

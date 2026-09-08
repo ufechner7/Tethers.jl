@@ -44,13 +44,70 @@ function analytic_force(se; v_wind_perp, d_segment, l_unstretched, l_segment, se
     # F³ + a₂F² + a₀ = 0; a₁ vanishes, which is what makes the closed form short
     a2 = EA * (r - 1) / r
     a0 = -cn * EA * w^2 * l_segment^2 / (24r)
+    # `a0 == 0` -- a single segment (`cn == 0`), or no transverse load -- degenerates the
+    # cubic to F²(F + a2) = 0, a double root at zero. Both closed forms below break there:
+    # `D` is analytically zero, so its floating-point sign is pure round-off and decides at
+    # random between the two roots, and `sqrt`/`acos` at that point have an infinite
+    # derivative, which fills any ForwardDiff Jacobian with NaN. Return the elastic law
+    # directly instead: tension `-a2` while stretched, exactly zero once slack.
+    iszero(a0) && return max(-a2, zero(a2))
     p  = -a2^2/3
     q  = 2a2^3/27 + a0
     D  = q^2/4 + p^3/27
-    if D > 0            # one real root
-        return cbrt(-q/2 + sqrt(D)) + cbrt(-q/2 - sqrt(D)) - a2/3
+    if D >= 0           # one real root (or a repeated root at D == 0)
+        # `-q/2 ± sqrt(D)` cancels catastrophically as `p -> 0`, i.e. exactly where the
+        # segment sits at its unstretched length: one of the two cube roots collapses onto
+        # zero, where `cbrt` has an infinite derivative and fills a ForwardDiff Jacobian
+        # with NaN. So take whichever sign *adds* rather than subtracts, and recover the
+        # second root of the Cardano pair from the identity `u v = -p/3`.
+        u = cbrt(-q/2 + (q <= 0 ? sqrt(D) : -sqrt(D)))
+        v = iszero(u) ? zero(u) : -p/(3u)
+        return u + v - a2/3
     end                 # three real roots, the physical one is the positive one
+    # D < 0 forces p < 0 strictly, since p = -a2²/3 ≤ 0 always; so m below is never zero
     m  = 2sqrt(-p/3)
     th = acos(clamp(3q/(p*m), -1, 1))/3
     maximum(m*cos(th - 2π*k/3) - a2/3 for k in 0:2)
+end
+
+"""
+    hooke_force(se; d_segment, l_unstretched, l_segment)
+
+Axial force [N] of a segment under plain Hooke's law with a *constant* stiffness, tension
+positive: `EA (l_segment - l_unstretched) / l_unstretched`, with `EA` scaled to `d_segment`
+exactly as in [`analytic_force`](@ref).
+
+Unlike a real tether this reference spring also pushes back when it is compressed, so it is
+negative below the unstretched length. That is what makes it the yardstick
+[`damping_factor`](@ref) measures the slack-capable tether against.
+"""
+hooke_force(se; d_segment, l_unstretched, l_segment) =
+    se.c_spring * (d_segment/se.d_tether)^2 * (l_segment - l_unstretched) / l_unstretched
+
+"""
+    damping_factor(se; v_wind_perp, d_segment, l_unstretched, l_segment, segments=Inf)
+
+Fraction in `[0, 1]` of the nominal axial damping that a segment still carries: the quotient
+of [`analytic_force`](@ref) and `abs(`[`hooke_force`](@ref)`)`, capped at one.
+
+A slack cable does not damp axial motion, so the damper has to fade out together with the
+tension rather than being switched off by hand. While the segment is stretched the sag makes
+the analytical force the larger of the two -- `ΔS >= 0` in the derivation above is exactly
+`F >= F_hooke` -- so the quotient saturates at `1` and the damping is left untouched. Once
+the segment is shorter than its unstretched length `F_hooke` turns negative and its magnitude
+grows linearly, while the wind-driven `F` stays bounded, so the quotient, and with it the
+damping, decays smoothly to zero.
+
+The cap also removes the singularity at `l_segment == l_unstretched`, where `F_hooke` is zero.
+
+Note that this is smooth only as long as there *is* a transverse load to hold the slack
+segment in tension. With `segments=1` (or `v_wind_perp=0`) `analytic_force` is exactly
+`max(0, F_hooke)`, and the quotient degenerates to a hard `0`/`1` switch at the unstretched
+length.
+"""
+function damping_factor(se; v_wind_perp, d_segment, l_unstretched, l_segment, segments=Inf)
+    f  = analytic_force(se; v_wind_perp, d_segment, l_unstretched, l_segment, segments)
+    fh = abs(hooke_force(se; d_segment, l_unstretched, l_segment))
+    fh <= f && return one(f)    # also catches fh == 0 at l_segment == l_unstretched
+    f / fh
 end
