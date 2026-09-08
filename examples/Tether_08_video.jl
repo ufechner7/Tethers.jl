@@ -5,6 +5,7 @@
 # This example differs from Tether_08.jl in that the tether diameter is set to 12 mm
 # and that the size of the plot is twice as large (in pixels) as in Tether_08.jl.
 using ModelingToolkit, OrdinaryDiffEq, SteadyStateDiffEq, LinearAlgebra, Timers, Parameters, MakieControlPlots
+using OrdinaryDiffEqSDIRK: KenCarp4
 tic()
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using MakieControlPlots
