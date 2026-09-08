@@ -1,7 +1,6 @@
 # Example three: Falling mass, attached to non-linear spring without compression stiffness
 # with callback, initially moving upwards with 4 m/s.
-using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, MakieControlPlots
-using OrdinaryDiffEqRosenbrock: Rodas5
+using ModelingToolkit, OrdinaryDiffEqCore, OrdinaryDiffEqBDF, LinearAlgebra, MakieControlPlots
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using Tethers: display_if_interactive
 
@@ -47,8 +46,8 @@ end
 cb = ContinuousCallback(condition, affect!)
 
 prob = ODEProblem(simple_sys, nothing, tspan)
-sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts, callback = cb)
-@time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts, callback = cb)
+sol = solve(prob, FBDF(), dt=dt, abstol=tol, reltol=tol, saveat=ts, callback = cb)
+@time sol = solve(prob, FBDF(), dt=dt, abstol=tol, reltol=tol, saveat=ts, callback = cb)
 
 # plotting the result
 X = sol.t

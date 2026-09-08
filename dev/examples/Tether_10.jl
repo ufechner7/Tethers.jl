@@ -8,8 +8,7 @@
 # `main()`  reproduces example 8: one tether, first end fixed, second end free.
 # `main2()` re-uses the same component twice: two tethers of half the length, joined by a
 #           point mass, which is only possible because the component is composable.
-using ModelingToolkit, OrdinaryDiffEq, SteadyStateDiffEq, LinearAlgebra, Timers, Parameters, MakieControlPlots
-using OrdinaryDiffEqSDIRK: KenCarp4
+using ModelingToolkit, OrdinaryDiffEqCore, OrdinaryDiffEqBDF, SteadyStateDiffEq, LinearAlgebra, Timers, Parameters, MakieControlPlots
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using ADTypes: AutoFiniteDiff, AutoForwardDiff
 using Tethers: display_if_interactive
@@ -82,7 +81,7 @@ is zero.
 """
 function steady_state(se, simple_sys)
     prob = SteadyStateProblem(ODEProblem(simple_sys, nothing, (0.0, se.duration)))
-    sol = solve(prob, DynamicSS(KenCarp4(autodiff=AutoFiniteDiff())))
+    sol = solve(prob, DynamicSS(FBDF(autodiff=AutoFiniteDiff())))
     SciMLBase.successful_retcode(sol) ||
         error("Steady state solver failed with return code $(sol.retcode)!")
     # `DynamicSS` integrates the model until it stops changing, and `sol.original` is that

@@ -1,7 +1,6 @@
 # Example three: Falling mass, attached to non-linear spring without compression stiffness,
 # initially moving upwards with 4 m/s. Comparing results with and without callbacks.
-using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, MakieControlPlots
-using OrdinaryDiffEqRosenbrock: Rodas5
+using ModelingToolkit, OrdinaryDiffEqCore, OrdinaryDiffEqBDF, LinearAlgebra, MakieControlPlots
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using Tethers: display_if_interactive
 
@@ -51,11 +50,11 @@ function solve3(simple_sys, L0, V0; cb=true)
         end
         function affect!(integrator) end
         cb_ = ContinuousCallback(condition, affect!; interp_points=2)
-        solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts, callback = cb_)
-        @time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts, callback = cb_)
+        solve(prob, FBDF(), dt=dt, abstol=tol, reltol=tol, saveat=ts, callback = cb_)
+        @time sol = solve(prob, FBDF(), dt=dt, abstol=tol, reltol=tol, saveat=ts, callback = cb_)
     else
-        solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
-        @time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
+        solve(prob, FBDF(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
+        @time sol = solve(prob, FBDF(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
     end
     sol
 end

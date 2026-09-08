@@ -1,7 +1,6 @@
 # Tutorial example simulating a 3D mass-spring system with a nonlinear spring (no spring forces
 # for l < l_0), n tether segments, reel-in and reel-out and continues callbacks. 
-using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, Parameters, MakieControlPlots
-using OrdinaryDiffEqSDIRK: KenCarp4
+using ModelingToolkit, OrdinaryDiffEqCore, OrdinaryDiffEqBDF, LinearAlgebra, Timers, Parameters, MakieControlPlots
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using MakieControlPlots
 using ADTypes: AutoFiniteDiff
@@ -120,8 +119,8 @@ function simulate(se, simple_sys)
     ts    = 0:se.dt:se.duration
     prob = ODEProblem(simple_sys, nothing, tspan)
     solve_kwargs = (; dt=se.dt, abstol=tol, reltol=tol, saveat=ts)
-    sol = solve(prob, KenCarp4(autodiff=AutoFiniteDiff()); solve_kwargs...)
-    elapsed_time = @elapsed sol = solve(prob, KenCarp4(autodiff=AutoFiniteDiff()); solve_kwargs...)
+    sol = solve(prob, FBDF(autodiff=AutoFiniteDiff()); solve_kwargs...)
+    elapsed_time = @elapsed sol = solve(prob, FBDF(autodiff=AutoFiniteDiff()); solve_kwargs...)
     sol, elapsed_time
 end
 

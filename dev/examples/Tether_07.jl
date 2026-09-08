@@ -1,6 +1,6 @@
 # Tutorial example simulating a 3D mass-spring system with a nonlinear spring (1% stiffness
 # for l < l_0), n tether segments, tether drag and reel-in and reel-out. 
-using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, Parameters, MakieControlPlots
+using ModelingToolkit, OrdinaryDiffEqCore, OrdinaryDiffEqBDF, LinearAlgebra, Timers, Parameters, MakieControlPlots
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using MakieControlPlots
 using ADTypes: AutoForwardDiff
