@@ -13,14 +13,55 @@ if FAST
     push!(pkgs, :MakieControlPlots)
 end 
 
+function total_ram_swap_gb()
+    if Sys.iswindows()
+        # MEMORYSTATUSEX layout (x64): dwLength(u32), dwMemoryLoad(u32), then 7 x UInt64
+        buf = zeros(UInt8, 64)
+        unsafe_store!(Ptr{UInt32}(pointer(buf)), UInt32(64))
+        ok = ccall((:GlobalMemoryStatusEx, "kernel32"), stdcall, Cint, (Ptr{UInt8},), buf)
+        ok == 0 && error("GlobalMemoryStatusEx failed")
+        total_pagefile = unsafe_load(Ptr{UInt64}(pointer(buf) + 24)) # ullTotalPageFile: RAM + pagefile
+        total_pagefile / 1_073_741_824  # -> GiB
+    else
+        info = read("/proc/meminfo", String)
+        memtotal = parse(Int, match(r"MemTotal:\s+(\d+)", info).captures[1])   # kB
+        swaptotal = parse(Int, match(r"SwapTotal:\s+(\d+)", info).captures[1]) # kB
+        (memtotal + swaptotal) / 1_048_576  # -> GiB
+    end
+end
+
+let total = total_ram_swap_gb()
+    @info "Total RAM + swap: $(round(total; digits=1)) GB"
+    if total < 30
+        msg = "At least 30 GB of RAM + swap is recommended to create a system image, " *
+              "but only $(round(total; digits=1)) GB is available."
+        if Sys.iswindows()
+            # Windows' pagefile is commonly "System managed" and can grow on demand,
+            # so a low reading here isn't necessarily a hard limit.
+            @warn msg * " Windows may grow the pagefile automatically; increase it manually if the build fails."
+        else
+            error(msg * " Increase your swap file and retry.")
+        end
+    end
+
+    if haskey(ENV, "JULIA_IMAGE_THREADS")
+        @info "JULIA_IMAGE_THREADS already set to $(ENV["JULIA_IMAGE_THREADS"]), leaving as is"
+    else
+        # Linear interpolation: 1 thread at 30 GB, 8 threads at 40 GB (empirically the
+        # amount of memory each extra image-compilation thread needs), capped at 16 and
+        # at Julia's own default cap of CPU_THREADS / 2.
+        ideal = 1 + floor(Int, (total - 30) * 7 / 10)
+        threads = clamp(ideal, 1, 16)
+        threads = min(threads, max(1, Sys.CPU_THREADS ÷ 2))
+        ENV["JULIA_IMAGE_THREADS"] = string(threads)
+        @info "Setting JULIA_IMAGE_THREADS=$threads based on $(round(total; digits=1)) GB total memory"
+    end
+end
+
 GC.gc(true)
 let mem = Sys.free_memory() / 1024^2
     @info "Free memory: $(round(mem; digits=1)) MB"
-    if haskey(ENV, "JULIA_IMAGE_THREADS")
-        @info "JULIA_IMAGE_THREADS: $(ENV["JULIA_IMAGE_THREADS"])"
-    else
-        @info "JULIA_IMAGE_THREADS not defined!"
-    end
+    @info "JULIA_IMAGE_THREADS: $(ENV["JULIA_IMAGE_THREADS"])"
 end
 
 PackageCompiler.create_sysimage(
