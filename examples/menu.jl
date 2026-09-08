@@ -11,9 +11,12 @@ examples = [("Tether_01",  "include(\"Tether_01.jl\")",  "Falling mass thrown up
             ("Tether_06b", "include(\"Tether_06b.jl\")", "Reel-out tether, refactored with Settings"),
             ("Tether_06c", "include(\"Tether_06c.jl\")", "Reel-out tether with continuous callback"),
             ("Tether_07",  "include(\"Tether_07.jl\")",  "Segmented tether with aerodynamic drag"),
+            ("Tether_07b", "include(\"Tether_07b.jl\")", "Segment force from analytic_force"),
             ("Tether_08",  "include(\"Tether_08.jl\")",  "Tether with arbitrary/free endpoints"),
             ("Tether_09",  "include(\"Tether_09.jl\")",  "Labeled tether shape diagram for docs"),
-            ("Tether_10",  "include(\"Tether_10.jl\")",  "Re-usable tether component with two end points")]
+            ("Tether_10",  "include(\"Tether_10.jl\")",  "Re-usable tether component with two end points"),
+            ("test_compression", "include(\"test_compression.jl\")", "Equilibrium force of a compressed tether"),
+            ("plot_compression", "include(\"plot_compression.jl\")", "Replot the compression results from the CSV file")]
 
 name_width = maximum(length(name) for (name, _, _) in examples)
 options = [rpad(name, name_width) * "  " * descr for (name, _, descr) in examples]

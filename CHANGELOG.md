@@ -5,6 +5,7 @@
 - hand-coded, analytic Jacobians for the Python examples, replacing finite-difference Jacobians
 - test scripts for all tether examples (`test_tether_01.jl` .. `test_tether_08.jl`, `test_tether_10.jl`) that check that the Python and Julia implementations produce the same results
 - `test/test_copy_install.jl`, unit tests for `copy_files`, `copy_examples`, `copy_bin` and `install_examples`
+- `bin/create_pdf`, which renders a markdown document to PDF with pandoc and xelatex
 - `test/test_tether_component.jl`, unit tests for the re-usable tether component, checking its steady state, drag, catenary shape and compression stiffness against analytic results
 - `docs/julia_vs_python.md`, comparing the performance and code size of the Julia and Python implementations
 - `install_examples`, `copy_examples` and `copy_bin` functions in `Tethers.jl`, to install the example scripts and helper scripts (`bin/run_julia`, `bin/install`, `bin/create_sys_image`) into the current working directory, and optionally add the packages they need
@@ -19,6 +20,9 @@
 - `install_examples` no longer omits `Symbolics`, which several examples need directly
 - `copy_examples` no longer copies `examples/Project.toml` or leftover `Manifest*.toml` files into the destination directory
 #### Changed
+- the position of `FixedEnd` is now the parameter `pos_fix` instead of a literal, so that a compiled model can be re-solved for a different anchor position without calling `mtkcompile` again
+- the wind of `Tether` is now the parameter `v_wind` instead of a literal, so that a compiled model can be re-solved for a different wind speed without calling `mtkcompile` again
+- the tether cross section of `Tether` is now given by the parameters `d_tether`, `c_spring_unit`, `damping_unit` and `mass_per_m` instead of literals, so that a compiled model can be re-solved for a different tether diameter without calling `mtkcompile` again
 - renamed ODESystem to System
 - update the `create_sys_image` script; the GC heap size hint now scales with the available RAM instead of always being 8000M
 - switched the interactive plots from PyPlot/matplotlib to MakieControlPlots; removed the PyCall and Conda dependencies from `Project.toml` and the Conda/matplotlib setup from `bin/run_julia`

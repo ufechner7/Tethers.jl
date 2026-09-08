@@ -6,8 +6,9 @@
 # Components
 # ----------
 # - `Point3D`      : the connector; across variable `pos`, flow variable `force`
-# - `Tether`       : `segments` spring-damper segments with drag, two connectors `p1`, `p2`
-# - `FixedEnd`     : holds the point it is attached to at a fixed position
+# - `Tether`       : `segments` spring-damper segments with drag, two connectors `p1`, `p2`;
+#                    the wind and the tether cross section are parameters
+# - `FixedEnd`     : holds the point it is attached to at the position of a parameter
 # - `FreeEnd`      : a point mass, falling under gravity and the tether forces
 #
 # Connection rule
@@ -159,6 +160,13 @@ all particles; they default to the straight line between the connector defaults 
 
 The particle positions are available as the array variable `pos(t)[1:3, 1:se.segments+1]`,
 the velocities as `vel`, and the segment lengths as `len(t)[1:se.segments]`.
+
+The wind and the tether cross section are parameters, defaulting to what `se` says, so that
+a compiled model can be re-solved for a different wind speed or tether diameter without
+calling `mtkcompile` again; pass them in the operating point map of the `ODEProblem`:
+`v_wind` [m/s], `d_tether` [mm], `c_spring_unit` [N], `damping_unit` [Ns] and `mass_per_m`
+[kg/m]. The last four all follow from the diameter, so set them together, from an `se` that
+[`set_diameter!`](@ref) has updated.
 """
 @component function Tether(; name, se, POS0=nothing, VEL0=nothing)
     n = se.segments
@@ -172,6 +180,14 @@ the velocities as `vel`, and the segment lengths as `len(t)[1:se.segments]`.
     @named p2 = Point3D(pos0=POS0[:, end])
 
     @parameters rel_compression_stiffness = se.rel_compression_stiffness
+    @parameters v_wind[1:3] = se.v_wind_tether
+    # the tether cross section enters in four places; each of them is a parameter with the
+    # value `se` gives it, so that a diameter sweep does not need a new `mtkcompile`.
+    # `set_diameter!` stays the one place that knows how the constants scale with `d`.
+    @parameters d_tether = se.d_tether            # [mm],   drag area
+    @parameters c_spring_unit = se.c_spring       # [N],    unit spring constant
+    @parameters damping_unit = se.damping         # [Ns],   unit damping constant
+    @parameters mass_per_m = mass_per_meter(se)   # [kg/m], mass per meter
     @variables begin
         # the states of this component: the inner particles 2..n
         pos_in(t)[1:3, 1:n-1] = POS0[:, 2:n]
@@ -220,10 +236,10 @@ the velocities as `vel`, and the segment lengths as `len(t)[1:se.segments]`.
                                      * (rel_compression_stiffness+(len[i] > l_seg)),
                spring_force[:, i] ~ (c_spr[i] * (len[i] - l_seg)
                                      + damping * spring_vel[i]) * unit_vector[:, i],
-               v_apparent[:, i]   ~ se.v_wind_tether .- (vel[:, i] + vel[:, i+1])/2,
+               v_apparent[:, i]   ~ collect(v_wind) .- (vel[:, i] + vel[:, i+1])/2,
                v_app_perp[:, i]   ~ v_apparent[:, i] - (v_apparent[:, i] ⋅ unit_vector[:, i]) .* unit_vector[:, i],
                norm_v_app[i]      ~ norm(v_app_perp[:, i]),
-               half_drag_force[:, i] ~ 0.25 * se.rho * se.cd_tether * norm_v_app[i] * (len[i]*se.d_tether/1000.0)
+               half_drag_force[:, i] ~ 0.25 * se.rho * se.cd_tether * norm_v_app[i] * (len[i]*d_tether/1000.0)
                                         * v_app_perp[:, i]]
         eqs2 = vcat(eqs2, reduce(vcat, eqs))
     end
@@ -248,9 +264,9 @@ the velocities as `vel`, and the segment lengths as `len(t)[1:se.segments]`.
 
     # scalar equations
     eqs = [l_seg             ~ l_spring(se),
-           c_spring          ~ se.c_spring / l_seg,
-           m_tether_particle ~ mass_per_meter(se) * l_seg,
-           damping           ~ se.damping  / l_seg]
+           c_spring          ~ c_spring_unit / l_seg,
+           m_tether_particle ~ mass_per_m * l_seg,
+           damping           ~ damping_unit / l_seg]
     eqs2 = vcat(eqs2, reduce(vcat, eqs))
 
     # Only `pos_in` and `vel_in` are states and get an initial value (see the `@variables`
@@ -294,12 +310,18 @@ end
 """
     FixedEnd(; name, pos0)
 
-Holds the node it is connected to at the fixed position `pos0`, e.g. a winch or a ground
-anchor. The force needed to do so is the force flowing through its connector `flange`.
+Holds the node it is connected to at the position of the parameter `pos_fix`, which
+defaults to `pos0`, e.g. a winch or a ground anchor. The force needed to do so is the force
+flowing through its connector `flange`.
+
+The position is a parameter and not a literal, so that a compiled model can be re-solved
+for a different anchor position without calling `mtkcompile` again; pass
+`sys.<name>.pos_fix => [x, y, z]` in the operating point map of the `ODEProblem`.
 """
 @component function FixedEnd(; name, pos0)
     @named flange = Point3D(pos0=pos0)
-    eqs = collect(flange.pos .~ collect(pos0))
+    @parameters pos_fix[1:3] = collect(pos0)
+    eqs = collect(flange.pos .~ collect(pos_fix))
     System(eqs, t; name, systems=[flange])
 end
 

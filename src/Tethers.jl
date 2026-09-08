@@ -2,10 +2,15 @@ module Tethers
 
 using CondaPkg, Pkg
 
-export docu, display_if_interactive, install_examples, run_python
+export docu, display_if_interactive, install_examples, run_python, analytic_force,
+       hooke_force, damping_factor
 
 # the re-usable, composable tether component of example 10
 include("TetherComponent.jl")
+
+# the analytical force formula of PlanCompression.md, shared by plot_compression.jl and
+# test_compression.jl
+include("analytic_force.jl")
 
 LAUNCH_BROWSER = true
 
