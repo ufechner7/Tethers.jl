@@ -51,11 +51,11 @@ cd test
 julia --project="."
 ```
 
-Then add `Tethers` from Julia's package manager:
+Then add `Tethers`. It is not registered yet, so install the main branch from its URL:
 
 ```julia
 using Pkg
-pkg"add Tethers"
+pkg"add https://github.com/ufechner7/Tethers.jl#main"
 ```
 
 Copy the example scripts and the `bin` helper scripts to your project with:
@@ -70,6 +70,15 @@ This also adds the extra packages needed by the example scripts. You can now run
 ```julia
 include("examples/menu.jl")
 ```
+
+For a faster start of the examples, build a system image (this takes a while and needs a lot of memory):
+
+```bash
+cd bin
+./create_sys_image
+```
+
+`./bin/run_julia` picks it up automatically. Use `./bin/create_sys_image --update` to update all packages before building it.
 
 ## Basic example
 
