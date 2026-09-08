@@ -63,10 +63,10 @@ ts    = 0:dt:duration
 ```
 The time step $dt$ is the interval in which the solution shall be stored, NOT the time step of the integrator. The integrator uses a variable time step which can be much smaller or much larger as determined by the required tolerance, in this example set to $tol=10^{-6}$. The variable $ts$ is a range object defining the sampling times for the result.
 
-In the next lines, we define the ODE problem and finally, we solve it using the Rodas5 solver with the given parameters. The second parameter defines the initial conditions. We use `nothing` here because we defined the initial conditions already in the [model](https://github.com/ufechner7/Tethers.jl/blob/87635d9df32f3ded49d0a394b613b412c2c83d55/src/Tether_01.jl#L7C1-L9C44).
+In the next lines, we define the ODE problem and finally, we solve it using the FBDF solver with the given parameters. The second parameter defines the initial conditions. We use `nothing` here because we defined the initial conditions already in the [model](https://github.com/ufechner7/Tethers.jl/blob/87635d9df32f3ded49d0a394b613b412c2c83d55/src/Tether_01.jl#L7C1-L9C44).
 ```julia
 prob = ODEProblem(simple_sys, nothing, (0.0, duration))
-@time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
+@time sol = solve(prob, FBDF(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
 ```
 The macro `@time` measures the compilation and execution time of calling the function `solve()`. The function is compiled only when called the first time. 
 
@@ -138,7 +138,7 @@ cb = ContinuousCallback(condition, affect!)
 ```
 and add the parameter `callback = cb` to the line that calls the solver:
 ```julia
-sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts, callback = cb)
+sol = solve(prob, FBDF(), dt=dt, abstol=tol, reltol=tol, saveat=ts, callback = cb)
 ```
 
 ### Using a callback with Python
@@ -419,7 +419,7 @@ try
     tspan = (0.0, se.duration)
     prob = ODEProblem(simple_sys, nothing, tspan)
     prob1 = SteadyStateProblem(prob)
-    sol1 = solve(prob1, DynamicSS(KenCarp4(autodiff=false)))
+    sol1 = solve(prob1, DynamicSS(FBDF(autodiff=false)))
 finally
     se.v_ro = v_ro  # restore the reel-out speed, also if the steady state solver failed
 end

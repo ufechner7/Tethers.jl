@@ -1,5 +1,5 @@
 @info "Loading packages ..."
-using ModelingToolkit, OrdinaryDiffEq, OrdinaryDiffEqRosenbrock, OrdinaryDiffEqSDIRK
+using ModelingToolkit, OrdinaryDiffEqCore, OrdinaryDiffEqBDF
 using SteadyStateDiffEq, PackageCompiler, MakieControlPlots, Timers, REPL.TerminalMenus
 
 FAST=true
@@ -7,7 +7,7 @@ FAST=true
 @info "Creating sysimage ..."
 push!(LOAD_PATH,joinpath(pwd(),"src"))
 
-pkgs=[:ModelingToolkit, :OrdinaryDiffEq, :OrdinaryDiffEqRosenbrock, :OrdinaryDiffEqSDIRK,
+pkgs=[:ModelingToolkit, :OrdinaryDiffEqCore, :OrdinaryDiffEqBDF,
       :SteadyStateDiffEq, :Timers]
 if FAST
     push!(pkgs, :MakieControlPlots)

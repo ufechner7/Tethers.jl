@@ -6,8 +6,7 @@
 # - drag                  : the drag of a vertical tether in a side wind
 # - catenary              : the shape of a tether hanging between two points at z=0
 # - compression stiffness : the stiffness of a compressed and of a stretched segment
-using Test, LinearAlgebra, ModelingToolkit, OrdinaryDiffEq, SteadyStateDiffEq
-using OrdinaryDiffEqSDIRK: KenCarp4
+using Test, LinearAlgebra, ModelingToolkit, OrdinaryDiffEqCore, OrdinaryDiffEqBDF, SteadyStateDiffEq
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using ADTypes: AutoFiniteDiff
 using Tethers.TetherComponents: TetherSettings, set_diameter!, Tether, FixedEnd, FreeEnd
@@ -54,7 +53,7 @@ Integrate `simple_sys` until it stops changing and return the tether shape, a
 """
 function solve_steady_state(se, simple_sys)
     prob = SteadyStateProblem(ODEProblem(simple_sys, nothing, (0.0, se.duration)))
-    sol = solve(prob, DynamicSS(KenCarp4(autodiff=AutoFiniteDiff())))
+    sol = solve(prob, DynamicSS(FBDF(autodiff=AutoFiniteDiff())))
     SciMLBase.successful_retcode(sol) ||
         error("Steady state solver failed with return code $(sol.retcode)!")
     # `DynamicSS` integrates the model until it stops changing, and `sol.original` is that

@@ -1,8 +1,7 @@
 # Example one: Falling mass.
 using Timers
 tic()
-using ModelingToolkit, OrdinaryDiffEq, MakieControlPlots
-using OrdinaryDiffEqRosenbrock: Rodas5
+using ModelingToolkit, OrdinaryDiffEqCore, OrdinaryDiffEqBDF, MakieControlPlots
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using Tethers: display_if_interactive
 toc()
@@ -29,7 +28,7 @@ ts       = 0:dt:duration
 
 prob = ODEProblem(simple_sys, nothing, (0.0, duration))
 toc()
-@time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
+@time sol = solve(prob, FBDF(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
 
 # plotting the result
 X = sol.t

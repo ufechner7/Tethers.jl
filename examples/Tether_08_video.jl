@@ -4,8 +4,7 @@
 # given pair of endpoints, which is then used as the initial condition for the simulation.
 # This example differs from Tether_08.jl in that the tether diameter is set to 12 mm
 # and that the size of the plot is twice as large (in pixels) as in Tether_08.jl.
-using ModelingToolkit, OrdinaryDiffEq, SteadyStateDiffEq, LinearAlgebra, Timers, Parameters, MakieControlPlots
-using OrdinaryDiffEqSDIRK: KenCarp4
+using ModelingToolkit, OrdinaryDiffEqCore, OrdinaryDiffEqBDF, SteadyStateDiffEq, LinearAlgebra, Timers, Parameters, MakieControlPlots
 tic()
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using MakieControlPlots
@@ -78,7 +77,7 @@ function model(se; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
     tspan = (0.0, se.duration)
     prob = ODEProblem(simple_sys, nothing, tspan)
     prob1 = SteadyStateProblem(prob)
-    sol1 = solve(prob1, DynamicSS(KenCarp4(autodiff=AutoFiniteDiff())))
+    sol1 = solve(prob1, DynamicSS(FBDF(autodiff=AutoFiniteDiff())))
     POS0 = sol1[pos]
     # create the real model
     se.v_ro = v_ro

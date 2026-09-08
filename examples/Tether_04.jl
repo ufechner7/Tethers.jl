@@ -1,10 +1,9 @@
 """
 Tutorial example simulating a 3D mass-spring system with a nonlinear spring (no spring forces
-for l < l_0) and n tether segments, using the implicit solver Rodas5.
+for l < l_0) and n tether segments, using the implicit solver FBDF.
 """
 
-using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, MakieControlPlots
-using OrdinaryDiffEqRosenbrock: Rodas5
+using ModelingToolkit, OrdinaryDiffEqCore, OrdinaryDiffEqBDF, LinearAlgebra, MakieControlPlots
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using Tethers: display_if_interactive
 
@@ -68,7 +67,7 @@ tspan    = (0.0, duration)
 ts       = 0:dt:duration
 
 prob      = ODEProblem(simple_sys, nothing, tspan)
-@time sol = solve(prob, Rodas5(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
+@time sol = solve(prob, FBDF(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
 
 function plt(sol, particle)
     X        = sol.t

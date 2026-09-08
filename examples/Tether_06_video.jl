@@ -1,7 +1,7 @@
 # Tutorial example simulating a 3D mass-spring system with a nonlinear spring (1% spring forces
 # for l < l_0), n tether segments and reel-in and reel-out. The compression stiffness is hardcoded
 # to 1% of the spring stiffness.
-using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, MakieControlPlots
+using ModelingToolkit, OrdinaryDiffEqCore, OrdinaryDiffEqBDF, LinearAlgebra, Timers, MakieControlPlots
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using MakieControlPlots
 using Tethers: display_if_interactive
