@@ -75,19 +75,48 @@ function copy_examples(; overwrite=true)
 end
 
 """
+    copy_file(relpath, src_file, dst_file; overwrite=true)
+
+Copy `src_file` from the folder `relpath` of this package to `dst_file` in the folder
+`relpath` of the current working directory (it will be created if it doesn't exist).
+Used for the scripts that exist in a variant for a clone of this repository and in a
+variant for an installed package.
+"""
+function copy_file(relpath, src_file, dst_file; overwrite=true)
+    if ! isdir(relpath)
+        mkdir(relpath)
+    end
+    dst = joinpath(relpath, dst_file)
+    if overwrite || !isfile(dst)
+        cp(joinpath(dirname(@__DIR__), relpath, src_file), dst, force=true)
+        chmod(dst, 0o774)
+    end
+    dst
+end
+
+"""
     copy_bin(; overwrite=true)
 
-Copy the script `run_julia` from the folder `bin` to the folder `bin` in the current
-working directory (it will be created if it doesn't exist). Only `run_julia` is copied;
-the other scripts in `bin` are specific to a clone of this repository and are not tested
-when `Tethers` is installed as a package.
+Copy the scripts needed to run the examples of an installed `Tethers` package to the
+folders `bin` and `test` in the current working directory (they will be created if they
+don't exist):
+
+- `bin/run_julia`            starts Julia with the settings used for the examples
+- `bin/create_sys_image`     builds a system image for a faster start of the examples
+- `test/create_sys_image.jl` and `test/test_for_precompile.jl`, which it uses
+
+The two scripts that build the system image exist in a variant for a clone of this
+repository and in a variant for an installed package; the latter have a `2` in their name
+and are copied without it. The remaining scripts in `bin` are specific to a clone of this
+repository and are not copied. Pre-built system images (`*.so`) are not copied either.
 """
 function copy_bin(; overwrite=true)
-    PATH = "bin"
-    if ! isdir(PATH)
-        mkdir(PATH)
-    end
-    copy_files(PATH, ["run_julia"]; overwrite)
+    copy_files("bin", ["run_julia"]; overwrite)
+    copy_file("bin", "create_sys_image2", "create_sys_image"; overwrite)
+    copy_files("test", ["test_for_precompile.jl"]; overwrite)
+    copy_file("test", "create_sys_image2.jl", "create_sys_image.jl"; overwrite)
+    [joinpath("bin", "run_julia"), joinpath("bin", "create_sys_image"),
+     joinpath("test", "test_for_precompile.jl"), joinpath("test", "create_sys_image.jl")]
 end
 
 function copy_files(relpath, files; overwrite=true)
