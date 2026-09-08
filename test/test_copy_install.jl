@@ -54,13 +54,32 @@ end
 @testset "copy_bin" begin
     mktempdir() do dir
         cd(dir) do
-            copy_bin()
+            copied = copy_bin()
             @test isdir("bin")
-            # only `run_julia` is copied; the other scripts in `bin` are specific to a
-            # clone of this repository
-            @test readdir("bin") == ["run_julia"]
+            @test isdir("test")
+            # the other scripts in `bin` are specific to a clone of this repository
+            @test sort(readdir("bin")) == ["create_sys_image", "run_julia"]
+            @test sort(readdir("test")) == ["create_sys_image.jl", "test_for_precompile.jl"]
+            @test sort(copied) == sort([joinpath("bin", "run_julia"),
+                                        joinpath("bin", "create_sys_image"),
+                                        joinpath("test", "test_for_precompile.jl"),
+                                        joinpath("test", "create_sys_image.jl")])
             @test read(joinpath(pkg_dir, "bin", "run_julia")) ==
                   read(joinpath("bin", "run_julia"))
+            @test read(joinpath(pkg_dir, "test", "test_for_precompile.jl")) ==
+                  read(joinpath("test", "test_for_precompile.jl"))
+            # the `2` variants are the ones for an installed package
+            @test read(joinpath(pkg_dir, "bin", "create_sys_image2")) ==
+                  read(joinpath("bin", "create_sys_image"))
+            @test read(joinpath(pkg_dir, "test", "create_sys_image2.jl")) ==
+                  read(joinpath("test", "create_sys_image.jl"))
+            # the script that builds the system image must be executable
+            @test Base.Filesystem.uperm(joinpath("bin", "create_sys_image")) & 0x01 == 0x01
+
+            # overwrite=false must not touch the existing scripts
+            write(joinpath("bin", "create_sys_image"), "modified")
+            copy_bin(overwrite=false)
+            @test read(joinpath("bin", "create_sys_image"), String) == "modified"
         end
     end
 end
@@ -78,7 +97,8 @@ end
                 file != "Project.toml" && !startswith(file, "Manifest")
             end
             @test sort(copied) == sort(src_files)
-            @test readdir("bin") == ["run_julia"]
+            @test sort(readdir("bin")) == ["create_sys_image", "run_julia"]
+            @test sort(readdir("test")) == ["create_sys_image.jl", "test_for_precompile.jl"]
         end
     end
 end

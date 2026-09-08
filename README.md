@@ -77,6 +77,15 @@ This also adds the extra packages needed by the example scripts. You can now run
 include("examples/menu.jl")
 ```
 
+For a faster start of the examples, build a system image (this takes a while and needs a lot of memory):
+
+```bash
+cd bin
+./create_sys_image
+```
+
+`./bin/run_julia` picks it up automatically. Use `./bin/create_sys_image --update` to update all packages before building it.
+
 ## Basic example
 
 Use the provided script to start Julia from the `Tethers.jl` folder:
