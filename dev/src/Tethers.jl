@@ -56,7 +56,11 @@ end
     copy_examples(; overwrite=true)
 
 Copy all example scripts (Julia and Python) to the folder `examples`
-(it will be created if it doesn't exist).
+(it will be created if it doesn't exist). The `examples/Project.toml` of this
+package is not copied, since it points back at this package via a relative
+`[sources]` path that would not resolve in the destination. Any local
+`Manifest.toml` / `Manifest-v*.toml` left over from instantiating that
+Project.toml is skipped as well.
 """
 function copy_examples(; overwrite=true)
     PATH = "examples"
@@ -64,7 +68,10 @@ function copy_examples(; overwrite=true)
         mkdir(PATH)
     end
     src_path = joinpath(dirname(@__DIR__), PATH)
-    copy_files(PATH, readdir(src_path); overwrite)
+    files = filter(readdir(src_path)) do file
+        file != "Project.toml" && !startswith(file, "Manifest")
+    end
+    copy_files(PATH, files; overwrite)
 end
 
 """
@@ -102,6 +109,18 @@ function copy_files(relpath, files; overwrite=true)
 end
 
 """
+    example_packages()
+
+Return the names of the registered packages required to run the example scripts, read
+from `examples/Project.toml`. `Tethers` itself and standard library packages (currently
+only `LinearAlgebra`) are excluded, since they do not need to be added.
+"""
+function example_packages()
+    project = Pkg.TOML.parsefile(joinpath(dirname(@__DIR__), "examples", "Project.toml"))
+    filter(!in(("Tethers", "LinearAlgebra")), collect(keys(project["deps"])))
+end
+
+"""
     install_examples(add_packages=true)
 
 Install the example scripts into the current working directory.
@@ -116,8 +135,7 @@ function install_examples(add_packages=true)
     copy_examples()
     copy_bin()
     if add_packages
-        Pkg.add(["ADTypes", "GLMakie", "LaTeXStrings", "MakieControlPlots", "ModelingToolkit",
-                 "OrdinaryDiffEq", "Parameters", "StatsBase", "SteadyStateDiffEq", "Timers"])
+        Pkg.add(example_packages())
     end
 end
 
