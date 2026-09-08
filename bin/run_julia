@@ -33,11 +33,11 @@ fi
 if test -f "bin/kps-image-${julia_major}.so"; then
     echo "Found system image!"
     if [[ $HOSTNAME == "TUD262682" ]]; then
-        julia -J  bin/kps-image-${julia_major}.so --project=examples -i -q -t 10 $GCT "${EX[@]}"
+        julia -J  bin/kps-image-${julia_major}.so --project -i -q -t 10 $GCT "${EX[@]}"
     elif [[ $HOSTNAME == "ufryzen" ]]; then
-        julia -J  bin/kps-image-${julia_major}.so --project=examples -i -q -t 16 $GCT "${EX[@]}"
+        julia -J  bin/kps-image-${julia_major}.so --project -i -q -t 16 $GCT "${EX[@]}"
     else
-        julia -J  bin/kps-image-${julia_major}.so --project=examples -i -q -t 8 $GCT "${EX[@]}"
+        julia -J  bin/kps-image-${julia_major}.so --project -i -q -t 8 $GCT "${EX[@]}"
     fi
 else
     if [[ $HOSTNAME == "ufryzen" ]]; then

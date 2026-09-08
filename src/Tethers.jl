@@ -77,19 +77,17 @@ end
 """
     copy_bin(; overwrite=true)
 
-Copy the helper scripts from the folder `bin` (e.g. `run_julia`, `install` and
-`create_sys_image`) to the folder `bin` in the current working directory
-(it will be created if it doesn't exist). Pre-built system images (`*.so`) are
-not copied.
+Copy the script `run_julia` from the folder `bin` to the folder `bin` in the current
+working directory (it will be created if it doesn't exist). Only `run_julia` is copied;
+the other scripts in `bin` are specific to a clone of this repository and are not tested
+when `Tethers` is installed as a package.
 """
 function copy_bin(; overwrite=true)
     PATH = "bin"
     if ! isdir(PATH)
         mkdir(PATH)
     end
-    src_path = joinpath(dirname(@__DIR__), PATH)
-    files = filter(file -> !endswith(file, ".so"), readdir(src_path))
-    copy_files(PATH, files; overwrite)
+    copy_files(PATH, ["run_julia"]; overwrite)
 end
 
 function copy_files(relpath, files; overwrite=true)

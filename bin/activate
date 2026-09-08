@@ -1,2 +1,0 @@
-# run source/bin/activate to activate the local conda environment
-micromamba activate .CondaPkg/env

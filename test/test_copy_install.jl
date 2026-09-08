@@ -56,10 +56,11 @@ end
         cd(dir) do
             copy_bin()
             @test isdir("bin")
-            copied = readdir("bin")
-            @test !any(f -> endswith(f, ".so"), copied)
-            src_files = filter(f -> !endswith(f, ".so"), readdir(joinpath(pkg_dir, "bin")))
-            @test sort(copied) == sort(src_files)
+            # only `run_julia` is copied; the other scripts in `bin` are specific to a
+            # clone of this repository
+            @test readdir("bin") == ["run_julia"]
+            @test read(joinpath(pkg_dir, "bin", "run_julia")) ==
+                  read(joinpath("bin", "run_julia"))
         end
     end
 end
@@ -77,7 +78,7 @@ end
                 file != "Project.toml" && !startswith(file, "Manifest")
             end
             @test sort(copied) == sort(src_files)
-            @test !any(f -> endswith(f, ".so"), readdir("bin"))
+            @test readdir("bin") == ["run_julia"]
         end
     end
 end
