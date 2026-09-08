@@ -53,7 +53,12 @@ Integrate `simple_sys` until it stops changing and return the tether shape, a
 """
 function solve_steady_state(se, simple_sys)
     prob = SteadyStateProblem(ODEProblem(simple_sys, nothing, (0.0, se.duration)))
-    sol = solve(prob, DynamicSS(FBDF(autodiff=AutoFiniteDiff())))
+    # the tether swings as a whole for a long time before the per-segment dampers bring it
+    # to rest, so DynamicSS's tight default termination tolerance (abstol=1e-8, reltol=1e-6)
+    # is never quite met with the FBDF solver; the assertions below only need rtol=1e-2 /
+    # atol=1e-6 accuracy, so a looser tolerance here is fine (see Tether_09.jl for the same
+    # fix applied to a similar steady-state solve)
+    sol = solve(prob, DynamicSS(FBDF(autodiff=AutoFiniteDiff())); abstol=1e-6, reltol=1e-4)
     SciMLBase.successful_retcode(sol) ||
         error("Steady state solver failed with return code $(sol.retcode)!")
     # `DynamicSS` integrates the model until it stops changing, and `sol.original` is that
