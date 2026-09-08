@@ -41,8 +41,8 @@ if test -f "bin/kps-image-${julia_major}.so"; then
     fi
 else
     if [[ $HOSTNAME == "ufryzen" ]]; then
-        julia --project=examples -i -q -t 16 $GCT "${EX[@]}"
+        julia --project -i -q -t 16 $GCT "${EX[@]}"
     else
-        julia --project=examples -i -q -t 8 $GCT "${EX[@]}"
+        julia --project -i -q -t 8 $GCT "${EX[@]}"
     fi
 fi
