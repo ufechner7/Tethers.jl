@@ -5,6 +5,7 @@
 display_if_interactive
 run_python
 Tethers.copy_bin
+Tethers.copy_file
 Tethers.copy_examples
 Tethers.example_packages
 install_examples
