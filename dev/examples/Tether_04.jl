@@ -4,6 +4,7 @@ for l < l_0) and n tether segments, using the implicit solver Rodas5.
 """
 
 using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, MakieControlPlots
+using OrdinaryDiffEqRosenbrock: Rodas5
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using Tethers: display_if_interactive
 

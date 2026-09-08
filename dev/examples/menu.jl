@@ -1,3 +1,11 @@
+using Pkg
+# When running from a clone of this repository, activate the examples environment unless it
+# is already active. If the examples were copied into another project with
+# `install_examples()`, there is no `Project.toml` next to this script; in that case the
+# environment of that project is already active and is left unchanged.
+if isfile(joinpath(@__DIR__, "Project.toml")) && dirname(Pkg.project().path) != @__DIR__
+    Pkg.activate(@__DIR__)
+end
 using REPL.TerminalMenus
 
 examples = [("Tether_01",  "include(\"Tether_01.jl\")",  "Falling mass thrown upwards"),

@@ -3,6 +3,7 @@
 # New feature: A steady state solver is used to find the initial tether shape for any
 # given pair of endpoints, which is then used as the initial condition for the simulation.
 using ModelingToolkit, OrdinaryDiffEq, SteadyStateDiffEq, LinearAlgebra, Timers, Parameters, MakieControlPlots
+using OrdinaryDiffEqSDIRK: KenCarp4
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using ADTypes: AutoFiniteDiff, AutoForwardDiff
 using Tethers: display_if_interactive
