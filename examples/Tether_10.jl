@@ -9,6 +9,7 @@
 # `main2()` re-uses the same component twice: two tethers of half the length, joined by a
 #           point mass, which is only possible because the component is composable.
 using ModelingToolkit, OrdinaryDiffEq, SteadyStateDiffEq, LinearAlgebra, Timers, Parameters, MakieControlPlots
+using OrdinaryDiffEqSDIRK: KenCarp4
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using ADTypes: AutoFiniteDiff, AutoForwardDiff
 using Tethers: display_if_interactive

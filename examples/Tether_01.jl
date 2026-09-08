@@ -2,6 +2,7 @@
 using Timers
 tic()
 using ModelingToolkit, OrdinaryDiffEq, MakieControlPlots
+using OrdinaryDiffEqRosenbrock: Rodas5
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using Tethers: display_if_interactive
 toc()

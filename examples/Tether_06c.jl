@@ -1,6 +1,7 @@
 # Tutorial example simulating a 3D mass-spring system with a nonlinear spring (no spring forces
 # for l < l_0), n tether segments, reel-in and reel-out and continues callbacks. 
 using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, Timers, Parameters, MakieControlPlots
+using OrdinaryDiffEqSDIRK: KenCarp4
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using MakieControlPlots
 using ADTypes: AutoFiniteDiff

@@ -1,5 +1,6 @@
 # Example two: Falling mass, attached to linear spring
 using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, MakieControlPlots
+using OrdinaryDiffEqRosenbrock: Rodas5
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using Tethers: display_if_interactive
 

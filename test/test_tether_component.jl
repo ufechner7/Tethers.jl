@@ -7,6 +7,7 @@
 # - catenary              : the shape of a tether hanging between two points at z=0
 # - compression stiffness : the stiffness of a compressed and of a stretched segment
 using Test, LinearAlgebra, ModelingToolkit, OrdinaryDiffEq, SteadyStateDiffEq
+using OrdinaryDiffEqSDIRK: KenCarp4
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using ADTypes: AutoFiniteDiff
 using Tethers.TetherComponents: TetherSettings, set_diameter!, Tether, FixedEnd, FreeEnd

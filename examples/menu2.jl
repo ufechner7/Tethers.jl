@@ -1,3 +1,8 @@
+using Pkg
+# see the comment in `menu.jl`
+if isfile(joinpath(@__DIR__, "Project.toml")) && dirname(Pkg.project().path) != @__DIR__
+    Pkg.activate(@__DIR__)
+end
 using REPL.TerminalMenus
 using Tethers: run_python
 

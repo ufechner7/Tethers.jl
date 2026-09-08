@@ -1,6 +1,7 @@
 # Example three: Falling mass, attached to non-linear spring without compression stiffness
 # with callback, initially moving upwards with 4 m/s.
 using ModelingToolkit, OrdinaryDiffEq, LinearAlgebra, MakieControlPlots
+using OrdinaryDiffEqRosenbrock: Rodas5
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using Tethers: display_if_interactive
 
