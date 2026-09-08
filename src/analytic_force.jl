@@ -1,8 +1,7 @@
 """
     analytic_force(se; v_wind_perp, d_segment, l_unstretched, l_segment, segments=Inf)
 
-Step two of PlanCompression.md: the analytical prediction of the mean axial force [N],
-tension positive, without solving the model.
+Analytical prediction of the mean axial force [N], tension positive.
 
 `se` is a [`TetherSettings`](@ref) (or anything with the same `rho`, `cd_tether`, `d_tether`
 and `c_spring` fields); `rho` and `cd_tether` are taken from it directly, and the axial
