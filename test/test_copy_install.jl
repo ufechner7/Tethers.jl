@@ -74,7 +74,10 @@ end
             @test read(joinpath(pkg_dir, "test", "create_sys_image2.jl")) ==
                   read(joinpath("test", "create_sys_image.jl"))
             # the script that builds the system image must be executable
-            @test Base.Filesystem.uperm(joinpath("bin", "create_sys_image")) & 0x01 == 0x01
+            # (Windows has no POSIX execute bit, so this check is Unix-only)
+            if !Sys.iswindows()
+                @test Base.Filesystem.uperm(joinpath("bin", "create_sys_image")) & 0x01 == 0x01
+            end
 
             # overwrite=false must not touch the existing scripts
             write(joinpath("bin", "create_sys_image"), "modified")
