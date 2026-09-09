@@ -34,11 +34,12 @@ _default_julia="1.12"
 echo "Which Julia version do you want to use?"
 echo "  1) Julia 1.11"
 echo "  2) Julia 1.12"
+echo "  3) Julia 1.13"
 if [[ "$_yes" == "true" ]]; then
     _julia_choice=""
     echo "Non-interactive mode: using default (${_default_julia})"
 else
-    read -rp "Enter 1 or 2 [default: ${_default_julia}]: " _julia_choice
+    read -rp "Enter 1, 2 or 3 [default: ${_default_julia}]: " _julia_choice
 fi
 case "${_julia_choice}" in
     1)
@@ -47,11 +48,14 @@ case "${_julia_choice}" in
     2)
         _desired_julia="1.12"
         ;;
+    3)
+        _desired_julia="1.13"
+        ;;
     "")
         _desired_julia="${_default_julia}"
         ;;
     *)
-        echo "Invalid choice: '${_julia_choice}'. Please enter 1 or 2."
+        echo "Invalid choice: '${_julia_choice}'. Please enter 1, 2 or 3."
         exit 1
         ;;
 esac
@@ -70,9 +74,9 @@ fi
 
 echo "Detected Julia version: $julia_version (major: $julia_major)"
 
-# Only accept Julia 1.11 and 1.12
-if [[ $julia_major != "1.11" ]] && [[ $julia_major != "1.12" ]]; then
-    echo "Error: Julia $julia_major is not supported. Only Julia 1.11 and 1.12 are supported."
+# Only accept Julia 1.11, 1.12 and 1.13
+if [[ $julia_major != "1.11" ]] && [[ $julia_major != "1.12" ]] && [[ $julia_major != "1.13" ]]; then
+    echo "Error: Julia $julia_major is not supported. Only Julia 1.11, 1.12 and 1.13 are supported."
     echo "You can install Julia 1.11 with the following commands:"
     echo "juliaup add 1.11"
     echo "juliaup default 1.11"
@@ -139,7 +143,7 @@ else
     exit $_ec
 fi
 
-# If Julia 1.12 created a plain Manifest.toml, rename it to the versioned name
+# If Julia 1.12 or later created a plain Manifest.toml, rename it to the versioned name
 if [ -f "Manifest.toml" ]; then
     mv Manifest.toml "$VERSIONED_MANIFEST"
     echo "Renamed Manifest.toml to $VERSIONED_MANIFEST"
@@ -147,7 +151,7 @@ fi
 
 # Julia 1.11's Pkg does not understand the root [workspace] section, so examples/, test/
 # and docs/ are resolved as fully independent projects there instead of sharing the root
-# manifest (Julia 1.12 shares the manifest natively and needs none of this).
+# manifest (Julia 1.12 and later share the manifest natively and need none of this).
 #
 # docs/ has a small, non-conflicting dependency set, so seeding it from the pinned root
 # manifest keeps versions aligned with root and speeds up its resolve. examples/ and test/

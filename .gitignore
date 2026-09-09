@@ -21,7 +21,9 @@ bin/kps-image-1.11.so
 Manifest-v1.11.toml
 Manifest-v1.10.toml
 Manifest-v1.12.toml
+Manifest-v1.13.toml
 bin/kps-image-1.12.so
+bin/kps-image-1.13.so
 bin/kps-image-.so
 .markdownlint.json
 bin/kps-image-1.12.so.bak
