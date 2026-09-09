@@ -24,17 +24,22 @@ push!(LOAD_PATH,joinpath(pwd(),"src"))
 pkgs=[:ModelingToolkit, :OrdinaryDiffEqCore, :OrdinaryDiffEqBDF,
       :SteadyStateDiffEq, :Timers]
 if FAST
-    push!(pkgs, :MakieControlPlots)
+    # Windows refuses to load a PE image of 2 GiB or more ("%1 is not a valid Win32
+    # application"), and MakieControlPlots drags in both Makie backends. Listing GLMakie
+    # instead keeps the interactive backend but leaves CairoMakie out of the image.
+    push!(pkgs, Sys.iswindows() ? :GLMakie : :MakieControlPlots)
 end
 
-# Dropping docstrings and source-location metadata shrinks the image by a double-digit
-# percentage, which Windows needs to stay under the 2 GiB limit ("%1 is not a valid Win32
-# application"). The catch: stripping leaves `Base.Docs.META` declared but undefined, so
-# any package precompiled *against* the image that calls `Base.doc` while loading dies with
-# `UndefVarError: ##meta#NN not defined in Base.Docs`. CairoMakie, GLMakie and Makie all
-# interpolate `$(Base.doc(...))` into a docstring at load time, so they must be inside the
-# image (where they load before the strip happens) rather than precompiled against it.
-build_args = Sys.iswindows() ? `--strip-metadata` : ``
+# Do NOT add `--strip-metadata` here to shrink the image. It does save a double-digit
+# percentage, but it leaves every `Base.Docs.META` binding in the image declared and
+# unassigned, which breaks the doc system beyond repair: evaluating any docstring then
+# fails with `UndefVarError: ##meta#NN`, both while precompiling packages against the image
+# (CairoMakie interpolates `$(Base.doc(...))` at load time) and in user code (`@with_kw` in
+# examples/Tether_08.jl attaches a docstring to `Main`). Re-seeding those bindings at
+# startup is not a way out either -- redefining one crashes with `UndefRefError` in
+# `invalidate_code_for_globalref!`, because the stripped binding partition has no
+# restriction to invalidate. Reproduced on Julia 1.12.7.
+build_args = ``
 
 function total_ram_swap_gb()
     if Sys.iswindows()
@@ -96,10 +101,9 @@ PackageCompiler.create_sysimage(
 
 let size_gib = filesize("kps-image_tmp.so") / 1024^3
     @info "System image size: $(round(size_gib; digits=2)) GiB"
-    if Sys.iswindows() && size_gib > 1.8
+    if Sys.iswindows() && size_gib > 1.9
         error("The system image is $(round(size_gib; digits=2)) GiB. Windows cannot load a " *
               "PE image of 2 GiB or more; it fails with \"%1 is not a valid Win32 application\". " *
-              "Shorten test/test_for_precompile.jl or remove packages from `pkgs` \u2014 but not " *
-              "MakieControlPlots, see the comment on `build_args`.")
+              "Remove packages from `pkgs` or shorten test/test_for_precompile.jl.")
     end
 end
