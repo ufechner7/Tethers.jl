@@ -5,7 +5,11 @@
 using ModelingToolkit, OrdinaryDiffEqCore, OrdinaryDiffEqBDF, SteadyStateDiffEq, LinearAlgebra, Timers, Parameters, MakieControlPlots
 tic()
 using ModelingToolkit: t_nounits as t, D_nounits as D
-using MakieControlPlots, GLMakie, LaTeXStrings, StatsBase
+using MakieControlPlots, LaTeXStrings, StatsBase
+# `import`, not `using`: menu.jl runs every example into the same `Main`, and GLMakie
+# exports `plot` just like MakieControlPlots, so a `using GLMakie` here would make `plot`
+# ambiguous in every example run afterwards.
+import GLMakie
 using ADTypes: AutoFiniteDiff
 using Tethers: display_if_interactive
 
@@ -193,11 +197,11 @@ sol, pos, vel, simple_sys = main(p2=[-60,0,0], fix_p2=true);
 x=sol[pos][1][1,:]
 z=sol[pos][1][3,:]
 
-fig = Figure()
-ax = Axis(fig[1, 1])
-lines!(ax, x, z; color=:black)
-scatter!(ax, x, z; color=:red)
-ylims!(ax, -80, 10)
+fig = GLMakie.Figure()
+ax = GLMakie.Axis(fig[1, 1])
+GLMakie.lines!(ax, x, z; color=:black)
+GLMakie.scatter!(ax, x, z; color=:red)
+GLMakie.ylims!(ax, -80, 10)
 
 OFFSET = 2.5
 O1 = -1
@@ -216,10 +220,10 @@ labels = [(L"P_1",     x[end]+O1,                    OFFSET),
           (L"S_5",     mean(x[end-5:end-4])+1O1,     -6.5OFFSET),
           (L"S_{n-1}", mean(x[end-6:end-5])+1O1,     -4OFFSET)]
 for (label, lx, lz) in labels
-    text!(ax, lx, lz; text=label, fontsize=14)
+    GLMakie.text!(ax, lx, lz; text=label, fontsize=14)
 end
-hidedecorations!(ax)
-hidespines!(ax)
+GLMakie.hidedecorations!(ax)
+GLMakie.hidespines!(ax)
 display_if_interactive(fig)
 
 nothing
