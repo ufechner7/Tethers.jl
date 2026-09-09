@@ -448,14 +448,15 @@ much like a cause. `SteadyStateProblem` drops the `ODEProblem`'s `tspan`, and
 `DynamicSS` integrates over `alg.tspan`, which defaults to `Inf` — the
 `tspan = (0.0, se.duration)` on the line above never reaches the solver.
 
-### Still worth doing
+### Why it stayed hidden
 
-`Tether_11.jl` never checks `sol1`'s retcode, while `Tether_08.jl` does
-(`SciMLBase.successful_retcode(sol1) || error(...)`). That is why a
-non-converged steady state could be fed in as an initial condition for this
-long without anything failing. `Tether_08.jl` also wraps the solve in
-`try/finally` so `se.v_ro` is restored even if it throws; `Tether_11.jl` would
-leak the zeroed value.
+`Tether_11.jl` never checked `sol1`'s retcode, so a steady-state solve that ran
+to `maxiters` and gave up was fed in as the initial condition regardless, with
+nothing but a warning on stderr to show for it. Both it and `Tether_09.jl` now
+check it the way `Tether_08.jl` already did, and both wrap the solve in a
+`try/finally` that restores `se.v_ro` — `Settings3` is mutable and `se` belongs
+to the caller, so a throw in between left the caller's settings with the
+reel-out speed zeroed.
 
 ## Verified
 
