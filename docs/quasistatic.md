@@ -3,6 +3,45 @@
 Notes on porting the quasi-static tether model from the `andrea_quasistatic`
 branch onto `main`, and on the open questions that port uncovered.
 
+## TODO
+
+Outstanding work, in the order it should be done. Steps 1–4 are the angle
+convention; each section linked below holds the detail and the reasoning.
+
+1. ~~**Add the conversion helpers.** Create `src/qsm_conventions.jl` with
+   `matlab_to_wind(θ_m, φ_m)` and its inverse `wind_to_matlab(β, φ)`, and
+   `include` it from both `src/Tether_quasistatic.jl` and
+   `src/Tether_qsm_dual.jl`.~~ **Done** — see `src/qsm_conventions.jl`.
+2. ~~**Convert on load.** Apply `matlab_to_wind` to `stateVec` in both copies
+   of `get_initial_conditions`. Nothing else in the `.mat` files is
+   converted.~~ **Done** — see [It is a parametrisation difference, not a
+   frame rotation](#it-is-a-parametrisation-difference-not-a-frame-rotation).
+3. ~~**Bring `src/Tether_qsm_dual.jl` in line.** Its `res!` still uses the
+   MATLAB parametrisation, so it must move to the elevation/azimuth form used
+   by `Tether_quasistatic.jl`.~~ **Done** — `FT[:, Ns]`/`pj[:, Ns]` in its
+   `res!` now use `[cos(β)cos(φ), cos(β)sin(φ), sin(β)]`, matching
+   `Tether_quasistatic.jl`.
+4. ~~**Re-enable the reference comparisons.** Turn the four `@test_broken` in
+   `test/test_qsm.jl` back into `@test` with an `rtol`. The reference outputs
+   need no conversion.~~ **Done, not yet re-run** — now `@test ... rtol=1e-2`;
+   still expected to leave a residual `‖p0 - p0_ref‖ ≈ 1.6 m` (step 5).
+5. **Explain the remaining 1.6 m.** With steps 1–4 done the max relative error
+   is 0.8 % rather than 202 %, which makes a tight tolerance meaningful and the
+   leftover discrepancy worth chasing on its own. See [Tolerance will not paper
+   over this](#tolerance-will-not-paper-over-this).
+6. **Track down the `maxiters` warning** in `examples/Tether_11.jl`. The
+   obvious hypothesis has already been tested and ruled out — see [Open
+   question: the `maxiters` warning](#open-question-the-maxiters-warning).
+7. **Decide what to do with `transformFromOtoW` / `transformFromWtoO`.**
+   Currently dead code carrying a y-flip and a z-flip; either delete them or
+   reconcile them with the convention settled in steps 1–2. See [Related: the
+   unused frame transforms](#related-the-unused-frame-transforms).
+
+Raise the mirrored azimuth in `test/data/input_basic_test.mat` with whoever
+owns the MATLAB code — it is not a blocker, and the fixture should be left
+alone. See [Caveat: the fixture's stored azimuth looks
+mirrored](#caveat-the-fixtures-stored-azimuth-looks-mirrored).
+
 ## Resolved: the angle convention
 
 **The Julia model keeps its own convention; the MATLAB data is converted on
@@ -248,6 +287,8 @@ still unknown.
 ## Verified
 
 - The workspace root and the `test` environment both resolve against MTK 11.
-- `test/test_qsm.jl`: 4 pass, 4 broken.
+- `test/test_qsm.jl`: 4 pass, 4 broken. **Stale** — the four broken
+  comparisons were turned into `@test ... rtol=1e-2` once the angle
+  conversion landed (see TODO step 4); not yet re-run to confirm they pass.
 - All six `examples/quasistatic/` scripts run.
 - `examples/Tether_11.jl` runs end to end (~67 s).

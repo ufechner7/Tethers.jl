@@ -1,4 +1,5 @@
 using LinearAlgebra, StaticArrays, ADTypes, NonlinearSolve, MAT, Parameters#, QuadGK
+include(joinpath(@__DIR__, "qsm_conventions.jl"))
 
 const MVec3 = MVector{3, Float64}
 const SVec3 = SVector{3, Float64}
@@ -285,13 +286,16 @@ end
 """
     get_initial_conditions(filename)
 
-Loads the initialization data for the basic examples and tests
+Loads the initialization data for the basic examples and tests. The two
+angles in `stateVec` are stored in the MATLAB reference convention and are
+converted to this package's elevation/wind-frame-azimuth convention via
+[`matlab_to_wind`](@ref) before being returned.
 
 # Arguments
 - filename: the filename of the mat file to read
 
 # Returns
-- state_vec::MVector{3, Float64} state vector (theta [rad], phi [rad], Tn [N])  
+- state_vec::MVector{3, Float64} state vector (theta [rad], phi [rad], Tn [N])
   tether orientation and tension at ground station
 - kite_pos::MVector{3, Float64} kite position vector in wind reference frame
 - kite_vel::MVector{3, Float64} kite velocity vector in wind reference frame
@@ -300,8 +304,10 @@ Loads the initialization data for the basic examples and tests
 - settings::Settings struct containing environmental and tether parameters: see [Settings](@ref)
 """
 function get_initial_conditions(filename)
-    vars = matread(filename) 
-    state_vec = MVector{3}(vec(get(vars,"stateVec", 0)))
+    vars = matread(filename)
+    sv = vec(get(vars,"stateVec", 0))
+    β, φ = matlab_to_wind(sv[1], sv[2])
+    state_vec = MVector{3}(β, φ, sv[3])
     kite_pos = MVector{3}(vec(get(vars,"kitePos", 0)))
     kite_vel = MVector{3}(vec(get(vars,"kiteVel", 0)))
     wind_vel = get(vars,"windVel", 0)

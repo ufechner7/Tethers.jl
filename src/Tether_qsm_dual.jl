@@ -1,4 +1,5 @@
 using LinearAlgebra, StaticArrays, ADTypes, NonlinearSolve, MAT, ForwardDiff, PreallocationTools
+include(joinpath(@__DIR__, "qsm_conventions.jl"))
 # experimental version for using automated differentiation
 
 const MVec3 = MVector{3, Float64}
@@ -149,7 +150,7 @@ function res!(res, state_vec, param)
     vj = get_tmp(buffers[4], state_vec)
     aj = get_tmp(buffers[5], state_vec)
 
-    # Unpack state variables
+    # Unpack state variables (elevation, azimuth)
     θ, φ, Tn = state_vec[1], state_vec[2], state_vec[3]
 
     # Precompute common values
@@ -160,15 +161,15 @@ function res!(res, state_vec, param)
     norm_p = norm(kite_pos)
     p_unit = kite_pos ./ norm_p
     v_parallel = dot(kite_vel, p_unit)
-    
-    # First element calculations
-    FT[1, Ns] = Tn * sinθ * cosφ
-    FT[2, Ns] = Tn * sinφ
-    FT[3, Ns] = Tn * cosθ * cosφ
 
-    pj[1, Ns] = Ls * sinθ * cosφ
-    pj[2, Ns] = Ls * sinφ
-    pj[3, Ns] = Ls * cosθ * cosφ
+    # First element calculations
+    FT[1, Ns] = Tn * cosθ * cosφ # cos(elevation)cos(azimuth)
+    FT[2, Ns] = Tn * cosθ * sinφ # cos(elevation)sin(azimuth)
+    FT[3, Ns] = Tn * sinθ        # sin(elevation)
+
+    pj[1, Ns] = Ls * cosθ * cosφ
+    pj[2, Ns] = Ls * cosθ * sinφ
+    pj[3, Ns] = Ls * sinθ
 
     # Velocity and acceleration calculations
     ω = get_tmp(buffers[6], state_vec)
@@ -297,7 +298,10 @@ end
 """
     get_initial_conditions(filename)
 
-Loads the initialization data for the basic examples and tests
+Loads the initialization data for the basic examples and tests. The two
+angles in `stateVec` are stored in the MATLAB reference convention and are
+converted to this package's elevation/wind-frame-azimuth convention via
+[`matlab_to_wind`](@ref) before being returned.
 
 # Arguments
 - filename: the filename of the mat file to read
@@ -311,8 +315,10 @@ Loads the initialization data for the basic examples and tests
 - settings::Settings struct containing enviromental and tether parameters: see [Settings](@ref)
 """
 function get_initial_conditions(filename)
-    vars = matread(filename) 
-    state_vec = MVector{3}(vec(get(vars,"stateVec", 0)))
+    vars = matread(filename)
+    sv = vec(get(vars,"stateVec", 0))
+    β, φ = matlab_to_wind(sv[1], sv[2])
+    state_vec = MVector{3}(β, φ, sv[3])
     kite_pos = MVector{3}(vec(get(vars,"kitePos", 0)))
     kite_vel = MVector{3}(vec(get(vars,"kiteVel", 0)))
     wind_vel = get(vars,"windVel", 0)
