@@ -134,21 +134,21 @@ function model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0, acc_p2)
         if i == se.segments+1
             push!(eqs, total_force[:, i] ~ spring_force[:, i-1] + half_drag_force[:, i-1])
             if isnothing(p2) || ! fix_p2
-                push!(eqs, acc[:, i]         ~ se.g_earth + total_force[:, i] / (0.5 * m_tether_particle))
+                push!(eqs, acc[:, i]         ~ se.g_earth .+ total_force[:, i] / (0.5 * m_tether_particle))
             else
                 push!(eqs, acc[:, i]         ~ acc_p2)
             end
         elseif i == 1
             push!(eqs, total_force[:, i] ~ spring_force[:, i] + half_drag_force[:, i])
             if isnothing(p1) || ! fix_p1
-                push!(eqs, acc[:, i]     ~ se.g_earth + total_force[:, i] / (0.5 * m_tether_particle))
+                push!(eqs, acc[:, i]     ~ se.g_earth .+ total_force[:, i] / (0.5 * m_tether_particle))
             else
                 push!(eqs, acc[:, i]     ~ zeros(3))                
             end
         else
             push!(eqs, total_force[:, i] ~ spring_force[:, i-1] - spring_force[:, i] 
                                            + half_drag_force[:, i-1] + half_drag_force[:, i])
-            push!(eqs, acc[:, i]         ~ se.g_earth + total_force[:, i] / m_tether_particle)
+            push!(eqs, acc[:, i]         ~ se.g_earth .+ total_force[:, i] / m_tether_particle)
         end
         eqs2 = vcat(eqs2, reduce(vcat, eqs))
     end
