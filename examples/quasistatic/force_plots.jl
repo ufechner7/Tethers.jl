@@ -19,6 +19,7 @@ function main()
 
     kite_pos = MVector(5, 100, 300)
     state_vec, tether_pos, Ft_ground, Ft_kite, p0 =  simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings)
+    tether_pos = Matrix(tether_pos)
 
     fig1 = GLMakie.Figure()
     ax = GLMakie.Axis3(fig1[1, 1]; title="3D view", xlabel="X [m]", ylabel="Y [m]", zlabel="Z [m]")
@@ -46,6 +47,7 @@ function main()
     for ii = 1:length(x_positions)
         kite_pos = MVector(5, x_positions[ii], 300)
         state_vec, tether_pos, Ft_ground, Ft_kite, p0 = simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings)
+        tether_pos = Matrix(tether_pos)
 
         l_tether1 = GLMakie.scatterlines!(ax1, sqrt.(tether_pos[1,:].^2 + tether_pos[2,:].^2), tether_pos[3,:]; color=:blue)
         s_ground1 = GLMakie.scatter!(ax1, [0.0], [0.0]; markersize=20, marker=:rect, color=:gray)

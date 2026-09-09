@@ -8,7 +8,7 @@ if [[ $(basename $(pwd)) == "bin" ]]; then
 fi
 
 # Build the startup expression; optionally include a user-provided script
-JCODE='function menu() include("examples/menu.jl") end; function menu2() include("examples/menu2.jl") end'
+JCODE='function menu() include("examples/menu.jl") end; function menu2() include("examples/menu2.jl") end; function menu3() include("examples/menu3.jl") end'
 if [[ -n "${1:-}" ]]; then
     JCODE="${JCODE};include(\"${1}\")"
 fi

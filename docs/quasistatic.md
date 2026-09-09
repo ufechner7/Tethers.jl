@@ -137,6 +137,19 @@ current working directory.
 It also asserted `p0 isa Vector`, which is false: `res!` returns an
 `MVector{3,Float64}`. That assertion was corrected rather than deleted.
 
+**`GLMakie.lines!`/`scatterlines!` choked on raw `simulate_tether` output.**
+`simulate_tether` returns `tether_pos` as an `MMatrix{3,segments}`, so a row
+slice like `tether_pos[1,:]` is itself a `StaticArray`, not a `Base.Vector`.
+GLMakie treats a fixed-size `StaticArray` passed as plot data as a single GPU
+uniform rather than a per-vertex buffer, which fails shader compilation with
+`Object GeometryBasics.Point{2, Float32} is not a supported uniform element
+type`. `run_catenary.jl` and `flying_circular.jl` were unaffected because they
+already run their `tether_pos` through `hcat` (which promotes to a plain
+`Matrix`) before plotting; `run_catenary_matlab.jl` and `force_plots.jl` did
+not, and crashed on their first `display_if_interactive` call. Fixed by
+materializing `tether_pos` (and the `x_qs`/`y_qs` derived from it) with
+`Matrix`/`collect` right after `simulate_tether` returns.
+
 **`Tether_11.jl` was entirely dead code.** Its `main()` and the call that drove
 it sat inside a `"""..."""` string literal, so including the file defined
 `model` and `simulate` and then did nothing at all. `main()` was lifted out and
