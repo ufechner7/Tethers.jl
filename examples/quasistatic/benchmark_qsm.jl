@@ -34,17 +34,24 @@ simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings
 
 @benchmark simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings)
 
-#= On Ryzen 7950X 
+#= On Ryzen 7950X
 julia> include("examples/quasistatic/benchmark_qsm.jl")
-Iterations: 36
+Iterations: 22, retcode: Success, |res|: 4.263256414560601e-14
 BenchmarkTools.Trial: 10000 samples with 1 evaluation per sample.
- Range (min … max):   93.927 μs …   8.020 ms  ┊ GC (min … max): 0.00% … 98.07%
- Time  (median):     102.166 μs               ┊ GC (median):    0.00%
- Time  (mean ± σ):   106.874 μs ± 117.790 μs  ┊ GC (mean ± σ):  2.18% ±  2.32%
+ Range (min … max):  22.793 μs …  2.311 ms  ┊ GC (min … max): 0.00% … 97.66%
+ Time  (median):     23.444 μs              ┊ GC (median):    0.00%
+ Time  (mean ± σ):   24.000 μs ± 31.892 μs  ┊ GC (mean ± σ):  1.85% ±  1.38%
 
-     █▇▃▁                                                        
-  ▂▃█████▇▇▆▇▆▆▆▆▆▅▅▅▅▅▅▅▅▅▅▅▅▄▅▄▄▄▄▄▄▃▃▃▃▃▃▃▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▁▂ ▄
-  93.9 μs          Histogram: frequency by time          133 μs <
+        ▁▁▄▇▅▆█▄▃▄
+  ▁▁▂▄▅▆███████████▇▆▅▄▃▂▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁ ▃
+  22.8 μs         Histogram: frequency by time        25.9 μs <
 
- Memory estimate: 46.53 KiB, allocs estimate: 1118. 
+ Memory estimate: 6.70 KiB, allocs estimate: 63.
+
+Was 94 μs / 46.53 KiB / 1118 allocs with 36 iterations, before
+
+  - the residual was made allocation free (0.35 μs per evaluation, `tether_shape`),
+  - the tension was moved to a logarithmic scale with a bounded trust region radius,
+  - `rho_t` was read from the .mat file as a mass per unit length rather than a density,
+    which had made the tether 1442x too light.
  =#

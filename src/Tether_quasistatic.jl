@@ -15,19 +15,21 @@ include(joinpath(@__DIR__, "qsm_conventions.jl"))
 
 const MVec3 = MVector{3, Float64}
 const SVec3 = SVector{3, Float64}
-# const segments = 15
 
-# Iterations: 36
-# BenchmarkTools.Trial: 10000 samples with 1 evaluation per sample.
-#  Range (min … max):  84.169 μs …  2.388 ms  ┊ GC (min … max): 0.00% … 93.18%
-#  Time  (median):     89.110 μs              ┊ GC (median):    0.00%
-#  Time  (mean ± σ):   92.513 μs ± 47.339 μs  ┊ GC (mean ± σ):  1.10% ±  2.09%
-
-#     ▂█▇▆▂▁                                                     
-#   ▁▃██████▆▆▆▅▅▅▄▅▄▄▄▃▃▄▃▃▃▃▃▃▄▃▃▃▃▃▃▃▃▃▃▃▃▂▂▂▃▂▂▂▂▂▂▂▂▂▂▂▁▁▁ ▃
-#   84.2 μs         Histogram: frequency by time         108 μs <
-
-#  Memory estimate: 41.20 KiB, allocs estimate: 971.
+# Solvers used by [`simulate_tether`](@ref). This problem needs globalization: the initial
+# guess for the tension is easily orders of magnitude off, and an undamped Newton step then
+# jumps clean out of the physically meaningful region - straight to `Tn` = 0, where the
+# residual flattens out at the shape of a tether hanging limp from the ground station and
+# there is no gradient left to come back on. The radius is capped because the unknowns are
+# O(1) by construction (see `scaled_res`), so a step longer than 2 is never useful, while
+# the default cap of `max(norm(f(u0)), maximum(u0) - minimum(u0))` lets a single step cross
+# ten decades of tension. `AutoForwardDiff` gives an exact 3x3 Jacobian in one evaluation,
+# where `AutoFiniteDiff` needs four inexact ones.
+const DEFAULT_SOLVER = TrustRegion(autodiff = AutoForwardDiff(),
+                                   max_trust_radius = 2.0, initial_trust_radius = 1.0)
+# Only used if `DEFAULT_SOLVER` fails. The linear parameterization of the tension is worse
+# conditioned, but it fails in different places, which is the point of a fallback.
+const FALLBACK_SOLVER = TrustRegion(autodiff = AutoForwardDiff())
 
 """
     Settings
@@ -66,48 +68,215 @@ Function to determine the tether shape and forces, based on a quasi-static model
 - tether_length: tether length
 - settings:: Settings struct containing environmental and tether parameters: see [Settings](@ref)
 
+# Keyword arguments
+- prn: print the solver statistics
+- alg: the nonlinear solver, see [`DEFAULT_SOLVER`](@ref)
+
 # Returns
 - state_vec::MVector{3, Float64}: state vector (theta [rad], phi [rad], Tn [N]);  
   tether orientation and tension at ground station 
 - tether_pos::Matrix{Float64}: x,y,z - coordinates of the tether nodes
 - force_gnd::Float64: Line tension at the ground station
-- force_kite::Vector{Float64}: force from the kite to the end of tether
-- p0::Vector{Float64}:  x,y,z - coordinates of the kite-tether attachment
+- force_kite::MVector{3, Float64}: force from the kite to the end of tether
+- p0::MVector{3, Float64}:  x,y,z - coordinates of the kite-tether attachment
 """
-function simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings; prn=false)
-    segments = size(wind_vel)[2]
-    buffers= [MMatrix{3, segments}(zeros(3, segments)), MMatrix{3, segments}(zeros(3, segments)), MMatrix{3, segments}(zeros(3, segments)), 
-              MMatrix{3, segments}(zeros(3, segments)), MMatrix{3, segments}(zeros(3, segments))]
-    
-    # Pack parameters in param named tuple - false sets res! for in-place solution
-    param = (kite_pos=kite_pos, kite_vel=kite_vel, wind_vel=wind_vel, 
-         tether_length=tether_length, settings=settings, buffers=buffers, segments = segments, 
-         return_result=false)
-    # Define the nonlinear problem
-    prob = NonlinearProblem(res!, state_vec, param)
-    # Solve the problem with TrustRegion method
-    sol = solve(prob, TrustRegion(autodiff=AutoFiniteDiff()), show_trace=Val(false)) 
+function simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings;
+                         prn=false, alg=DEFAULT_SOLVER)
+    segments = size(wind_vel, 2)
+    # The tension is solved for as log(Tn/tension_scale), see `scaled_res`. `tension_scale`
+    # is the initial guess itself, so the third unknown simply starts at zero.
+    tension_scale = state_vec[3] > 0 ? Float64(state_vec[3]) : 2e-4 * settings.c_spring
+    param = (kite_pos=SVec3(kite_pos), kite_vel=SVec3(kite_vel), wind_vel=wind_vel,
+             tether_length=tether_length, settings=settings, segments=segments,
+             tension_scale=tension_scale)
 
-    iterations = sol.stats.nsteps  # Field name may vary; verify with `propertynames(sol)`
-    state_vec = sol.u
-    if prn
-        println("Iterations: ", iterations)
+    # Out-of-place residual on a static vector, which keeps the solver allocation free.
+    u0 = SVec3(state_vec[1], state_vec[2], 0.0)
+    prob = NonlinearProblem{false}(scaled_res, u0, param)
+    sol = solve(prob, alg)
+    tol = 1e-6 * tether_length
+    if converged(sol, tol)
+        tension = tension_scale * exp(sol.u[3])
+    else
+        sol = solve(NonlinearProblem{false}(lin_res, SVec3(u0[1], u0[2], 1.0), param),
+                    FALLBACK_SOLVER)
+        tension = tension_scale * sol.u[3]
+        converged(sol, tol) ||
+            @warn "simulate_tether did not converge" sol.retcode norm(sol.resid)
     end
-    # Set the return_result to true so that res! returns outputs
-    param = (; param..., return_result=true)
-    res = MVector(0.0, 0, 0)
-    res, force_kite, tether_pos, p0 = res!(res, state_vec, param)
+    if prn
+        nsteps = sol.stats === nothing ? "n/a" : sol.stats.nsteps
+        println("Iterations: ", nsteps, ", retcode: ", sol.retcode, ", |res|: ", norm(sol.resid))
+    end
+
+    state_vec = MVector(sol.u[1], sol.u[2], tension)
+    # Re-run the model at the solution, this time storing the node positions.
+    tether_pos = Matrix{Float64}(undef, 3, segments)
+    _, force_kite, p0 = tether_shape(state_vec[1], state_vec[2], state_vec[3], param, tether_pos)
 
     force_gnd = state_vec[3]
-    state_vec, tether_pos, force_gnd, force_kite, p0
+    state_vec, tether_pos, force_gnd, MVector(force_kite), MVector(p0)
 end
 
+"""
+    scaled_res(u, param)
+
+Residual of [`tether_shape`](@ref) as seen by the nonlinear solver: `u` is
+`(theta, phi, log(Tn/tension_scale))`, see [`simulate_tether`](@ref).
+
+The tension is solved for on a logarithmic scale because it spans decades. A taut tether
+pulls with 1e5 N, a tether long enough to sag between kite and ground station with a few N,
+so an initial guess can easily be a factor 1e5 off, and a solver that walks that distance
+linearly needs an iteration per decade. On top of that the residual is far less sensitive
+to the tension than to the two angles - a stiff tether hardly stretches - which leaves the
+Jacobian nearly singular in the tension direction; `d(res)/d(log Tn)` is `Tn * d(res)/dTn`,
+which is of the same order as the two angle columns. Positivity of the tension comes free.
+"""
+scaled_res(u, param) = first(tether_shape(u[1], u[2], param.tension_scale * exp(u[3]), param, nothing))
+
+"""
+    lin_res(u, param)
+
+As [`scaled_res`](@ref), but with `u[3]` the tension itself in units of `tension_scale`.
+Used only by the fallback solve in [`simulate_tether`](@ref).
+"""
+lin_res(u, param) = first(tether_shape(u[1], u[2], u[3] * param.tension_scale, param, nothing))
+
+"""
+    converged(sol, tol)
+
+Whether a nonlinear solution actually solved the problem. Written so that a `NaN` residual
+counts as "not converged" rather than slipping through a `>` comparison.
+"""
+converged(sol, tol) = sol.retcode == ReturnCode.Success && norm(sol.resid) < tol
+
+"""
+    node_kinematics(ω, p_unit, v_parallel, pos)
+
+Velocity and acceleration of a tether node at `pos`, assuming the tether rotates rigidly
+with the kite: `ω` is the angular velocity of the kite position vector, and `v_parallel` the
+radial component of the kite velocity along the unit vector `p_unit`.
+"""
+@inline function node_kinematics(ω, p_unit, v_parallel, pos)
+    vel = v_parallel * p_unit + cross(ω, pos)
+    acc = cross(ω, cross(ω, pos))
+    return vel, acc
+end
+
+"""
+    segment_drag(v_app, dir, drag_coeff)
+
+Drag force on one tether segment with unit direction `dir` and apparent wind velocity
+`v_app`: `drag_coeff * |v_n| * v_n`, with `v_n` the component of `v_app` normal to the
+segment. Below 1 mm/s of apparent wind the drag is zero by definition, which also keeps the
+normal direction well defined.
+"""
+@inline function segment_drag(v_app, dir, drag_coeff)
+    if abs(v_app[1]) < 1e-3 && abs(v_app[2]) < 1e-3 && abs(v_app[3]) < 1e-3
+        return zero(v_app)
+    end
+    v_n = v_app - dot(v_app, dir) * dir
+    n2 = dot(v_n, v_n)
+    n2 < 1e-24 && return zero(v_app)   # apparent wind aligned with the segment
+    return (drag_coeff * sqrt(n2)) * v_n
+end
+
+@inline function set_col!(m, i, v)
+    @inbounds m[1, i], m[2, i], m[3, i] = v[1], v[2], v[3]
+    return nothing
+end
+
+@inline wind_col(w, i) = @inbounds SVector(w[1, i], w[2, i], w[3, i])
+
+"""
+    tether_shape(θ, φ, Tn, param, pj)
+
+Integrate the quasi-static tether from the ground station up to the kite and return the
+gap between the kite and the end of the tether.
+
+The tether is walked one segment at a time, so only the force, drag, velocity and
+acceleration of the *current* node are needed; keeping them in `SVector`s instead of in
+`(3, segments)` buffers makes the whole integration allocation free and lets ForwardDiff
+run straight through it.
+
+# Arguments
+- θ, φ, Tn: elevation [rad], wind-frame azimuth [rad] and tension [N] at the ground station
+- param: named tuple with `kite_pos`, `kite_vel`, `wind_vel`, `tether_length`, `settings`
+  and `segments`, see [`simulate_tether`](@ref)
+- pj: `(3, segments)` matrix that receives the node positions, or `nothing` to skip them.
+  Node `segments` is the one closest to the ground station, node 1 the last one before the
+  kite attachment point `p0`.
+
+# Returns
+- res: difference between the kite position and the end of the tether `p0`
+- T0: force from the kite on the end of the tether
+- p0: x,y,z - coordinates of the kite-tether attachment
+"""
+function tether_shape(θ, φ, Tn, param, pj)
+    (; kite_pos, kite_vel, wind_vel, tether_length, settings, segments) = param
+    g = abs(settings.g_earth[3])
+    Ls = tether_length / (segments + 1)
+    drag_coeff = -0.5 * settings.rho * Ls * settings.d_tether * settings.cd_tether
+    A = π/4 * (settings.d_tether/1000)^2
+    mj = settings.rho_tether * Ls * A
+    EA = settings.c_spring          # the model's E is c_spring/A, so E*A is c_spring again
+
+    # Precompute common values
+    sinθ, cosθ = sin(θ), cos(θ)
+    sinφ, cosφ = sin(φ), cos(φ)
+    kite_p = SVec3(kite_pos)
+    kite_v = SVec3(kite_vel)
+    norm_p = norm(kite_p)
+    p_unit = kite_p / norm_p
+    v_parallel = dot(kite_v, p_unit)
+    ω = cross(kite_p / norm_p^2, kite_v)
+
+    # First element: the segment leaving the ground station, ending in node `segments`
+    dir = SVector(cosθ*cosφ, cosθ*sinφ, sinθ)   # cos(elevation)cos(azimuth), ...
+    FT = SVector(Tn*cosθ*cosφ, Tn*cosθ*sinφ, Tn*sinθ)
+    pos = Ls * dir
+    pj === nothing || set_col!(pj, segments, pos)
+    vel, acc = node_kinematics(ω, p_unit, v_parallel, pos)
+    Fd = segment_drag(vel - wind_col(wind_vel, segments), dir, drag_coeff)
+
+    # Process the other segments, walking up towards the kite
+    @inbounds for ii in segments:-1:2
+        # Tension force: the node below carries 1.5 segment masses (the model lumps the
+        # half segment at the ground station onto it), all others carry one.
+        mj_total = ii == segments ? 1.5mj : mj
+        FT = mj_total * acc + FT - Fd + SVector(0.0, 0.0, mj_total * g)
+
+        # Position of the next node, the segment being stretched by its own tension
+        ft_norm = norm(FT)
+        l_i_1 = (ft_norm/EA + 1) * Ls
+        pos_next = pos + l_i_1 * (FT / ft_norm)
+
+        # The drag of this segment uses the velocity of the node below it, so it has to be
+        # taken before `vel` is advanced.
+        v_app = vel - wind_col(wind_vel, ii)
+        vel, acc = node_kinematics(ω, p_unit, v_parallel, pos_next)
+        seg = pos_next - pos
+        Fd = segment_drag(v_app, seg / norm(seg), drag_coeff)
+
+        pos = pos_next
+        pj === nothing || set_col!(pj, ii-1, pos)
+    end
+
+    # Final ground connection calculations
+    T0 = 1.5mj * acc + FT - Fd + SVector(0.0, 0.0, 1.5mj * g)
+    T0_norm = norm(T0)
+    l_i_1 = (T0_norm/EA + 1) * Ls
+    p0 = pos + l_i_1 * (T0 / T0_norm)
+
+    return kite_p - p0, T0, p0
+end
 
 """
     res!(res, state_vec, param)
 
 Calculates difference between tether end and kite given tether ground segment orientation 
-and magnitude.
+and magnitude. Thin, mutating wrapper around [`tether_shape`](@ref), kept for callers that
+work with the in-place `(res, state_vec, param)` signature.
 
 # Arguments
 - res::Vector{Float64} difference between tether end and kite segment
@@ -119,15 +288,16 @@ and magnitude.
     - wind_vel::MMatrix{Float64} wind velocity vector in wind reference frame for each segment of the tether
     - tether_length: tether length
     - settings:: Settings struct containing environmental and tether parameters: see [Settings](@ref)
-    - buffers:: (5, ) Vector{Matrix{Float64}}  Vector of (3, segments) Matrix{Float64} empty matrices for preallocation
+    - buffers:: (5, ) Vector{Matrix{Float64}}  Vector of (3, segments) Matrix{Float64} empty matrices;
+      only `buffers[3]` is used, it receives the node positions
     - segments:: number of tether segments
     - return_result:: Boolean to determine use for in-place optimization or for calculating returns
 
 # Returns (if return_result==true)
 - res::Vector{Float64} difference between tether end and kite segment
-- T0::Vector{Float64} force from the kite to the end of tether
+- T0::MVector{3, Float64} force from the kite to the end of tether
 - pj:: (3, segments) Matrix{Float64} x,y,z - coordinates of the tether nodes
-- p0::Vector{Float64}  x,y,z - coordinates of the kite-tether attachment
+- p0::MVector{3, Float64}  x,y,z - coordinates of the kite-tether attachment
 
 # Example usage
 state_vec = rand(3,)
@@ -140,160 +310,15 @@ res!(res, state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings)
 """
 function res!(res, state_vec, param)
     kite_pos, kite_vel, wind_vel, tether_length, settings, buffers, segments, return_result = param
-    g = abs(settings.g_earth[3])
-    Ls = tether_length / (segments + 1)
-    drag_coeff = -0.5 * settings.rho * Ls * settings.d_tether * settings.cd_tether
-    A = π/4 * (settings.d_tether/1000)^2
-    mj = settings.rho_tether * Ls * A
-    E = settings.c_spring / A
-
-    # Preallocate arrays
-    FT = buffers[1]
-    Fd = buffers[2]
-    pj = buffers[3]
-    vj = buffers[4]
-    aj = buffers[5]
-
-    # Unpack state variables (elevation, azimuth)
-    θ, φ, Tn = state_vec[1], state_vec[2], state_vec[3]
-
-    # Precompute common values
-    sinθ = sin(θ)
-    cosθ = cos(θ)
-    sinφ = sin(φ)
-    cosφ = cos(φ)
-    norm_p = norm(kite_pos)
-    p_unit = kite_pos ./ norm_p
-    v_parallel = dot(kite_vel, p_unit)
-    
-    # First element calculations
-    FT[1, segments] = Tn * cosθ * cosφ # cos(elevation)cos(azimuth)
-    FT[2, segments] = Tn * cosθ * sinφ # cos(elevation)sin(azimuth)
-    FT[3, segments] = Tn * sinθ        # sin(elevation)
-
-    pj[1, segments] = Ls * cosθ * cosφ
-    pj[2, segments] = Ls * cosθ * sinφ
-    pj[3, segments] = Ls * sinθ
-
-
-    # Velocity and acceleration calculations
-    ω = cross(kite_pos / norm_p^2, kite_vel)
-    a = cross(ω, SVec3(pj[:, segments]))         
-    b = cross(ω, cross(ω, SVec3(pj[:, segments])))
-    vj[:, segments] .= v_parallel * p_unit + a
-    aj[:, segments] .= b
-
-    # Drag calculation for first element
-    v_a_p1 = vj[1, segments] - wind_vel[1, segments]
-    v_a_p2 = vj[2, segments] - wind_vel[2, segments]
-    v_a_p3 = vj[3, segments] - wind_vel[3, segments]
-
-    if all(x -> abs(x) < 1e-3, (v_a_p1, v_a_p2, v_a_p3))
-        Fd[:, segments] .= 0.0
-    else
-        dir1, dir2, dir3 = pj[1, segments]/Ls, pj[2, segments]/Ls, pj[3, segments]/Ls
-        v_dot_dir = v_a_p1*dir1 + v_a_p2*dir2 + v_a_p3*dir3
-        v_a_p_t1 = v_dot_dir * dir1
-        v_a_p_t2 = v_dot_dir * dir2
-        v_a_p_t3 = v_dot_dir * dir3
-
-        v_a_p_n1 = v_a_p1 - v_a_p_t1
-        v_a_p_n2 = v_a_p2 - v_a_p_t2
-        v_a_p_n3 = v_a_p3 - v_a_p_t3
-
-        norm_v_a_p_n = sqrt(v_a_p_n1^2 + v_a_p_n2^2 + v_a_p_n3^2)
-        coeff = drag_coeff * norm_v_a_p_n
-
-        Fd[1, segments] = coeff * v_a_p_n1
-        Fd[2, segments] = coeff * v_a_p_n2
-        Fd[3, segments] = coeff * v_a_p_n3
-    end
-
-    # Process other segments
-    @inbounds for ii in segments:-1:2
-        # Tension force calculations
-        if ii == segments
-            mj_total = 1.5mj
-            g_term = mj_total * g
-        else
-            mj_total = mj
-            g_term = mj * g
-        end
-
-        FT[:, ii-1] .= mj_total * aj[:, ii] + FT[:, ii] - Fd[:, ii]
-        FT[3, ii-1] += g_term
-
-        # Position calculations
-        ft_norm = sqrt(FT[1, ii-1]^2 + FT[2, ii-1]^2 + FT[3, ii-1]^2)
-        l_i_1 = (ft_norm/(E*A) + 1) * Ls
-        ft_dir = FT[1, ii-1]/ft_norm, FT[2, ii-1]/ft_norm, FT[3, ii-1]/ft_norm
-
-        pj[1, ii-1] = pj[1, ii] + l_i_1 * ft_dir[1]
-        pj[2, ii-1] = pj[2, ii] + l_i_1 * ft_dir[2]
-        pj[3, ii-1] = pj[3, ii] + l_i_1 * ft_dir[3]
-
-        # Velocity and acceleration
-        a = cross(ω, SVec3(pj[:, ii-1]))           
-        b = cross(ω, cross(ω, SVec3(pj[:, ii-1])))
-        vj[:, ii-1] .= v_parallel * p_unit + a
-        aj[:, ii-1] .= b
-
-        # Drag calculations
-        v_a_p1 = vj[1, ii] - wind_vel[1, ii]
-        v_a_p2 = vj[2, ii] - wind_vel[2, ii]
-        v_a_p3 = vj[3, ii] - wind_vel[3, ii]
-
-        if all(x -> abs(x) < 1e-3, (v_a_p1, v_a_p2, v_a_p3))
-            Fd[:, ii-1] .= 0.0
-        else
-            dx = pj[1, ii-1] - pj[1, ii]
-            dy = pj[2, ii-1] - pj[2, ii]
-            dz = pj[3, ii-1] - pj[3, ii]
-            segment_norm = sqrt(dx^2 + dy^2 + dz^2)
-            dir1 = dx/segment_norm
-            dir2 = dy/segment_norm
-            dir3 = dz/segment_norm
-
-            v_dot_dir = v_a_p1*dir1 + v_a_p2*dir2 + v_a_p3*dir3
-            v_a_p_t1 = v_dot_dir * dir1
-            v_a_p_t2 = v_dot_dir * dir2
-            v_a_p_t3 = v_dot_dir * dir3
-
-            v_a_p_n1 = v_a_p1 - v_a_p_t1
-            v_a_p_n2 = v_a_p2 - v_a_p_t2
-            v_a_p_n3 = v_a_p3 - v_a_p_t3
-
-            norm_v_a_p_n = sqrt(v_a_p_n1^2 + v_a_p_n2^2 + v_a_p_n3^2)
-            coeff = drag_coeff * norm_v_a_p_n
-
-            Fd[1, ii-1] = coeff * v_a_p_n1
-            Fd[2, ii-1] = coeff * v_a_p_n2
-            Fd[3, ii-1] = coeff * v_a_p_n3
-        end
-    end
-
-    # Final ground connection calculations
-    T0_1 = 1.5mj*aj[1,1] + FT[1,1] - Fd[1,1]
-    T0_2 = 1.5mj*aj[2,1] + FT[2,1] - Fd[2,1]
-    T0_3 = 1.5mj*aj[3,1] + FT[3,1] - Fd[3,1] + 1.5mj*g
-    T0_norm = sqrt(T0_1^2 + T0_2^2 + T0_3^2)
-    
-    l_i_1 = (T0_norm/(E*A) + 1) * Ls
-    T0_dir1 = T0_1/T0_norm
-    T0_dir2 = T0_2/T0_norm
-    T0_dir3 = T0_3/T0_norm
-
-    p0 = MVector(pj[1,1] + l_i_1*T0_dir1, 
-                 pj[2,1] + l_i_1*T0_dir2,
-                 pj[3,1] + l_i_1*T0_dir3)
-
-    res .= kite_pos - p0
-    if return_result
-        return res, MVector(T0_1, T0_2, T0_3), pj, p0
-    else
-        nothing
-    end
+    par = (kite_pos=kite_pos, kite_vel=kite_vel, wind_vel=wind_vel,
+           tether_length=tether_length, settings=settings, segments=segments)
+    pj = return_result ? buffers[3] : nothing
+    r, T0, p0 = tether_shape(state_vec[1], state_vec[2], state_vec[3], par, pj)
+    res .= r
+    return_result || return nothing
+    return res, MVector(T0), pj, MVector(p0)
 end
+
 
 """
     get_initial_conditions(filename)
@@ -396,8 +421,6 @@ function init_quasistatic(kite_pos, tether_length; kite_vel = nothing, segments 
     # azimuth angle calculation
     phi_init = atan(kite_pos[2], kite_pos[1])        
     
-    # tension definition
-    tension = 0.0002*settings.c_spring
     function solve_catenary(kite_pos, tether_length, segments)  
         hvec = kite_pos[1:2]    
         h = norm(hvec)
@@ -427,13 +450,23 @@ function init_quasistatic(kite_pos, tether_length; kite_vel = nothing, segments 
         z_catenary = cosh.((X .- x_min) .* coeff_val) ./ coeff_val .+ bias
         x_catenary = XY[1, :]
         y_catenary = XY[2, :]    
-        return x_catenary, y_catenary, z_catenary
+        return x_catenary, y_catenary, z_catenary, coeff_val
     end
 
     # Solve the catenary equation
-    x_catenary, y_catenary, z_catenary = solve_catenary(kite_pos, tether_length, segments)  
+    x_catenary, y_catenary, z_catenary, coeff = solve_catenary(kite_pos, tether_length, segments)  
     # Calculate the elevation angle
     theta_init = atan(z_catenary[2], sqrt(x_catenary[2]^2 + y_catenary[2]^2))    
+
+    # Initial tension, from the catenary itself: its parameter 1/coeff is H/w, the
+    # horizontal tension over the weight per unit length, so the shape that was just
+    # fitted to the tether length already carries a tension estimate. The tension of a
+    # sagging tether is set by its own weight, not by how stiff it is, which is why the
+    # previous guess of a fixed fraction of `c_spring` could be orders of magnitude off -
+    # and every decade of error costs `simulate_tether` iterations. `w * tether_length`
+    # bounds it from below so that a near vertical tether cannot produce a zero guess.
+    w = settings.rho_tether * (π/4 * (settings.d_tether/1000)^2) * abs(settings.g_earth[3])
+    tension = sqrt((w / coeff)^2 + (w * tether_length)^2)
 
     # Assemble state vector
     state_vec = MVector{3}([theta_init, phi_init, tension])        
@@ -472,5 +505,6 @@ function transformFromWtoO(windDirection_rad,vec_W)
     vec_O = M_OW*vec_W
     return vec_O
 end
+
 
 end # module Quasistatic
