@@ -18,9 +18,9 @@ convention; each section linked below holds the detail and the reasoning.
    frame rotation](#it-is-a-parametrisation-difference-not-a-frame-rotation).
 3. ~~**Bring `src/Tether_qsm_dual.jl` in line.** Its `res!` still uses the
    MATLAB parametrisation, so it must move to the elevation/azimuth form used
-   by `Tether_quasistatic.jl`.~~ **Done** — `FT[:, Ns]`/`pj[:, Ns]` in its
-   `res!` now use `[cos(β)cos(φ), cos(β)sin(φ), sin(β)]`, matching
-   `Tether_quasistatic.jl`.
+   by `Tether_quasistatic.jl`.~~ **Done**, and the file has since been deleted
+   — see [Removed: the dual-number
+   copy](#removed-the-dual-number-copy).
 4. ~~**Re-enable the reference comparisons.** Turn the four `@test_broken` in
    `test/test_qsm.jl` back into `@test` with an `rtol`. The reference outputs
    need no conversion.~~ **Done and verified** — all four pass. `rtol=1e-2` was
@@ -406,6 +406,27 @@ default; `simulate_tether` takes an `alg` keyword for the rest. The `Simple*`
 variants are the fastest warm and would be worth a cheap-first,
 fall-back-to-robust structure if this is ever called per time step — but a cold
 failure costs 1.6 ms, which is too much to risk on a default.
+
+## Removed: the dual-number copy
+
+`src/Tether_qsm_dual.jl` was a second, experimental implementation of the same
+model, wired up so the residual could be differentiated with ForwardDiff by
+routing every buffer through `PreallocationTools.DiffCache`. It has been
+deleted, along with `examples/quasistatic/benchmark_qsm_dual.jl` and its
+`menu3.jl` entry. References to it elsewhere in this document are historical.
+
+It was never part of the package: `src/Tethers.jl` did not include it and no
+test touched it. What it did have was a verbatim copy of `get_initial_conditions`,
+of `res!` and of `Settings`, all of which had to be kept in step with the real
+ones by hand. TODO steps 1 and 3 above were both that maintenance, and the
+`rho_t` fix would have been a third round of it.
+
+The question it existed to answer has since been answered, and not in its
+favour: its own benchmark recorded 328.67 KiB and 2292 allocations per solve,
+against 46.53 KiB and 1118 for the plain version at the same date.
+`Tether_quasistatic.jl` now differentiates its residual with ForwardDiff and no
+such machinery at all — the residual no longer writes into buffers, so there is
+nothing left for a `DiffCache` to do. See [Performance](#performance).
 
 ## Resolved: the `maxiters` warning
 

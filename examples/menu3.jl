@@ -9,8 +9,7 @@ quasistatic_examples = [("run_catenary",        "include(\"quasistatic/run_caten
                          ("run_catenary_matlab", "include(\"quasistatic/run_catenary_matlab.jl\")",      "Quasi-static shape for the MATLAB reference case vs. analytic catenary"),
                          ("flying_circular",     "include(\"quasistatic/flying_circular.jl\"); main()",  "Tether shape and force while the kite flies a circular trajectory"),
                          ("force_plots",         "include(\"quasistatic/force_plots.jl\"); main()",      "Tether shape and force as a function of kite distance"),
-                         ("benchmark_qsm",       "include(\"quasistatic/benchmark_qsm.jl\")",            "Benchmark: quasi-static model, elevation/azimuth angles"),
-                         ("benchmark_qsm_dual",  "include(\"quasistatic/benchmark_qsm_dual.jl\")",       "Benchmark: quasi-static model, dual-number formulation")]
+                         ("benchmark_qsm",       "include(\"quasistatic/benchmark_qsm.jl\")",            "Benchmark: quasi-static model, elevation/azimuth angles")]
 
 quasistatic_name_width = maximum(length(name) for (name, _, _) in quasistatic_examples)
 quasistatic_options = [rpad(name, quasistatic_name_width) * "  " * descr for (name, _, descr) in quasistatic_examples]
