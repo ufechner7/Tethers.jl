@@ -68,7 +68,7 @@ Copy the example scripts and the `bin` helper scripts to your project with:
 
 ```julia
 using Tethers
-Tethers.install_examples()
+install_examples()
 ```
 
 This also adds the extra packages needed by the example scripts. You can now run the examples with:
