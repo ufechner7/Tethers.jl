@@ -23,21 +23,15 @@ convention; each section linked below holds the detail and the reasoning.
    `Tether_quasistatic.jl`.
 4. ~~**Re-enable the reference comparisons.** Turn the four `@test_broken` in
    `test/test_qsm.jl` back into `@test` with an `rtol`. The reference outputs
-   need no conversion.~~ **Done and verified** — `@test ... rtol=2e-2`; all
-   four pass. `rtol=1e-2` was tried first and left `T0` failing at ~1.9 %, which
-   is what led to step 5's finding.
-5. **Explain the remaining 1.6 m.** Narrowed but not closed: with dynamics
-   removed (`kiteVel = windVel = 0` in the fixture), the residual on `p0`
-   (`‖p0 - p0_ref‖ ≈ 1.6 m`, ~0.4 %) shows up amplified on `T0` (~1.9 %, ~2846
-   N), isolated entirely to the z/vertical component — `T0`'s x and y match
-   the reference to full double precision, since nothing in this model touches
-   them but the initial guess. Ruled out: the tether's own gravity term, which
-   totals ~2 N here (three orders of magnitude too small), and a mismatched
-   tension guess, which would perturb x and y too. Closing this needs the
-   original MATLAB source to diff against; this repo's `matlab/` directory is
-   currently empty. See the comment above the four `@test`s in
-   `test/test_qsm.jl` for the numbers, and [Tolerance will not paper over
-   this](#tolerance-will-not-paper-over-this).
+   need no conversion.~~ **Done and verified** — all four pass. `rtol=1e-2` was
+   tried first and left `T0` failing at ~1.9 %, which is what led to step 5's
+   finding; with that closed the tolerance is now `rtol=1e-6`.
+5. ~~**Explain the remaining 1.6 m.**~~ **Done** — it was gravity after all.
+   `T.rho_t` in the `.mat` files is a mass per unit length [kg/m], while
+   `Settings.rho_tether` is a density [kg/m³], so the tether ran `1/A` = 1442
+   times too light. The original MATLAB source was not needed. See [Resolved:
+   the remaining 1.6 m was the tether's
+   mass](#resolved-the-remaining-16-m-was-the-tethers-mass).
 6. **Track down the `maxiters` warning** in `examples/Tether_11.jl`. The
    obvious hypothesis has already been tested and ruled out — see [Open
    question: the `maxiters` warning](#open-question-the-maxiters-warning).
@@ -129,12 +123,13 @@ or on the way out.
 | as written | 202 % | `2.02` |
 | angles converted (`p0`) | 0.8 % | `0.008` |
 | angles converted (`T0`) | 1.9 % | `0.019` |
+| angles converted, `rho_t` read as kg/m | — | `1e-6` |
 
 At `rtol = 2.02` the assertion would no longer constrain anything. Only after
-the convention is settled does a tolerance become meaningful — and then a
-modest one does the job, though the residual 1.6 m is a second, smaller
-discrepancy that still wants explaining. Land the conversion first, then chase
-that 1.6 m against a tight tolerance.
+the convention is settled does a tolerance become meaningful. The last row is
+where this ended up: the 1.6 m turned out to be a second, independent bug (the
+section below), and with both fixed the two implementations agree to six
+figures rather than two.
 
 ### Why the loader and not `res!`
 
@@ -216,23 +211,81 @@ the second conversion site and it will have to be reconciled with the one above.
 
 ### Reproducing
 
+`get_initial_conditions` now applies both fixes on load — `matlab_to_wind` to
+the two angles, and the `/A` to `rho_t` — so this measures what is left:
+
 ```julia
 using Tethers.Quasistatic: get_initial_conditions
 import Tethers.Quasistatic as QSM
+using LinearAlgebra, MAT
 sv, kp, kv, wv, tl, se = get_initial_conditions("test/data/input_basic_test.mat")
 ref = matread("test/data/basic_test_results.mat")
 Ns = size(wv, 2)
-buffers() = [zeros(3, Ns) for _ in 1:5]
+buffers = [zeros(3, Ns) for _ in 1:5]      # only buffers[3] is read, for the positions
 
-_, _, _, p0 = QSM.res!(zeros(3), sv, (kp, kv, wv, tl, se, buffers(), Ns, true))
-norm(p0 .- vec(ref["p0"]))          # 365.6
-
-# the same call with the angles converted to the reference convention
-d = [sin(sv[1])cos(sv[2]), sin(sv[2]), cos(sv[1])cos(sv[2])]; d ./= norm(d)
-sv2 = MVector(asin(d[3]), atan(d[2], d[1]), sv[3])
-_, _, _, p0c = QSM.res!(zeros(3), sv2, (kp, kv, wv, tl, se, buffers(), Ns, true))
-norm(p0c .- vec(ref["p0"]))         # 1.61
+_, T0, pj, p0 = QSM.res!(zeros(3), sv, (kp, kv, wv, tl, se, buffers, Ns, true))
+se.rho_tether                # 970.0 kg/m³ — the stored 0.6729 kg/m divided by A
+norm(p0 .- vec(ref["p0"]))   # was 1.61 m before the rho_t fix
+norm(T0 .- vec(ref["T0"]))   # was ~2846 N before it, all of it in z
 ```
+
+Both norms now sit inside the `rtol=1e-6` the assertions in `test/test_qsm.jl`
+use. To see the historical numbers, bypass the loader: feeding `res!` the raw
+`stateVec` angles gives `‖p0 - p0_ref‖ = 365.6 m`, and feeding it `rho_t`
+unconverted (`se.rho_tether = 0.6729`) gives the 1.61 m.
+
+## Resolved: the remaining 1.6 m was the tether's mass
+
+TODO step 5, closed without needing the MATLAB source. `T.rho_t` in the `.mat`
+fixtures is a **mass per unit length** [kg/m]; `Settings.rho_tether` is a
+**density** [kg/m³], which the model multiplies by the cross section itself.
+`get_initial_conditions` passed the number through unconverted, so every model
+built from these fixtures ran with a tether `1/A` = 1442 times too light — 1.98
+N of tether weight instead of 2848 N.
+
+The fixture pins the intended unit down on its own:
+
+```
+rho_t / A = 0.6729014779417218 / 6.937129e-4 = 970.00 kg/m³
+```
+
+exactly the density of Dyneema, for a cable whose other stored properties (`d =
+29.72 mm`, `E = 116 GPa`) are equally Dyneema-like.
+
+### Why gravity had been ruled out
+
+The note above the assertions in `test/test_qsm.jl` excluded gravity by
+observing that the gap against `T0` was ~2846 N while *"the model's own gravity
+term here totals ~2 N"*. Those two numbers are the same quantity, a factor
+`1/A` apart — the observation that was meant to rule gravity out is the one that
+identifies it. Read as a mass per metre, the identity closes exactly:
+
+| | z component |
+| --- | --- |
+| `T0_ref` | 148425.44665 N |
+| `Tn · dir` at the ground station | 145576.95967 N |
+| difference | **2848.487 N** |
+| `16 · Ls · g · rho_t` | **2848.487 N** |
+
+`T0`'s x and y already agreed to 5e-5 N out of 48525 N (1e-9 relative), which is
+what localised the discrepancy to the vertical to begin with: nothing but
+gravity enters z that the two implementations could disagree about.
+
+### Consequences
+
+- The reference agreement improves by four orders of magnitude, so the
+  assertions in `test/test_qsm.jl` move from `rtol=2e-2` to `rtol=1e-6`.
+- **Results change for every caller of `get_initial_conditions`.** The tether
+  in the basic test case now weighs 2848 N rather than 1.98 N. That is the
+  physically correct behaviour for a 29.7 mm Dyneema cable, but tether-shape
+  plots will legitimately look different — the old ones were of a nearly
+  weightless string. The hardcoded `rho_tether` in both
+  `examples/quasistatic/benchmark_qsm*.jl` was updated to 970.0 to match.
+- The fixture stops being physically inconsistent. With a weightless tether the
+  only way to close the 100 m between the kite distance (331.7 m) and the
+  tether length (431.7 m) was to hang the tether in a deep loop below the
+  ground station: `simulate_tether` converged on a ground tension of 0.32 N and
+  an elevation of −63°, from a guess of 1.6e5 N and +65°.
 
 ## Bugs found and fixed
 
@@ -258,7 +311,10 @@ already run their `tether_pos` through `hcat` (which promotes to a plain
 `Matrix`) before plotting; `run_catenary_matlab.jl` and `force_plots.jl` did
 not, and crashed on their first `display_if_interactive` call. Fixed by
 materializing `tether_pos` (and the `x_qs`/`y_qs` derived from it) with
-`Matrix`/`collect` right after `simulate_tether` returns.
+`Matrix`/`collect` right after `simulate_tether` returns. `simulate_tether` now
+returns `tether_pos` as a plain `Matrix{Float64}` (see [Performance](#performance)),
+so the trap is gone at the source; the `Matrix`/`collect` calls are harmless and
+were left in place.
 
 **`Tether_11.jl` was entirely dead code.** Its `main()` and the call that drove
 it sat inside a `"""..."""` string literal, so including the file defined
@@ -275,6 +331,62 @@ eqs2 = vcat(eqs1...)
 
 leaves a `Vector{Any}`, which the ModelingToolkit 11 `System` constructor
 rejects. It now builds them per column, the way `examples/Tether_08.jl` does.
+
+## Performance
+
+`simulate_tether` runs `examples/quasistatic/benchmark_qsm.jl` in 23.4 µs
+against 94 µs before, with 63 allocations instead of 1118 and 22 solver
+iterations instead of 36. Three independent changes:
+
+**The residual no longer allocates.** `res!` carried the tension, drag,
+position, velocity and acceleration of every node in five `(3, segments)`
+buffers, but the integration walks the tether one segment at a time, and each
+of those columns was written once and read once, on the next pass of the loop.
+They are now `SVector` locals in `tether_shape`; only the node positions, which
+are returned, still need a matrix. That also removed a type instability:
+`segments` is a runtime value, so `MMatrix{3, segments}` made the parameter
+tuple — and the `NonlinearProblem` built from it — uninferable. One evaluation
+now costs 0.35 µs and allocates nothing, which is what makes `AutoForwardDiff`
+worth it: an exact 3×3 Jacobian in a single evaluation, against four inexact
+ones for finite differences.
+
+**The tension is solved for on a logarithmic scale**, with the trust region
+radius capped at 2. The tension spans decades — a taut tether pulls with 1e5 N,
+one long enough to sag with a few N — so a linear guess is easily a factor 1e5
+off, and a solver walks that down a decade at a time. The cap matters as much
+as the log does: uncapped, the first step crosses some thirteen decades and
+lands where the tether hangs limp from the ground station, the residual flattens
+out, and the solve dies with no gradient left to come back on.
+
+**`init_quasistatic` derives its initial tension from the catenary it already
+fits.** The catenary parameter `1/coeff` is `H/w`, the horizontal tension over
+the weight per unit length. The tension of a sagging tether is set by its own
+weight, not by how stiff it is, so the previous guess of `0.0002 * c_spring`
+could be orders of magnitude out — five, for the basic test case.
+
+`res!` keeps its signature and remains the entry point `test/test_qsm.jl` uses;
+it is now a wrapper around the out-of-place `tether_shape`, and reads only
+`buffers[3]`, for the node positions.
+
+### Solvers that were measured
+
+Cold start is the benchmark's own guess; warm start is the previous solution,
+as `flying_circular.jl` would supply it. Measured before the mass fix, so the
+cold column is a harder problem than it is now.
+
+| | cold | warm | warm +2 % |
+| --- | --- | --- | --- |
+| linear tension, `TrustRegion` | 64.1 µs | 4.0 µs | 7.0 µs |
+| **log tension, `TrustRegion`, radius ≤ 2** | **26.9 µs** | **4.0 µs** | **6.9 µs** |
+| log tension, `SimpleTrustRegion`, radius ≤ 2 | fails | 1.8 µs | 6.0 µs |
+| log tension, `SimpleNewtonRaphson` | fails (NaN) | 1.8 µs | 5.4 µs |
+| log tension, `NewtonRaphson` | fails (`Tn` → 0) | 3.9 µs | 6.7 µs |
+
+Only the bounded trust region converges in all three columns, so it is the
+default; `simulate_tether` takes an `alg` keyword for the rest. The `Simple*`
+variants are the fastest warm and would be worth a cheap-first,
+fall-back-to-robust structure if this is ever called per time step — but a cold
+failure costs 1.6 ms, which is too much to risk on a default.
 
 ## Open question: the `maxiters` warning
 
@@ -298,9 +410,10 @@ still unknown.
 ## Verified
 
 - The workspace root and the `test` environment both resolve against MTK 11.
-- `test/test_qsm.jl`: 8 pass. The four `@test_broken` were turned into
-  `@test ... rtol=2e-2` once the angle conversion landed (TODO step 4), and
-  re-run to confirm — `rtol=1e-2` was tried first and left `T0` failing at
-  ~1.9 %, which is now tracked separately as TODO step 5.
+- `test/test_qsm.jl`: 8 pass at `rtol=1e-6`. The four `@test_broken` first
+  became `@test ... rtol=2e-2` once the angle conversion landed (TODO step 4);
+  the tolerance moved to `1e-6` once the `rho_t` unit mismatch was fixed (TODO
+  step 5), which is a four-order-of-magnitude tightening and the check that
+  confirms that reading of the fixture.
 - All six `examples/quasistatic/` scripts run.
 - `examples/Tether_11.jl` runs end to end (~67 s).
