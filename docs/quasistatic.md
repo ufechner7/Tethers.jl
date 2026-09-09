@@ -35,10 +35,9 @@ convention; each section linked below holds the detail and the reasoning.
 6. **Track down the `maxiters` warning** in `examples/Tether_11.jl`. The
    obvious hypothesis has already been tested and ruled out — see [Open
    question: the `maxiters` warning](#open-question-the-maxiters-warning).
-7. **Decide what to do with `transformFromOtoW` / `transformFromWtoO`.**
-   Currently dead code carrying a y-flip and a z-flip; either delete them or
-   reconcile them with the convention settled in steps 1–2. See [Related: the
-   unused frame transforms](#related-the-unused-frame-transforms).
+7. ~~**Decide what to do with `transformFromOtoW` / `transformFromWtoO`.**~~
+   **Done** — deleted. See [Related: the unused frame
+   transforms](#related-the-unused-frame-transforms).
 
 Raise the mirrored azimuth in `test/data/input_basic_test.mat` with whoever
 owns the MATLAB code — it is not a blocker, and the fixture should be left
@@ -204,10 +203,29 @@ worth raising with whoever owns that code.
 
 ### Related: the unused frame transforms
 
-`transformFromOtoW` / `transformFromWtoO` at the end of
-`src/Tether_quasistatic.jl` are currently dead code, and their matrix carries
-both a y-flip and a z-flip. If a wind-direction rotation is ever needed, that is
-the second conversion site and it will have to be reconciled with the one above.
+`transformFromOtoW` / `transformFromWtoO` sat at the end of
+`src/Tether_quasistatic.jl` as dead code — defined, never called, never
+exported — and their matrix carried both a y-flip and a z-flip, which is a
+second convention in a file whose first one had just taken this much work to
+pin down. They have been deleted rather than reconciled: nothing in the package
+rotates by wind direction today, and a transform nobody calls cannot be
+verified against anything.
+
+If a wind-direction rotation is needed later, here is what those two were,
+since it is not obvious by inspection. Both used the *same* matrix for both
+directions, which is only correct if it is an involution, and
+`[c s 0; s -c 0; 0 0 -1]` is one: it squares to the identity. Its determinant
+is +1, so despite carrying both a y-flip and a z-flip it is a proper rotation —
+the two flips cancel. Specifically it is a rotation by 180° about the
+horizontal axis at angle `windDirection_rad/2`, i.e. `2nnᵀ - I` for
+`n = [cos(wd/2), sin(wd/2), 0]`.
+
+The part that matters for reuse is that it maps `z → -z`: it converts between a
+z-up and a z-down frame, which this package's convention is not. The `.mat`
+fixtures do carry `ENVMT.windDirection_rad`, so the concept exists in the
+reference data; whatever replaces these should be checked against the
+convention settled above, and against whether the caller wants z-up on both
+sides.
 
 ### Reproducing
 

@@ -494,17 +494,4 @@ function get_analytic_catenary(filename)
     return x_cat, y_cat
 end
 
-function transformFromOtoW(windDirection_rad,vec_O)
-    M_WO = [cos(windDirection_rad) sin(windDirection_rad) 0; sin(windDirection_rad) -cos(windDirection_rad) 0;  0 0 -1]
-    vec_W = M_WO*vec_O
-    return vec_W
-end
-
-function transformFromWtoO(windDirection_rad,vec_W)
-    M_OW = [cos(windDirection_rad) sin(windDirection_rad) 0; sin(windDirection_rad) -cos(windDirection_rad) 0; 0 0 -1]
-    vec_O = M_OW*vec_W
-    return vec_O
-end
-
-
 end # module Quasistatic
