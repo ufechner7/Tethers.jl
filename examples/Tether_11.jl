@@ -108,9 +108,8 @@ function model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0, acc_p2)
     end
 
     # basic differential equations
-    eqs1 = vcat(D.(pos) .~ vel,
-                D.(vel) .~ acc)
-    eqs2 = vcat(eqs1...)
+    eqs2 = vcat([D(pos[:, i]) ~ vel[:, i] for i in axes(pos, 2)],
+                [D(vel[:, i]) ~ acc[:, i] for i in axes(vel, 2)])
     # loop over all segments to calculate the spring and drag forces
     for i in 1:se.segments
         eqs = [segment[:, i]      ~ pos[:, i+1] - pos[:, i],
