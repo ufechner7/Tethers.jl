@@ -1,0 +1,37 @@
+#!/bin/bash
+# Print the peak RAM, swap and total (RAM+swap) usage seen since this script started.
+# Samples /proc/meminfo once per second; press Enter to stop.
+
+peak_ram=0
+peak_swap=0
+peak_total=0
+
+echo "Measuring peak memory usage. Press Enter to stop."
+printf '%-12s %-12s %-12s\n' "RAM (MB)" "Swap (MB)" "Total (MB)"
+
+while true; do
+    info=$(cat /proc/meminfo)
+    mem_total=$(awk '/^MemTotal:/{print $2}' <<< "$info")
+    mem_avail=$(awk '/^MemAvailable:/{print $2}' <<< "$info")
+    swap_total=$(awk '/^SwapTotal:/{print $2}' <<< "$info")
+    swap_free=$(awk '/^SwapFree:/{print $2}' <<< "$info")
+
+    ram_used_kb=$(( mem_total - mem_avail ))
+    swap_used_kb=$(( swap_total - swap_free ))
+    total_used_kb=$(( ram_used_kb + swap_used_kb ))
+
+    (( ram_used_kb > peak_ram )) && peak_ram=$ram_used_kb
+    (( swap_used_kb > peak_swap )) && peak_swap=$swap_used_kb
+    (( total_used_kb > peak_total )) && peak_total=$total_used_kb
+
+    printf '%-12s %-12s %-12s\r' "$(( peak_ram / 1024 ))" "$(( peak_swap / 1024 ))" "$(( peak_total / 1024 ))"
+
+    if read -r -t 1; then
+        break
+    fi
+done
+
+echo
+echo "Peak RAM:   $(( peak_ram / 1024 )) MB"
+echo "Peak swap:  $(( peak_swap / 1024 )) MB"
+echo "Peak total: $(( peak_total / 1024 )) MB"
