@@ -78,7 +78,11 @@ function model(se; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false, acc_p2 = [
     tspan = (0.0, se.duration)
     prob = ODEProblem(simple_sys, nothing, tspan)
     prob1 = SteadyStateProblem(prob)
-    sol1 = solve(prob1, DynamicSS(FBDF(autodiff=AutoFiniteDiff())))
+    # the tether swings as a whole for a long time before the per-segment dampers bring it
+    # to rest, so DynamicSS's tight default termination tolerance (abstol=1e-8, reltol=1e-6)
+    # is never quite met; POS0 is only a warm start for the real simulation below, so a
+    # looser tolerance here is fine
+    sol1 = solve(prob1, DynamicSS(FBDF(autodiff=AutoFiniteDiff())); abstol=1e-6, reltol=1e-4)
     POS0 = sol1[pos]
     # create the real model
     se.v_ro = v_ro
