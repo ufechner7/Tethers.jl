@@ -32,9 +32,10 @@ convention; each section linked below holds the detail and the reasoning.
    times too light. The original MATLAB source was not needed. See [Resolved:
    the remaining 1.6 m was the tether's
    mass](#resolved-the-remaining-16-m-was-the-tethers-mass).
-6. **Track down the `maxiters` warning** in `examples/Tether_11.jl`. The
-   obvious hypothesis has already been tested and ruled out — see [Open
-   question: the `maxiters` warning](#open-question-the-maxiters-warning).
+6. ~~**Track down the `maxiters` warning** in `examples/Tether_11.jl`.~~
+   **Done** — two independent causes, which is why each survived being tested
+   on its own. See [Resolved: the `maxiters`
+   warning](#resolved-the-maxiters-warning).
 7. ~~**Decide what to do with `transformFromOtoW` / `transformFromWtoO`.**~~
    **Done** — deleted. See [Related: the unused frame
    transforms](#related-the-unused-frame-transforms).
@@ -406,24 +407,55 @@ variants are the fastest warm and would be worth a cheap-first,
 fall-back-to-robust structure if this is ever called per time step — but a cold
 failure costs 1.6 ms, which is too much to risk on a default.
 
-## Open question: the `maxiters` warning
+## Resolved: the `maxiters` warning
 
-`examples/Tether_11.jl` emits this during its steady-state solve, while
-`examples/Tether_08.jl` does not:
+`examples/Tether_11.jl` used to emit this from the `DynamicSS` call that
+produces the initial tether shape, while `examples/Tether_08.jl` did not:
 
 ```
 Interrupted. Larger maxiters is needed. ...
 ```
 
-The example completes and plots correctly regardless; the warning comes from
-the `DynamicSS` call that produces the initial tether shape.
+There were **two** independent causes, which is why each of them survived being
+tested on its own and was written off.
 
-The obvious hypothesis is that `model` passes the prescribed `acc_p2` straight
-into the steady-state solve, so the second end point accelerates forever and no
-steady state exists — the same reason `se.v_ro` is zeroed on the line above.
-**This was tested and is wrong**: zeroing `acc_p2` for the steady-state solve
-does not remove the warning. The change was reverted, and the real cause is
-still unknown.
+**There was no steady state to find.** `model` built the steady-state system
+with `fix_p2 = true` *and* the caller's `acc_p2`, so the last particle's
+equation was `acc[:, end] ~ [0, 0, -1]` — that point accelerated downwards
+forever. `DynamicSS` terminates on `norm(du) ≤ tol` and `du` carried that
+constant −1, so the criterion was unsatisfiable at *any* tolerance. It is the
+same reasoning that already zeroes `se.v_ro` on the line above: a reel-out
+speed and a prescribed acceleration both mean "this never stops changing", and
+neither belongs in a steady-state solve. `acc_p2` is now zeroed for the
+steady-state solve and restored for the real model, so only the initial shape
+changes — into the shape of a tether actually at rest.
+
+**Convergence is slow even then.** The tether swings as a whole for a long time
+before the per-segment dampers bring it to rest, so `DynamicSS`'s default
+termination tolerance (`abstol=1e-8`, `reltol=1e-6`) is not met within
+`maxiters`. `examples/Tether_09.jl`, which prescribes no acceleration at all,
+ran into this by itself and carries the same fix: `POS0` is only a warm start
+for the real simulation, so `abstol=1e-6, reltol=1e-4` is plenty.
+
+Either fix alone leaves the warning exactly where it was — which is how the
+first of them came to be recorded here as tested and wrong. With both, the
+warning is gone and the example runs in 8.1 s instead of 12.8 s: the
+steady-state solve had been running to `maxiters` (1e5 steps) and giving up
+every single time.
+
+`se.duration = 0` is a red herring, worth writing down because it looks so
+much like a cause. `SteadyStateProblem` drops the `ODEProblem`'s `tspan`, and
+`DynamicSS` integrates over `alg.tspan`, which defaults to `Inf` — the
+`tspan = (0.0, se.duration)` on the line above never reaches the solver.
+
+### Still worth doing
+
+`Tether_11.jl` never checks `sol1`'s retcode, while `Tether_08.jl` does
+(`SciMLBase.successful_retcode(sol1) || error(...)`). That is why a
+non-converged steady state could be fed in as an initial condition for this
+long without anything failing. `Tether_08.jl` also wraps the solve in
+`try/finally` so `se.v_ro` is restored even if it throws; `Tether_11.jl` would
+leak the zeroed value.
 
 ## Verified
 
@@ -434,4 +466,4 @@ still unknown.
   step 5), which is a four-order-of-magnitude tightening and the check that
   confirms that reading of the fixture.
 - All six `examples/quasistatic/` scripts run.
-- `examples/Tether_11.jl` runs end to end (~67 s).
+- `examples/Tether_11.jl` runs end to end in ~8 s, with no warnings.
