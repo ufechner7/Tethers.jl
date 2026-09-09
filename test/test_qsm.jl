@@ -59,19 +59,17 @@ end
     # `matlab_to_wind` on load, so `state_vec` here is already directly comparable.
     # See docs/quasistatic.md, "Resolved: the angle convention", for the derivation.
     #
-    # A residual discrepancy of ‖p0 - p0_ref‖ ≈ 1.6 m on a 431 m tether remains
-    # unexplained, hence the `rtol` below rather than an exact comparison. `T0`'s x and y
-    # components match the reference to full double precision (they never touch gravity in
-    # this model), so the residual is isolated to the z/vertical direction, where it shows
-    # up amplified: ~1.9 % on `T0` vs ~0.4 % on `p0`. It is not gravity — the model's own
-    # gravity term here totals ~2 N against a ~2846 N gap — and not a tension-guess
-    # mismatch, since that would also perturb x and y. Fully explaining it needs the
-    # original MATLAB source, which this repo's `matlab/` directory does not currently
-    # contain. See docs/quasistatic.md, TODO step 5.
-    @test Fobj ≈ Fobj_ref rtol=2e-2
-    @test T0 ≈ T0_ref rtol=2e-2
-    @test pj ≈ pj_ref rtol=2e-2
-    @test p0 ≈ p0_ref rtol=2e-2
+    # The vertical discrepancy that used to remain (~1.9 % on `T0`, ~0.4 % on `p0`) was
+    # gravity after all: the `.mat` files store `T.rho_t` as a mass per unit length
+    # [kg/m], while `Settings.rho_tether` is a density [kg/m^3] that the model multiplies
+    # by the cross section itself, so the tether came out 1/A = 1442 times too light.
+    # `get_initial_conditions` now divides by `A` on load, which yields 970.0 kg/m^3 -
+    # Dyneema. With that, `T0 - Tn*dir` is `16*Ls*g*rho_t` = 2848.49 N against the
+    # reference's 2848.49 N, and `T0`'s x and y already agreed to 5e-5 N out of 48525 N.
+    @test Fobj ≈ Fobj_ref rtol=1e-6
+    @test T0 ≈ T0_ref rtol=1e-6
+    @test pj ≈ pj_ref rtol=1e-6
+    @test p0 ≈ p0_ref rtol=1e-6
     nothing
 end
 nothing

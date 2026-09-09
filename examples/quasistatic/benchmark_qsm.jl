@@ -27,7 +27,7 @@ settings = Settings(rho        = 1.225,
                     g_earth    = MVector{3}(0.0, 0.0, -9.8066),
                     cd_tether  = 1.2,
                     d_tether   = 29.71973504179974,     # [mm]
-                    rho_tether = 0.6729014779417218,
+                    rho_tether = 970.0,                 # = 0.6729 kg/m / A, Dyneema
                     c_spring   = 8.047069220746364e7)   # E*A with E = 116 GPa, A = 693.7 mm²
 
 simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings; prn=true)

@@ -332,10 +332,16 @@ function get_initial_conditions(filename)
     T = get(vars,"T", 0)
     cd_tether = get(T, "CD_tether", 0) 
     d_tether = get(T, "d_tether", 0)*1000           # tether diameter                  [mm]
-    rho_tether = get(T, "rho_t", 0) 
     E = get(T, "E", 0) 
     A = get(T, "A", 0)
     c_spring = E*A 
+    # `rho_t` in the .mat files is the mass per unit length [kg/m], while `Settings` wants
+    # a density [kg/m^3] - the model multiplies by the cross section itself. For these
+    # fixtures the quotient is 970.0 kg/m^3, the density of Dyneema, which is what makes
+    # the interpretation unambiguous. Passing `rho_t` through unconverted made the tether
+    # 1/A = 1442 times too light and was the cause of the ~2846 N gap against `T0` that
+    # test/test_qsm.jl used to document as unexplained.
+    rho_tether = get(T, "rho_t", 0) / A
 
     settings = Settings(rho_air, g_earth, cd_tether, d_tether, rho_tether, c_spring)
 
