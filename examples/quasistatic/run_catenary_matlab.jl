@@ -6,7 +6,7 @@
 # ambiguous in every example run afterwards.
 import GLMakie
 using Tethers: display_if_interactive
-include("../../src/Tether_quasistatic.jl")
+using Tethers.Quasistatic: get_initial_conditions, simulate_tether, get_analytic_catenary
 
 const DATA = joinpath(@__DIR__, "..", "..", "test", "data")
 

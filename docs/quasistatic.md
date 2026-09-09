@@ -217,19 +217,20 @@ the second conversion site and it will have to be reconciled with the one above.
 ### Reproducing
 
 ```julia
-include("src/Tether_quasistatic.jl")
+using Tethers.Quasistatic: get_initial_conditions
+import Tethers.Quasistatic as QSM
 sv, kp, kv, wv, tl, se = get_initial_conditions("test/data/input_basic_test.mat")
 ref = matread("test/data/basic_test_results.mat")
 Ns = size(wv, 2)
 buffers() = [zeros(3, Ns) for _ in 1:5]
 
-_, _, _, p0 = res!(zeros(3), sv, (kp, kv, wv, tl, se, buffers(), Ns, true))
+_, _, _, p0 = QSM.res!(zeros(3), sv, (kp, kv, wv, tl, se, buffers(), Ns, true))
 norm(p0 .- vec(ref["p0"]))          # 365.6
 
 # the same call with the angles converted to the reference convention
 d = [sin(sv[1])cos(sv[2]), sin(sv[2]), cos(sv[1])cos(sv[2])]; d ./= norm(d)
 sv2 = MVector(asin(d[3]), atan(d[2], d[1]), sv[3])
-_, _, _, p0c = res!(zeros(3), sv2, (kp, kv, wv, tl, se, buffers(), Ns, true))
+_, _, _, p0c = QSM.res!(zeros(3), sv2, (kp, kv, wv, tl, se, buffers(), Ns, true))
 norm(p0c .- vec(ref["p0"]))         # 1.61
 ```
 

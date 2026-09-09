@@ -1,5 +1,6 @@
-using Test
-include(joinpath(@__DIR__, "..", "src", "Tether_quasistatic.jl"))
+using Test, MAT, StaticArrays
+using Tethers.Quasistatic: get_initial_conditions
+import Tethers.Quasistatic as QSM  # for `res!`, which is internal and not exported
 
 const QSM_DATA = joinpath(@__DIR__, "data")
 
@@ -38,7 +39,7 @@ end
              tether_length=tether_length, settings=settings, buffers=buffers,
              segments=Ns, return_result=true)
     # Call objective function
-    Fobj, T0, pj, p0 = res!(res, state_vec, param)
+    Fobj, T0, pj, p0 = QSM.res!(res, state_vec, param)
 
     # Test type
     @test Fobj isa Vector

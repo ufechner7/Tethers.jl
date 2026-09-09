@@ -1,4 +1,16 @@
+# A quasi-static tether model: solves for tether shape and forces given the ground-station
+# orientation/tension and the kite's position and velocity.
+#
+# This is a submodule of `Tethers`, so that its names do not end up in `Main`: several
+# examples (e.g. `Tether_08.jl`) define their own top-level `Settings` struct, and
+# `runtests.jl` includes all of them into the same `Main`, which a top-level `Settings`
+# here would collide with. Use it with `using Tethers.Quasistatic`.
+module Quasistatic
+
 using LinearAlgebra, StaticArrays, ADTypes, NonlinearSolve, MAT, Parameters#, QuadGK
+
+export Settings, simulate_tether, get_initial_conditions, init_quasistatic, get_analytic_catenary
+
 include(joinpath(@__DIR__, "qsm_conventions.jl"))
 
 const MVec3 = MVector{3, Float64}
@@ -101,7 +113,7 @@ and magnitude.
 - res::Vector{Float64} difference between tether end and kite segment
 - state_vec::MVector{3, Float64} state vector (theta [rad], phi [rad], Tn [N]);
   tether orientation and tension at ground station
-- par:: 7-elements tuple:
+- par:: 8-elements tuple:
     - kite_pos::MVector{3, Float64} kite position vector in wind reference frame
     - kite_vel::MVector{3, Float64} kite velocity vector in wind reference frame
     - wind_vel::MMatrix{Float64} wind velocity vector in wind reference frame for each segment of the tether
@@ -454,3 +466,5 @@ function transformFromWtoO(windDirection_rad,vec_W)
     vec_O = M_OW*vec_W
     return vec_O
 end
+
+end # module Quasistatic

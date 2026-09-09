@@ -1,3 +1,9 @@
+using Pkg
+# When running this script directly (not via `examples/menu3.jl`), activate the examples
+# environment (one level up) unless it is already active.
+if dirname(Pkg.project().path) != normpath(joinpath(@__DIR__, ".."))
+    Pkg.activate(joinpath(@__DIR__, ".."))
+end
 using BenchmarkTools
 
 include("../../src/Tether_qsm_dual.jl")

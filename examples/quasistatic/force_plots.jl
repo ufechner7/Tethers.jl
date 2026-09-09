@@ -7,10 +7,9 @@
 using StaticArrays, LinearAlgebra
 import GLMakie
 using Tethers: display_if_interactive
+using Tethers.Quasistatic: get_initial_conditions, simulate_tether
 
 const segments = 15
-
-include("../../src/Tether_quasistatic.jl")
 
 function main()
     # Read the initial conditions from a .mat file

@@ -1,8 +1,13 @@
+using Pkg
+# When running this script directly (not via `examples/menu3.jl`), activate the examples
+# environment (one level up) unless it is already active.
+if dirname(Pkg.project().path) != normpath(joinpath(@__DIR__, ".."))
+    Pkg.activate(joinpath(@__DIR__, ".."))
+end
 using BenchmarkTools
+using Tethers.Quasistatic: get_initial_conditions, simulate_tether
 
 const segments = 15
-
-include("../../src/Tether_quasistatic.jl")
 
 # Read the initial conditions from a .mat file
 state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings = get_initial_conditions(joinpath(@__DIR__, "..", "..", "test", "data", "input_basic_test.mat"))

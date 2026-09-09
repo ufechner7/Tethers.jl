@@ -3,10 +3,10 @@
 # `import`, not `using`: menu.jl runs every example into the same `Main`, and GLMakie
 # exports `plot` just like MakieControlPlots, so a `using GLMakie` here would make `plot`
 # ambiguous in every example run afterwards.
-using LaTeXStrings
+using LaTeXStrings, StaticArrays, LinearAlgebra
 import GLMakie
 using Tethers: display_if_interactive
-include("../../src/Tether_quasistatic.jl")
+using Tethers.Quasistatic: init_quasistatic, simulate_tether
 
 function main()
     avg_el = deg2rad(70)
