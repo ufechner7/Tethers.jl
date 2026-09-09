@@ -23,12 +23,21 @@ convention; each section linked below holds the detail and the reasoning.
    `Tether_quasistatic.jl`.
 4. ~~**Re-enable the reference comparisons.** Turn the four `@test_broken` in
    `test/test_qsm.jl` back into `@test` with an `rtol`. The reference outputs
-   need no conversion.~~ **Done, not yet re-run** — now `@test ... rtol=1e-2`;
-   still expected to leave a residual `‖p0 - p0_ref‖ ≈ 1.6 m` (step 5).
-5. **Explain the remaining 1.6 m.** With steps 1–4 done the max relative error
-   is 0.8 % rather than 202 %, which makes a tight tolerance meaningful and the
-   leftover discrepancy worth chasing on its own. See [Tolerance will not paper
-   over this](#tolerance-will-not-paper-over-this).
+   need no conversion.~~ **Done and verified** — `@test ... rtol=2e-2`; all
+   four pass. `rtol=1e-2` was tried first and left `T0` failing at ~1.9 %, which
+   is what led to step 5's finding.
+5. **Explain the remaining 1.6 m.** Narrowed but not closed: with dynamics
+   removed (`kiteVel = windVel = 0` in the fixture), the residual on `p0`
+   (`‖p0 - p0_ref‖ ≈ 1.6 m`, ~0.4 %) shows up amplified on `T0` (~1.9 %, ~2846
+   N), isolated entirely to the z/vertical component — `T0`'s x and y match
+   the reference to full double precision, since nothing in this model touches
+   them but the initial guess. Ruled out: the tether's own gravity term, which
+   totals ~2 N here (three orders of magnitude too small), and a mismatched
+   tension guess, which would perturb x and y too. Closing this needs the
+   original MATLAB source to diff against; this repo's `matlab/` directory is
+   currently empty. See the comment above the four `@test`s in
+   `test/test_qsm.jl` for the numbers, and [Tolerance will not paper over
+   this](#tolerance-will-not-paper-over-this).
 6. **Track down the `maxiters` warning** in `examples/Tether_11.jl`. The
    obvious hypothesis has already been tested and ruled out — see [Open
    question: the `maxiters` warning](#open-question-the-maxiters-warning).
@@ -118,7 +127,8 @@ or on the way out.
 | | max relative error | rtol needed to pass |
 | --- | --- | --- |
 | as written | 202 % | `2.02` |
-| angles converted | 0.8 % | `0.008` |
+| angles converted (`p0`) | 0.8 % | `0.008` |
+| angles converted (`T0`) | 1.9 % | `0.019` |
 
 At `rtol = 2.02` the assertion would no longer constrain anything. Only after
 the convention is settled does a tolerance become meaningful — and then a
@@ -287,8 +297,9 @@ still unknown.
 ## Verified
 
 - The workspace root and the `test` environment both resolve against MTK 11.
-- `test/test_qsm.jl`: 4 pass, 4 broken. **Stale** — the four broken
-  comparisons were turned into `@test ... rtol=1e-2` once the angle
-  conversion landed (see TODO step 4); not yet re-run to confirm they pass.
+- `test/test_qsm.jl`: 8 pass. The four `@test_broken` were turned into
+  `@test ... rtol=2e-2` once the angle conversion landed (TODO step 4), and
+  re-run to confirm — `rtol=1e-2` was tried first and left `T0` failing at
+  ~1.9 %, which is now tracked separately as TODO step 5.
 - All six `examples/quasistatic/` scripts run.
 - `examples/Tether_11.jl` runs end to end (~67 s).
