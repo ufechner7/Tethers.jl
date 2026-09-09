@@ -3,65 +3,44 @@
 Notes on porting the quasi-static tether model from the `andrea_quasistatic`
 branch onto `main`, and on the open questions that port uncovered.
 
-## Why the branch was replanted instead of rebased
+## Resolved: the angle convention
 
-`andrea_quasistatic` forked 115 commits before `main` was restructured. In the
-meantime `main` moved the examples from `src/` to `examples/`, upgraded to
-ModelingToolkit 11, replaced ControlPlots with MakieControlPlots and moved to
-Julia 1.11/1.12. Of the 85 distinct commit subjects on the branch, 75 do not
-exist on `main`, and 86 of the commits are old-layout work touching Manifest
-files and example paths that `main` has since deleted or moved.
+**The Julia model keeps its own convention; the MATLAB data is converted on
+load.** The remaining work is to implement that — see *What to change* below.
 
-Replaying that history would have meant re-resolving the same layout conflicts
-on almost every commit. The feature itself is small, so it was replanted onto
-`main` as a fresh set of commits instead. The resulting diff is additive:
-roughly 1500 inserted lines and one deleted, against the original pull
-request's 4161 deletions of Manifest churn.
+### The convention the Julia code uses
 
-### What moved where
+The position of the kite is described by two angles, the azimuth angle `φ` and
+the elevation angle `β`. The elevation angle is zero when the height of the
+kite is zero and 90° when it is at zenith. The azimuth angle is the one in the
+wind reference frame, defined **positive anti-clockwise when seen from above**
+— the same convention `calc_heading()` and `calc_clock_angle()` use, and the
+one written to the log file and the system state from KiteUtils 0.8.2 onwards.
+(KiteUtils also knows `azimuth_north`, positive anti-clockwise, and
+`azimuth_east`, positive clockwise; neither is used here.)
 
-| Branch | Now | Note |
-| --- | --- | --- |
-| `src/Tether_quasistatic.jl` | unchanged | numerics untouched |
-| `src/Tether_qsm_dual.jl` | unchanged | numerics untouched |
-| `examples_quasistatic/` | `examples/quasistatic/` | shares `examples/Project.toml` |
-| `src/Tether_10.jl` | `examples/Tether_11.jl` | renamed, see below |
-| `test/test_qsm.jl`, `test/data/` | unchanged | wired into `runtests.jl` |
-
-`src/Tether_10.jl` had to be renamed because `main` already has an unrelated
-`examples/Tether_10.jl` (the re-usable acausal component). The branch's file is
-the imposed-kite-motion example, so it became `examples/Tether_11.jl` and was
-added to `examples/menu.jl`.
-
-The six example scripts used the Matplotlib-style `plt.` API that ControlPlots
-exposed. MakieControlPlots has no such passthrough, so they were rewritten
-against GLMakie directly, following the `import GLMakie` idiom already used by
-`examples/Tether_09.jl`. All six run.
-
-## Open question: the angle convention
-
-**This is the one that needs a decision.**
-
-`res!` in `src/Tether_quasistatic.jl` and the MATLAB reference data in
-`test/data/` disagree on how the state vector's two angles define the tether
-direction at the ground station.
-
-`res!` uses an elevation/azimuth convention, where `θ` is measured up from the
-x–y plane:
+In this convention the tether direction at the ground station is
 
 ```julia
-dir ∝ [cos(θ)cos(φ), cos(θ)sin(φ), sin(θ)]
+dir ∝ [cos(β)cos(φ), cos(β)sin(φ), sin(β)]
 ```
 
-The reference data was produced with a z-up convention, where `θ` is measured
-from the vertical:
+which is exactly what `res!` in `src/Tether_quasistatic.jl` already computes,
+and what `init_quasistatic` already produces: `phi_init = atan(kite_pos[2],
+kite_pos[1])` is anti-clockwise from above, and `theta_init = atan(z, hypot(x,
+y))` is an elevation. So the state vector's `θ` **is** the elevation `β`.
+
+### The convention the MATLAB data uses
+
+The reference data in `test/data/` was produced with
 
 ```julia
 dir ∝ [sin(θ)cos(φ), sin(φ), cos(θ)cos(φ)]
 ```
 
-For `test/data/input_basic_test.mat` (`θ = 18.435°`, `φ = -17.548°`,
-`Tn = 160941 N`, kite at `[100, 100, 300]`, 15 segments) the two give first
+where `θ` is measured from the vertical. For
+`test/data/input_basic_test.mat` (`θ = 18.435°`, `φ = -17.548°`, `Tn = 160941
+N`, kite at `[100, 100, 300]`, 15 segments) the two readings give first
 segments pointing in quite different directions:
 
 | | first segment direction | `p0` |
@@ -70,14 +49,30 @@ segments pointing in quite different directions:
 | reference data | `[0.302, -0.302, 0.905]` | `[129.36, -129.36, 391.88]` |
 
 The computed tether is a differently-oriented one, not a slightly inaccurate
-one: `‖p0 - p0_ref‖ = 365.6 m` on a 431 m tether.
+one: `‖p0 - p0_ref‖ = 365.6 m` on a 431 m tether. Re-running `res!` with the
+angles converted into the reference convention drops that to **1.61 m**, which
+is what identifies the convention as the cause. A third candidate, the standard
+spherical form `[sinθcosφ, sinθsinφ, cosθ]`, is ruled out at 90.0 m. Note that
+`[sin(θ)cos(φ), sin(φ), cos(θ)cos(φ)]` and `[sin(θ), tan(φ), cos(θ)]` are the
+same vector once normalised, and give identical results.
 
-Re-running `res!` with the angles converted into the reference convention drops
-that to **1.61 m**, which is what identifies the convention as the cause. A
-third candidate, the standard spherical form `[sinθcosφ, sinθsinφ, cosθ]`, is
-ruled out at 90.0 m. Note that `[sin(θ)cos(φ), sin(φ), cos(θ)cos(φ)]` and
-`[sin(θ), tan(φ), cos(θ)]` are the same vector once normalised, and give
-identical results.
+### It is a parametrisation difference, not a frame rotation
+
+This is what makes the fix cheap. Only the two angles in `stateVec` are
+affected; every *vector* quantity in the `.mat` files — `kitePos`, `kiteVel`,
+`windVel`, and the reference outputs `p0`, `pj`, `T0` — is already in the same
+right-handed, z-up frame the Julia code uses. The reference residual is a plain
+componentwise difference of the two:
+
+```
+kitePos  [100, 100, 300]           p0_ref  [129.36, -129.36, 391.88]
+Fobj_ref [-29.36, 229.36, -91.88]  ==  kitePos - p0_ref     ✓
+```
+
+If `p0_ref` were expressed in a y-flipped frame, that identity could not hold.
+So there is no handedness flip to undo: MATLAB's `+φ` maps to `+y` just as the
+wind-frame azimuth does. Nothing but `stateVec` needs converting, on the way in
+or on the way out.
 
 ### Tolerance will not paper over this
 
@@ -89,21 +84,86 @@ identical results.
 At `rtol = 2.02` the assertion would no longer constrain anything. Only after
 the convention is settled does a tolerance become meaningful — and then a
 modest one does the job, though the residual 1.6 m is a second, smaller
-discrepancy that still wants explaining.
+discrepancy that still wants explaining. Land the conversion first, then chase
+that 1.6 m against a tight tolerance.
 
-### Two defensible resolutions
+### Why the loader and not `res!`
 
-1. `res!` has the wrong convention and should be changed to match the
-   reference. This alters what `state_vec` means for every caller, so
-   `init_quasistatic`, `simulate_tether` and all six examples are affected.
-2. The `.mat` files are simply expressed in the MATLAB frame, and
-   `get_initial_conditions` should convert on load, leaving `res!` alone.
+The alternative — changing `res!` to the MATLAB parametrisation — would put a
+MATLAB-ism into the public state vector, alter what `state_vec` means for
+`init_quasistatic`, `simulate_tether` and all six examples, and force a
+conversion at every user-facing edge instead (`calc_heading`,
+`calc_clock_angle`, `SysState`). `get_initial_conditions` is the only point at
+which MATLAB angle data enters the package, so converting there leaves exactly
+one convention in play everywhere else.
 
-Which is correct depends on which frame the model is meant to expose. It was
-left alone pending that decision; the four value comparisons in
-`test/test_qsm.jl` are marked `@test_broken` with the diagnosis in a comment,
-so the suite is green (4 pass, 4 broken) and the reference data keeps its
-purpose.
+### What to change
+
+1. Add the conversion and its inverse — the inverse is wanted as soon as the
+   MATLAB reference is re-run to regenerate fixtures. `get_initial_conditions`
+   is already duplicated verbatim between `src/Tether_quasistatic.jl` and
+   `src/Tether_qsm_dual.jl`, so a small `src/qsm_conventions.jl` that both
+   `include` beats a third copy.
+
+   ```julia
+   """
+       matlab_to_wind(θ_m, φ_m)
+
+   Convert the tether angles at the ground station from the MATLAB reference
+   convention, `dir ∝ [sin(θ)cos(φ), sin(φ), cos(θ)cos(φ)]`, to the convention
+   used throughout this package: elevation measured up from the horizontal
+   plane, azimuth in the wind reference frame, positive anti-clockwise seen
+   from above.
+   """
+   function matlab_to_wind(θ_m, φ_m)
+       d = SVec3(sin(θ_m)*cos(φ_m), sin(φ_m), cos(θ_m)*cos(φ_m))
+       d /= norm(d)
+       return asin(d[3]), atan(d[2], d[1])      # elevation, azimuth
+   end
+   ```
+
+2. Call it in both copies of `get_initial_conditions`:
+
+   ```julia
+   sv = vec(get(vars, "stateVec", 0))
+   state_vec = MVector{3}(matlab_to_wind(sv[1], sv[2])..., sv[3])
+   ```
+
+3. **Bring `src/Tether_qsm_dual.jl` in line.** Its `res!` still computes
+   `FT[1] = Tn·sinθ·cosφ`, `FT[2] = Tn·sinφ`, `FT[3] = Tn·cosθ·cosφ` — the
+   MATLAB parametrisation, unconverted. The two implementations of the same
+   model therefore disagree with each other today, and both are handed
+   `state_vec` from the same loader (`examples/quasistatic/benchmark_qsm_dual.jl`).
+   Converting in the loader *requires* this file to move to the
+   elevation/azimuth form used by `Tether_quasistatic.jl`. That is an argument
+   for the loader rather than against it: it collapses the two onto one
+   convention instead of letting them drift further apart.
+
+4. Turn the four `@test_broken` in `test/test_qsm.jl` back into `@test` with an
+   `rtol`. The reference outputs need no conversion, per the section above.
+
+### Caveat: the fixture's stored azimuth looks mirrored
+
+Converted, the guess in `input_basic_test.mat` is elevation 64.76°, azimuth
+**−45°**. The kite at `[100, 100, 300]` sits at elevation **64.76°**, azimuth
+**+45°** — exact elevation match, mirrored azimuth. The MATLAB guess was
+evidently generated from `kitePos` using a *clockwise* (`azimuth_east`)
+convention, while MATLAB's own residual function treats `+φ` as `+y`, which is
+why `p0_ref` has a negative y component.
+
+For a residual unit test this is harmless: both sides evaluate the same input,
+and a deliberately off-nominal guess is a reasonable thing to test a residual
+at. **Do not flip the sign to make the guess point at the kite** — the stored
+`p0_ref` pins the interpretation, and flipping it breaks the comparison. It
+does suggest the two conventions are mixed on the MATLAB side too, which is
+worth raising with whoever owns that code.
+
+### Related: the unused frame transforms
+
+`transformFromOtoW` / `transformFromWtoO` at the end of
+`src/Tether_quasistatic.jl` are currently dead code, and their matrix carries
+both a y-flip and a z-flip. If a wind-direction rotation is ever needed, that is
+the second conversion site and it will have to be reconciled with the one above.
 
 ### Reproducing
 
@@ -165,12 +225,6 @@ eqs2 = vcat(eqs1...)
 
 leaves a `Vector{Any}`, which the ModelingToolkit 11 `System` constructor
 rejects. It now builds them per column, the way `examples/Tether_08.jl` does.
-
-**A stale compat bound.** `PreallocationTools = "0.4.25"` was carried over from
-the branch and predates that package's 1.0 release, so resolving the workspace
-failed with an empty intersection against 1.1.2. Widened to `"0.4.25, 1"`. The
-bound only bites from the workspace root, where every member project's compat
-is reconciled at once — resolving `--project=test` alone did not surface it.
 
 ## Open question: the `maxiters` warning
 
