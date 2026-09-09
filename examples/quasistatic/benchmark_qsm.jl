@@ -5,6 +5,7 @@ if dirname(Pkg.project().path) != normpath(joinpath(@__DIR__, ".."))
     Pkg.activate(joinpath(@__DIR__, ".."))
 end
 using BenchmarkTools, StaticArrays
+using StaticArrays: MVector
 using Tethers.Quasistatic: Settings, simulate_tether
 
 const segments = 15
