@@ -107,6 +107,13 @@ if test -f "bin/kps-image-${julia_major}.so"; then
     mv bin/kps-image-${julia_major}.so bin/kps-image-${julia_major}.so.bak
 fi
 
+restore_backup() {
+    if test -f "bin/kps-image-${julia_major}.so.bak"; then
+        echo "Restoring the previous system image."
+        mv bin/kps-image-${julia_major}.so.bak bin/kps-image-${julia_major}.so
+    fi
+}
+
 echo "Updating packages..."
 if test -f "Manifest.toml"; then
    rm Manifest.toml
@@ -114,7 +121,16 @@ fi
 julia --startup-file=no --project=test -e "using Pkg; Pkg.resolve(); Pkg.instantiate()"
 
 julia  --project=test -t auto -e "using Pkg; Pkg.precompile()"
-julia  --project=test -t auto --heap-size-hint=${heap_hint}M -e "include(\"./test/create_sys_image.jl\");"
+if ! julia  --project=test -t auto --heap-size-hint=${heap_hint}M -e "include(\"./test/create_sys_image.jl\");"; then
+    echo "Building the system image failed." >&2
+    restore_backup
+    exit 1
+fi
 
 mv kps-image_tmp.so bin/kps-image-${julia_major}.so
-julia --project=examples -J bin/kps-image-${julia_major}.so -e "using Pkg; Pkg.precompile(); using Parameters"
+if ! julia --project=examples -J bin/kps-image-${julia_major}.so -e "using Pkg; Pkg.precompile(); using Parameters"; then
+    echo "The new system image cannot be loaded; removing it." >&2
+    rm -f bin/kps-image-${julia_major}.so
+    restore_backup
+    exit 1
+fi

@@ -24,8 +24,15 @@ push!(LOAD_PATH,joinpath(pwd(),"src"))
 pkgs=[:ModelingToolkit, :OrdinaryDiffEqCore, :OrdinaryDiffEqBDF,
       :SteadyStateDiffEq, :Timers]
 if FAST
-    push!(pkgs, :MakieControlPlots)
+    # Windows refuses to load a PE image of 2 GiB or more ("%1 is not a valid Win32
+    # application"), and MakieControlPlots drags in both Makie backends. Listing GLMakie
+    # instead keeps the interactive backend but leaves CairoMakie out of the image.
+    push!(pkgs, Sys.iswindows() ? :GLMakie : :MakieControlPlots)
 end
+
+# Dropping docstrings and source-location metadata shrinks the image by a double-digit
+# percentage, which Windows needs to stay under the 2 GiB limit.
+build_args = Sys.iswindows() ? `--strip-metadata` : ``
 
 function total_ram_swap_gb()
     if Sys.iswindows()
@@ -81,5 +88,15 @@ end
 PackageCompiler.create_sysimage(
     pkgs;
     sysimage_path="kps-image_tmp.so",
-    precompile_execution_file=joinpath("test", "test_for_precompile.jl")
+    precompile_execution_file=joinpath("test", "test_for_precompile.jl"),
+    sysimage_build_args=build_args
 )
+
+let size_gib = filesize("kps-image_tmp.so") / 1024^3
+    @info "System image size: $(round(size_gib; digits=2)) GiB"
+    if Sys.iswindows() && size_gib > 1.8
+        error("The system image is $(round(size_gib; digits=2)) GiB. Windows cannot load a " *
+              "PE image of 2 GiB or more; it fails with \"%1 is not a valid Win32 application\". " *
+              "Remove packages from `pkgs` or shorten test/test_for_precompile.jl.")
+    end
+end
