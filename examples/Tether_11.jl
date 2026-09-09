@@ -74,23 +74,29 @@ function model(se; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false, acc_p2 = [
     # find steady state
     v_ro = se.v_ro      # save the reel-out speed
     se.v_ro = 0         # v_ro must be zero, otherwise finding the steady state is not possible
-    # `acc_p2` has to go for exactly the same reason: with an acceleration prescribed on
-    # the second end point, that point never stops accelerating, `norm(du)` never drops
-    # below the termination tolerance however loose it is, and there is no steady state to
-    # find in the first place. The prescribed acceleration is restored for the real model
-    # below, together with the reel-out speed.
-    simple_sys, pos, =  model(se, p1, p2, true, true, POS0, VEL0, zeros(3))
-    tspan = (0.0, se.duration)
-    prob = ODEProblem(simple_sys, nothing, tspan)
-    prob1 = SteadyStateProblem(prob)
-    # the tether swings as a whole for a long time before the per-segment dampers bring it
-    # to rest, so DynamicSS's tight default termination tolerance (abstol=1e-8, reltol=1e-6)
-    # is never quite met; POS0 is only a warm start for the real simulation below, so a
-    # looser tolerance here is fine
-    sol1 = solve(prob1, DynamicSS(FBDF(autodiff=AutoFiniteDiff())); abstol=1e-6, reltol=1e-4)
+    local sol1, pos
+    try
+        # `acc_p2` has to go for exactly the same reason: with an acceleration prescribed
+        # on the second end point, that point never stops accelerating, `norm(du)` never
+        # drops below the termination tolerance however loose it is, and there is no
+        # steady state to find in the first place. The prescribed acceleration is restored
+        # for the real model below, together with the reel-out speed.
+        simple_sys, pos, =  model(se, p1, p2, true, true, POS0, VEL0, zeros(3))
+        tspan = (0.0, se.duration)
+        prob = ODEProblem(simple_sys, nothing, tspan)
+        prob1 = SteadyStateProblem(prob)
+        # the tether swings as a whole for a long time before the per-segment dampers bring
+        # it to rest, so DynamicSS's tight default termination tolerance (abstol=1e-8,
+        # reltol=1e-6) is never quite met; POS0 is only a warm start for the real
+        # simulation below, so a looser tolerance here is fine
+        sol1 = solve(prob1, DynamicSS(FBDF(autodiff=AutoFiniteDiff())); abstol=1e-6, reltol=1e-4)
+    finally
+        se.v_ro = v_ro  # restore the reel-out speed, also if the steady state solver failed
+    end
+    SciMLBase.successful_retcode(sol1) ||
+        error("Steady state solver failed with return code $(sol1.retcode)!")
     POS0 = sol1[pos]
     # create the real model
-    se.v_ro = v_ro
     model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0, acc_p2)
 end
 function model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0, acc_p2)
