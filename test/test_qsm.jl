@@ -66,10 +66,14 @@ end
     # `get_initial_conditions` now divides by `A` on load, which yields 970.0 kg/m^3 -
     # Dyneema. With that, `T0 - Tn*dir` is `16*Ls*g*rho_t` = 2848.49 N against the
     # reference's 2848.49 N, and `T0`'s x and y already agreed to 5e-5 N out of 48525 N.
-    @test Fobj ≈ Fobj_ref rtol=1e-6
-    @test T0 ≈ T0_ref rtol=1e-6
-    @test pj ≈ pj_ref rtol=1e-6
-    @test p0 ≈ p0_ref rtol=1e-6
+    #
+    # Measured max relative error against the reference is now ~1e-16 to ~1e-15 for all
+    # four quantities (double-precision roundoff), so `rtol` tightens from `1e-6` to
+    # `1e-9`, leaving ~6 orders of magnitude of margin for BLAS/platform differences.
+    @test Fobj ≈ Fobj_ref rtol=1e-9
+    @test T0 ≈ T0_ref rtol=1e-9
+    @test pj ≈ pj_ref rtol=1e-9
+    @test p0 ≈ p0_ref rtol=1e-9
     nothing
 end
 nothing

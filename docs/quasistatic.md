@@ -25,7 +25,9 @@ convention; each section linked below holds the detail and the reasoning.
    `test/test_qsm.jl` back into `@test` with an `rtol`. The reference outputs
    need no conversion.~~ **Done and verified** — all four pass. `rtol=1e-2` was
    tried first and left `T0` failing at ~1.9 %, which is what led to step 5's
-   finding; with that closed the tolerance is now `rtol=1e-6`.
+   finding; with that closed the tolerance is now `rtol=1e-9` (measured max
+   relative error against the reference is ~1e-16 to ~1e-15, i.e. double-precision
+   roundoff).
 5. ~~**Explain the remaining 1.6 m.**~~ **Done** — it was gravity after all.
    `T.rho_t` in the `.mat` files is a mass per unit length [kg/m], while
    `Settings.rho_tether` is a density [kg/m³], so the tether ran `1/A` = 1442
@@ -248,8 +250,9 @@ norm(p0 .- vec(ref["p0"]))   # was 1.61 m before the rho_t fix
 norm(T0 .- vec(ref["T0"]))   # was ~2846 N before it, all of it in z
 ```
 
-Both norms now sit inside the `rtol=1e-6` the assertions in `test/test_qsm.jl`
-use. To see the historical numbers, bypass the loader: feeding `res!` the raw
+Both norms now sit inside the `rtol=1e-9` the assertions in `test/test_qsm.jl`
+use — the measured max relative error is ~1e-16 to ~1e-15, i.e. double-precision
+roundoff. To see the historical numbers, bypass the loader: feeding `res!` the raw
 `stateVec` angles gives `‖p0 - p0_ref‖ = 365.6 m`, and feeding it `rho_t`
 unconverted (`se.rho_tether = 0.6729`) gives the 1.61 m.
 
