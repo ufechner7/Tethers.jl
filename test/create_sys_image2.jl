@@ -24,14 +24,16 @@ push!(LOAD_PATH,joinpath(pwd(),"src"))
 pkgs=[:ModelingToolkit, :OrdinaryDiffEqCore, :OrdinaryDiffEqBDF,
       :SteadyStateDiffEq, :Timers]
 if FAST
-    # Windows refuses to load a PE image of 2 GiB or more ("%1 is not a valid Win32
-    # application"), and MakieControlPlots drags in both Makie backends. Listing GLMakie
-    # instead keeps the interactive backend but leaves CairoMakie out of the image.
-    push!(pkgs, Sys.iswindows() ? :GLMakie : :MakieControlPlots)
+    push!(pkgs, :MakieControlPlots)
 end
 
 # Dropping docstrings and source-location metadata shrinks the image by a double-digit
-# percentage, which Windows needs to stay under the 2 GiB limit.
+# percentage, which Windows needs to stay under the 2 GiB limit ("%1 is not a valid Win32
+# application"). The catch: stripping leaves `Base.Docs.META` declared but undefined, so
+# any package precompiled *against* the image that calls `Base.doc` while loading dies with
+# `UndefVarError: ##meta#NN not defined in Base.Docs`. CairoMakie, GLMakie and Makie all
+# interpolate `$(Base.doc(...))` into a docstring at load time, so they must be inside the
+# image (where they load before the strip happens) rather than precompiled against it.
 build_args = Sys.iswindows() ? `--strip-metadata` : ``
 
 function total_ram_swap_gb()
@@ -97,6 +99,7 @@ let size_gib = filesize("kps-image_tmp.so") / 1024^3
     if Sys.iswindows() && size_gib > 1.8
         error("The system image is $(round(size_gib; digits=2)) GiB. Windows cannot load a " *
               "PE image of 2 GiB or more; it fails with \"%1 is not a valid Win32 application\". " *
-              "Remove packages from `pkgs` or shorten test/test_for_precompile.jl.")
+              "Shorten test/test_for_precompile.jl or remove packages from `pkgs` \u2014 but not " *
+              "MakieControlPlots, see the comment on `build_args`.")
     end
 end
