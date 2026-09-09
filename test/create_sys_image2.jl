@@ -14,7 +14,7 @@ end
 
 @info "Loading packages ..."
 using ModelingToolkit, OrdinaryDiffEqCore, OrdinaryDiffEqBDF
-using SteadyStateDiffEq, PackageCompiler, MakieControlPlots, Timers, REPL.TerminalMenus
+using SteadyStateDiffEq, PackageCompiler, GLMakie, Timers, REPL.TerminalMenus
 
 FAST=true
 
@@ -27,7 +27,7 @@ if FAST
     # Windows refuses to load a PE image of 2 GiB or more ("%1 is not a valid Win32
     # application"), and MakieControlPlots drags in both Makie backends. Listing GLMakie
     # instead keeps the interactive backend but leaves CairoMakie out of the image.
-    push!(pkgs, Sys.iswindows() ? :GLMakie : :MakieControlPlots)
+    push!(pkgs, :GLMakie)
 end
 
 # Do NOT add `--strip-metadata` here to shrink the image. It does save a double-digit
