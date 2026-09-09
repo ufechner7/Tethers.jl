@@ -123,10 +123,53 @@ echo "Updating packages..."
 if test -f "Manifest.toml"; then
    rm Manifest.toml
 fi
-julia --startup-file=no --project=test -e "using Pkg; Pkg.resolve(); Pkg.instantiate()"
+# Bring the environment into a usable state before anything expensive happens. The rungs
+# escalate: use the manifest as it is; `Pkg.resolve()` repairs one that no longer satisfies
+# the projects (changed compat, a new Julia version); discarding the manifest and running
+# `Pkg.update()` is the last resort. The latter two move package versions, which invalidates
+# the precompile caches of the whole environment, so they say so -- the full precompile that
+# follows is then a consequence, not wasted work.
+# (`read -d ''` always ends at EOF with status 1; the `|| true` keeps that benign.)
+_instantiate_jl=""
+read -r -d '' _instantiate_jl <<'JLEOF' || true
+using Pkg
+# `Pkg.instantiate()` only *warns* when the manifest no longer matches the projects, so
+# the out-of-sync case has to be detected explicitly instead of caught as an exception.
+try
+    if Pkg.is_manifest_current(Pkg.Types.Context()) === false
+        @info "Manifest is out of sync with the project; resolving..."
+        Pkg.resolve()
+        @info "Manifest repaired by resolve; package versions moved, so a full precompile follows."
+    end
+    Pkg.instantiate()
+catch e
+    @warn "Could not instantiate the project, discarding the manifest..." exception=e
+    # Delete the manifest Pkg actually uses: with the root `[workspace]` section that is
+    # the shared `Manifest-v<version>.toml` at the top of the repository, not a file next
+    # to the active Project.toml.
+    mfile = Pkg.Types.Context().env.manifest_file
+    if mfile !== nothing && isfile(mfile)
+        rm(mfile; force=true)
+        @info "Deleted $(basename(mfile))"
+    end
+    Pkg.update()
+    @info "Manifest rebuilt from scratch; a full precompile follows."
+end
+JLEOF
 
-julia  --project=test -t auto -e "using Pkg; Pkg.precompile()"
-if ! julia  --project=test -t auto --heap-size-hint=${heap_hint}M -e "include(\"./test/create_sys_image.jl\");"; then
+if ! julia --startup-file=no --project=test -e "$_instantiate_jl"; then
+    echo "Could not instantiate the test project." >&2
+    restore_backup
+    exit 1
+fi
+
+if ! julia --project=test -t auto -e "using Pkg; Pkg.precompile()"; then
+    echo "Precompiling the test project failed." >&2
+    restore_backup
+    exit 1
+fi
+
+if ! julia --project=test -t auto --heap-size-hint=${heap_hint}M -e "include(\"./test/create_sys_image.jl\");"; then
     echo "Building the system image failed." >&2
     restore_backup
     exit 1
