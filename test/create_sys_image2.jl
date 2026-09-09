@@ -60,7 +60,7 @@ end
 
 let total = total_ram_swap_gb()
     @info "Total RAM + swap: $(round(total; digits=1)) GB"
-    if total < 30
+    if total < 34
         msg = "At least 30 GB of RAM + swap is recommended to create a system image, " *
               "but only $(round(total; digits=1)) GB is available."
         if Sys.iswindows()
