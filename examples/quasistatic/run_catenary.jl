@@ -20,9 +20,14 @@ y_qs = vec(tether_pos[3,:])
 
 
 tether_pos = hcat(p0, tether_pos, [0; 0; 0])
+x_min, x_max = extrema(tether_pos[1,:])
+y_min, y_max = extrema(tether_pos[2,:])
+z_min, z_max = extrema(tether_pos[3,:])
 fig = GLMakie.Figure()
 ax = GLMakie.Axis3(fig[1, 1]; title="3D view", xlabel="X [m]", ylabel="Y [m]", zlabel="Z [m]",
-                   aspect=:data, limits=((0, 100), (0, 100), (0, 800)))
+                   aspect=:data, limits=((min(0, x_min), max(100, x_max)),
+                                          (min(0, y_min), max(100, y_max)),
+                                          (min(0, z_min), max(800, z_max))))
 l_tether = GLMakie.scatterlines!(ax, tether_pos[1,:], tether_pos[2,:], tether_pos[3,:])
 s_origin = GLMakie.scatter!(ax, [0.0], [0.0], [0.0]; markersize=20, marker=:rect, color=:gray)
 s_kite   = GLMakie.scatter!(ax, [p0[1]], [p0[2]], [p0[3]]; markersize=12, marker=:diamond, color=:green)
