@@ -14,7 +14,8 @@ using ADTypes: AutoFiniteDiff, AutoForwardDiff
 using Tethers: display_if_interactive
 # the re-usable component, see src/TetherComponent.jl; imported by name, so that including
 # this example cannot collide with the globals defined by the other examples
-using Tethers.TetherComponents: TetherSettings, set_diameter!, Tether, FixedEnd, FreeEnd
+using Tethers.TetherComponents: TetherSettings, set_diameter!, Tether, FixedEnd, FreeEnd,
+                                 assemble_tether
 
 """
     linear_positions(se; p1, p2)
@@ -51,25 +52,21 @@ end
 """
     build(se; p1, p2, fix_p1, fix_p2, m1=0.0, m2=0.0, POS0, VEL0)
 
-Compose one [`Tether`](@ref) with an end component at each of its two connectors and
-return the tuple `(simple_sys, sys, tether)`.
+Compose one [`Tether`](@ref) with an end component at each of its two connectors, via
+[`assemble_tether`](@ref). Returns the tuple `(simple_sys, sys)`.
 
 An end point is held in place by a [`FixedEnd`](@ref) if the corresponding `fix_*` flag is
 `true`, and by a [`FreeEnd`](@ref) with the payload mass `m1` or `m2` otherwise.
 """
 function build(se; p1, p2, fix_p1, fix_p2, m1=0.0, m2=0.0, POS0, VEL0)
-    @named tether = Tether(; se, POS0, VEL0)
     end1 = fix_p1 ? FixedEnd(; name=:end1, pos0=p1) :
                     FreeEnd(; name=:end1, se, m_extra=m1, pos0=p1, vel0=VEL0[:, 1])
     end2 = fix_p2 ? FixedEnd(; name=:end2, pos0=p2) :
                     FreeEnd(; name=:end2, se, m_extra=m2, pos0=p2, vel0=VEL0[:, end])
-    eqs = [connect(end1.flange, tether.p1),
-           connect(tether.p2, end2.flange)]
-    @named sys = System(eqs, t; systems=[tether, end1, end2])
     tic()
-    simple_sys = mtkcompile(sys)
+    simple_sys, sys = assemble_tether(se; end1, end2, POS0, VEL0)
     toc()
-    simple_sys, sys, tether
+    simple_sys, sys
 end
 
 """
@@ -110,7 +107,7 @@ Internally, this first builds the model with both ends fixed and `se.v_ro` set t
 solves for the steady-state tether positions, then rebuilds the model with the original
 settings and that shape as initial condition.
 
-Returns `(simple_sys, sys, tether)`.
+Returns `(simple_sys, sys)`.
 """
 function model(se; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false, m1=0.0, m2=0.0)
     for (p, fix, name) in ((p1, fix_p1, "p1"), (p2, fix_p2, "p2"))
@@ -126,7 +123,7 @@ function model(se; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false, m1=0.0, m2
     v_ro = se.v_ro
     se.v_ro = 0
     try
-        simple_sys, _, _ = build(se; p1, p2, fix_p1=true, fix_p2=true, POS0, VEL0)
+        simple_sys, = build(se; p1, p2, fix_p1=true, fix_p2=true, POS0, VEL0)
         POS0 = steady_state(se, simple_sys)
     finally
         se.v_ro = v_ro  # restore the reel-out speed, also if the steady state solver failed
@@ -156,7 +153,7 @@ function model2(se; p1=[0,0,0], p2=nothing, m_knot=0.0, m2=0.0)
     v_ro = se.v_ro
     se.v_ro = 0
     try
-        ss, _, _ = build(se; p1, p2, fix_p1=true, fix_p2=true, POS0, VEL0)
+        ss, = build(se; p1, p2, fix_p1=true, fix_p2=true, POS0, VEL0)
         POS0 = steady_state(se, ss)
     finally
         se.v_ro = v_ro
@@ -261,7 +258,7 @@ function main(; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
     global sol, pos, vel, simple_sys, sys
     se = TetherSettings()
     set_diameter!(se, se.d_tether) # adapt spring and damping constants to tether diameter
-    simple_sys, sys, _ = model(se; p1, p2, fix_p1, fix_p2)
+    simple_sys, sys = model(se; p1, p2, fix_p1, fix_p2)
     pos, vel = simple_sys.tether.pos, simple_sys.tether.vel
     sol, elapsed_time = simulate(se, simple_sys)
     # save the z position and velocity of the last particle, for comparison with example 8

@@ -14,6 +14,28 @@ using Tethers.QuasiSteady: StaticSettings, Tether, init!, step!
 # inside the closure so that nothing opens a window on CI.
 show_fig(fig, title) = display_if_interactive(() -> display(GLMakie.Screen(; title), fig))
 
+"""
+    main()
+
+Compute and plot the tether shape and tether force at the kite while it flies one full
+revolution of a circular trajectory on a cone: half angle `cone_ang = 10°` around an axis
+tilted by the average elevation `avg_el = 70°`, at the constant angular velocity
+`gamma_dot = 0.05` rad/s and radius `traj_dist = 500` m - the same parameterization as
+`examples/Tether_11.jl`, resolved here with the quasi-steady catenary model of
+`Tethers.QuasiSteady` instead of the dynamic mass-spring-damper tether.
+
+The trajectory is sampled at `length(0:0.02:2π/gamma_dot)` points - the same time step and
+sample count as `examples/Tether_11.jl` - so that the two examples' 3D plots are directly
+comparable. At each sample, the kite's position and velocity are computed analytically and
+`step!` re-solves the tether shape and forces for that boundary condition, reusing the
+previous solution as its initial guess; the timed solve loop runs with the garbage collector
+disabled, so that a collection triggered by its small per-iteration allocations doesn't
+pollute the reported elapsed time.
+
+Displays three figures - interactively only, none on CI: the initial tether shape, the
+tether force components at the kite over one revolution, and the tether shapes at ~20 points
+spread around the trajectory.
+"""
 function main()
     avg_el = deg2rad(70)
     cone_ang = deg2rad(10)
