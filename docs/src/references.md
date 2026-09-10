@@ -56,8 +56,11 @@ clear!
 elevation
 azimuth
 tension
+check_wind_vel
 get_initial_conditions
 get_analytic_catenary
+simulate_tether
+init_quasisteady
 tether_shape
 res!
 scaled_res
@@ -68,6 +71,11 @@ segment_drag
 matlab_to_wind
 wind_to_matlab
 ```
+
+`simulate_tether` and `init_quasisteady` are documented here for completeness (this
+project's `checkdocs = :all` requires every docstring in the module to appear in the
+manual), but they are unexported internals that [`Tether`](@ref)/[`init!`](@ref)/
+[`step!`](@ref) are built on - new code should use the latter.
 
 ```@meta
 CurrentModule = Tethers
