@@ -268,17 +268,19 @@ function step!(te::Tether, kite_pos, kite_vel; tether_length=nothing, wind_vel=n
                prn=false)
     se = te.set
     _tether_length = tether_length === nothing ? (1 + se.slack) * norm(kite_pos) : tether_length
-    _wind_vel = wind_vel === nothing ? te.wind_vel : wind_vel
-    check_wind_vel(_wind_vel, se.segments)
+    if wind_vel !== nothing
+        check_wind_vel(wind_vel, se.segments)
+        te.wind_vel .= wind_vel
+    end
+    check_wind_vel(te.wind_vel, se.segments)
 
     state_vec, _, force_gnd, force_kite, p0 = simulate_tether(
-        te.state_vec, kite_pos, kite_vel, _wind_vel, _tether_length, se;
+        te.state_vec, kite_pos, kite_vel, te.wind_vel, _tether_length, se;
         prn, alg=se.alg, tether_pos=te.tether_pos)
 
     te.state_vec .= state_vec
     te.kite_pos .= kite_pos
     te.kite_vel .= kite_vel
-    te.wind_vel = _wind_vel
     te.tether_length = _tether_length
     # te.tether_pos was written in place by simulate_tether via the `tether_pos` keyword
     te.force_gnd = force_gnd
