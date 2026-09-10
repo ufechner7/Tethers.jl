@@ -1,15 +1,15 @@
-# A quasi-static tether model: solves for tether shape and forces given the ground-station
+# A quasi-steady tether model: solves for tether shape and forces given the ground-station
 # orientation/tension and the kite's position and velocity.
 #
 # This is a submodule of `Tethers`, so that its names do not end up in `Main`: several
 # examples (e.g. `Tether_08.jl`) define their own top-level `Settings` struct, and
 # `runtests.jl` includes all of them into the same `Main`, which a top-level `Settings`
-# here would collide with. Use it with `using Tethers.Quasistatic`.
-module Quasistatic
+# here would collide with. Use it with `using Tethers.QuasiSteady`.
+module QuasiSteady
 
 using LinearAlgebra, StaticArrays, ADTypes, NonlinearSolve, MAT, Parameters#, QuadGK
 
-export Settings, simulate_tether, get_initial_conditions, init_quasistatic, get_analytic_catenary
+export Settings, simulate_tether, get_initial_conditions, init_quasisteady, get_analytic_catenary
 
 include(joinpath(@__DIR__, "qsm_conventions.jl"))
 
@@ -58,7 +58,7 @@ Settings
 """
     simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings)
 
-Function to determine the tether shape and forces, based on a quasi-static model.
+Function to determine the tether shape and forces, based on a quasi-steady model.
 
 # Arguments
 - state_vec::MVector{3, Float64}: state vector (theta [rad], phi [rad], Tn [N]);  
@@ -192,7 +192,7 @@ end
 """
     tether_shape(θ, φ, Tn, param, pj)
 
-Integrate the quasi-static tether from the ground station up to the kite and return the
+Integrate the quasi-steady tether from the ground station up to the kite and return the
 gap between the kite and the end of the tether.
 
 The tether is walked one segment at a time, so only the force, drag, velocity and
@@ -377,9 +377,9 @@ function get_initial_conditions(filename)
 end
 
 """
-    init_quasistatic(kite_pos, tether_length; kite_vel = nothing, segments = nothing, wind_vel = nothing, settings = nothing)
+    init_quasisteady(kite_pos, tether_length; kite_vel = nothing, segments = nothing, wind_vel = nothing, settings = nothing)
 
-Initialize the quasi-static tether model providing an initial guess for the state vector based on the numerical solution of the catenary equation
+Initialize the quasi-steady tether model providing an initial guess for the state vector based on the numerical solution of the catenary equation
 
 # Arguments
 - kite_pos::MVector{3, Float64} kite position vector in wind reference frame
@@ -393,7 +393,7 @@ Initialize the quasi-static tether model providing an initial guess for the stat
 - state_vec::MVector{3, Float64} state vector (theta [rad], phi [rad], Tn [N])  
   tether orientation and tension at ground station
 """
-function init_quasistatic(kite_pos, tether_length; kite_vel = nothing, segments = nothing, wind_vel = nothing, settings = nothing)
+function init_quasisteady(kite_pos, tether_length; kite_vel = nothing, segments = nothing, wind_vel = nothing, settings = nothing)
     # Some basic checks
     @assert isa(kite_pos, MVector{3}) || error("kite_pos must be a MVector of size (3,1)")
     if isnothing(kite_vel) 
@@ -497,4 +497,4 @@ function get_analytic_catenary(filename)
     return x_cat, y_cat
 end
 
-end # module Quasistatic
+end # module QuasiSteady

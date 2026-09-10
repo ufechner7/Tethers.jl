@@ -1,9 +1,9 @@
 # Conversion between the MATLAB reference angle convention and the
 # elevation/azimuth convention used throughout this package. See
-# `docs/quasistatic.md`, section "Resolved: the angle convention", for the
+# `docs/quasisteady.md`, section "Resolved: the angle convention", for the
 # derivation and the evidence that only these two angles need converting.
 #
-# Wind-frame convention (used by `res!`, `init_quasistatic`, `calc_heading`,
+# Wind-frame convention (used by `res!`, `init_quasisteady`, `calc_heading`,
 # `calc_clock_angle`, and the system state from KiteUtils 0.8.2 onwards):
 #   - β (elevation): 0 at the horizon, 90° at zenith
 #   - φ (azimuth):   positive anti-clockwise seen from above

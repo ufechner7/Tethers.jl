@@ -1,4 +1,4 @@
-# Create new API for quasi-static tether model
+# Create new API for quasi-steady tether model
 
 The API should consist of:
 
@@ -20,7 +20,7 @@ All coordinates and angle symbols follow the KiteUtils.jl definitions:
 
 ## Reference frames and symbols
 
-The quasi-static model lives entirely in the **W (wind) reference frame**, whose
+The quasi-steady model lives entirely in the **W (wind) reference frame**, whose
 origin is the *anchor point of the tether* — which is exactly where the model
 puts the ground station, at `[0, 0, 0]`. The z-axis points up, the y-axis
 downwind. `kite_pos`, `kite_vel`, `wind_vel`, `tether_pos` and `p0` are all
@@ -32,14 +32,14 @@ Angle symbols, per KiteUtils:
 |---|---|---|
 | **β** | elevation | zero when the kite height is zero, 90° at zenith |
 | **φ** | azimuth (wind frame) | positive anti-clockwise seen from above |
-| **ψ** | heading / yaw | not used by the quasi-static model; reserved |
+| **ψ** | heading / yaw | not used by the quasi-steady model; reserved |
 
 So the tether direction at the ground station is
 `dir ∝ [cos(β)cos(φ), cos(β)sin(φ), sin(β)]`, which is what
 `src/qsm_conventions.jl` already documents.
 
 **θ is not a KiteUtils symbol** and must not be used for elevation. It appears
-today in `tether_shape`, in the `simulate_tether` / `res!` / `init_quasistatic`
+today in `tether_shape`, in the `simulate_tether` / `res!` / `init_quasisteady`
 docstrings ("theta [rad]") and as `theta_init`; all of these mean β and get
 renamed. The one legitimate use of θ is `θ_m` in `matlab_to_wind` /
 `wind_to_matlab`, where it denotes the *MATLAB reference* angle measured from
@@ -49,7 +49,7 @@ the vertical — a genuinely different quantity, already subscripted, and kept.
 
 **What are the input parameters of the quasi steady model?**
 
-The entry point is `simulate_tether` in `src/Tether_quasistatic.jl`; everything
+The entry point is `simulate_tether` in `src/Tether_quasisteady.jl`; everything
 below is either one of its arguments or reachable from one. They fall into five
 groups, and that grouping is what drives the API design below.
 
@@ -112,7 +112,7 @@ keyword argument of `init!`/`step!`, exactly as in `KiteModels.init!`.
 Groups 3, 4 and 5 are fixed for the lifetime of a simulation and become
 `StaticSettings`; group 1 is state that must persist between calls; only group 2
 genuinely varies per step. The current API forces the caller to thread all of it
-through by hand, which is why `init_quasistatic` returns a six-tuple of mostly
+through by hand, which is why `init_quasisteady` returns a six-tuple of mostly
 unchanged inputs.
 
 Group 2 has one exception that decides the shape of `init!`: the *initial* kite
@@ -161,9 +161,9 @@ end
 already knows these. `slack` is the one addition, and it exists because the
 catenary solve needs *both* the kite position and a tether length longer than the
 straight-line distance to it: with a taut tether the coefficient goes to zero and
-the solve in `init_quasistatic` degenerates. `slack = 0.05` reproduces the
+the solve in `init_quasisteady` degenerates. `slack = 0.05` reproduces the
 `tether_length = 1.05 * norm(kite_pos)` idiom that
-`examples/quasistatic/flying_circular.jl` uses today.
+`examples/quasisteady/flying_circular.jl` uses today.
 
 So the initial kite position is
 
@@ -222,7 +222,7 @@ tension(te::Tether)   = te.state_vec[3]   # Tn [N]
 
 ### 3. `init!(te::Tether; prn = false)`
 
-Replaces `init_quasistatic`. Takes no state arguments — everything comes from
+Replaces `init_quasisteady`. Takes no state arguments — everything comes from
 `te.set` — and returns `te` rather than a six-tuple:
 
 ```julia
@@ -236,7 +236,7 @@ end
 ```
 
 - `segments`, physical properties and `alg` come from `te.set`, so the
-  five-branch `isnothing` cascade in `init_quasistatic` disappears entirely.
+  five-branch `isnothing` cascade in `init_quasisteady` disappears entirely.
 - `wind_vel` keeps whatever `te` already holds (zeros after construction); a
   caller who wants a wind field writes it into `te.wind_vel` before `init!`, or
   passes it to `step!`.
@@ -272,7 +272,7 @@ for ii in 1:length(gamma)
 end
 ```
 
-Compare `examples/quasistatic/flying_circular.jl`, where the same loop currently
+Compare `examples/quasisteady/flying_circular.jl`, where the same loop currently
 threads seven values through `simulate_tether` and manually re-assigns
 `state_vec`.
 
@@ -281,7 +281,7 @@ threads seven values through `simulate_tether` and manually re-assigns
 `init!`/`step!` with the bang, since both mutate `te`, following the Julia
 convention for functions that mutate their first argument. **Decided.**
 KiteModels calls the stepping function `next_step!`; we keep `step!`, since the
-quasi-static model has no integrator and no time step — `step!` moves the
+quasi-steady model has no integrator and no time step — `step!` moves the
 boundary condition, it does not advance time.
 
 ## Decisions
@@ -307,23 +307,23 @@ boundary condition, it does not advance time.
   `init!`/`step!` validate `wind_vel` against `te.set.segments` instead.
 - **`simulate_tether` becomes internal.** `StaticSettings`/`Tether`/`init!`/
   `step!` is the documented, exported API; `simulate_tether` (and
-  `init_quasistatic`) stay in the module unexported, since tests and the MATLAB
-  comparison scripts still call them directly, but `docs/quasistatic.md` and
+  `init_quasisteady`) stay in the module unexported, since tests and the MATLAB
+  comparison scripts still call them directly, but `docs/quasisteady.md` and
   `docs/src/references.md` document only the new API.
 - **`res!` is dropped from the API.** It already isn't exported and stays
   purely internal — the residual `tether_shape` feeds to the nonlinear solve.
   The new API gets no equivalent; `test/test_qsm.jl` keeps calling `res!`
   directly (qualified) as it does today.
 - **θ → β rename applies everywhere**, not just the new API: `tether_shape`'s
-  argument, `theta_init` in `init_quasistatic`, and every existing "theta
+  argument, `theta_init` in `init_quasisteady`, and every existing "theta
   [rad]" docstring get renamed in the same pass (implementation step 1), so
   the old and new API don't leave two conventions side by side. `θ_m` in
   `src/qsm_conventions.jl` is a different quantity and is kept.
 
 ## Implementation steps
 
-1. Rename θ → β for elevation across the `Quasistatic` submodule: the
-   `tether_shape` argument, `theta_init` in `init_quasistatic`, and the
+1. Rename θ → β for elevation across the `QuasiSteady` submodule: the
+   `tether_shape` argument, `theta_init` in `init_quasisteady`, and the
    "theta [rad]" wording in every docstring. Leave `θ_m` in
    `src/qsm_conventions.jl` untouched. Pure rename, no behaviour change — do it
    first so the new code is written against the final vocabulary.
@@ -341,7 +341,7 @@ boundary condition, it does not advance time.
    `elevation`/`azimuth`/`tension` accessors; export them together with
    `StaticSettings`. Keep `simulate_tether` unchanged so nothing breaks mid-way.
    Once the new API is ported and tested (steps 7-9), unexport `simulate_tether`
-   and `init_quasistatic` — they remain callable (qualified) for tests and the
+   and `init_quasisteady` — they remain callable (qualified) for tests and the
    MATLAB comparison scripts, but are no longer part of the documented API.
 5. Implement `init!(te; prn)` on top of the existing catenary solve: derive
    `kite_pos` and `tether_length` from `te.set`, drop the `isnothing` cascade,
@@ -349,18 +349,18 @@ boundary condition, it does not advance time.
 6. Implement `step!` on top of the existing solver setup, writing into the
    pre-allocated buffers in `te`, with the `tether_length`/`wind_vel` defaults
    above.
-7. Port `examples/quasistatic/flying_circular.jl` first — it is the one example
+7. Port `examples/quasisteady/flying_circular.jl` first — it is the one example
    with a real stepping loop, so it is the best test of whether the API is
    pleasant to use, and its `1.05 * norm(kite_pos)` is exactly the `slack`
    default.
-8. Port the remaining callers: `examples/quasistatic/run_catenary.jl`,
+8. Port the remaining callers: `examples/quasisteady/run_catenary.jl`,
    `run_catenary_matlab.jl`, `force_plots.jl`, `benchmark_qsm.jl`.
 9. Add tests in `test/test_qsm.jl` asserting that `init!` + `step!` reproduce the
-   `init_quasistatic` + `simulate_tether` results bit for bit, for a
+   `init_quasisteady` + `simulate_tether` results bit for bit, for a
    `StaticSettings` whose `elevation`/`azimuth`/`l_tether`/`slack` correspond to
    the `kite_pos`/`tether_length` passed to the old API.
 10. Confirm with `@allocated` that a `step!` in a loop does not allocate.
-11. Update `docs/quasistatic.md` and `docs/src/references.md`, both of which
+11. Update `docs/quasisteady.md` and `docs/src/references.md`, both of which
     document the current function-level API, and state the W frame and the β/φ
     symbols explicitly, linking the KiteUtils reference-frames page.
 
@@ -368,13 +368,13 @@ boundary condition, it does not advance time.
 
 | File | Change |
 |---|---|
-| `src/Tether_quasistatic.jl` | θ → β rename; `Settings` → `StaticSettings` + new fields; new struct + methods; `simulate_tether`/`init_quasistatic` unexported |
+| `src/Tether_quasisteady.jl` | θ → β rename; `Settings` → `StaticSettings` + new fields; new struct + methods; `simulate_tether`/`init_quasisteady` unexported |
 | `src/qsm_conventions.jl` | unchanged code; comment updated to name the W frame and link KiteUtils |
-| `examples/quasistatic/flying_circular.jl` | port to `Tether` |
-| `examples/quasistatic/run_catenary.jl` | port to `Tether` |
-| `examples/quasistatic/run_catenary_matlab.jl` | port to `Tether` |
-| `examples/quasistatic/force_plots.jl` | port to `Tether` |
-| `examples/quasistatic/benchmark_qsm.jl` | port; add an allocation check |
+| `examples/quasisteady/flying_circular.jl` | port to `Tether` |
+| `examples/quasisteady/run_catenary.jl` | port to `Tether` |
+| `examples/quasisteady/run_catenary_matlab.jl` | port to `Tether` |
+| `examples/quasisteady/force_plots.jl` | port to `Tether` |
+| `examples/quasisteady/benchmark_qsm.jl` | port; add an allocation check |
 | `test/test_qsm.jl` | equivalence tests for the new API |
-| `docs/quasistatic.md` | document `StaticSettings`, `Tether`, `init!`, `step!`, W frame, β/φ |
+| `docs/quasisteady.md` | document `StaticSettings`, `Tether`, `init!`, `step!`, W frame, β/φ |
 | `docs/src/references.md` | update the docstring listing |

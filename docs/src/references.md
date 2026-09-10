@@ -36,20 +36,20 @@ FreeEnd
 CurrentModule = Tethers
 ```
 
-### Quasi-static tether model
-A quasi-static tether model: solves for tether shape and forces given the
+### Quasi-steady tether model
+A quasi-steady tether model: solves for tether shape and forces given the
 ground-station orientation/tension and the kite's position and velocity. See
-[`docs/quasistatic.md`](https://github.com/ufechner7/Tethers.jl/blob/main/docs/quasistatic.md)
-for implementation notes. It lives in the submodule `Tethers.Quasistatic`.
+[`docs/quasisteady.md`](https://github.com/ufechner7/Tethers.jl/blob/main/docs/quasisteady.md)
+for implementation notes. It lives in the submodule `Tethers.QuasiSteady`.
 
 ```@meta
-CurrentModule = Tethers.Quasistatic
+CurrentModule = Tethers.QuasiSteady
 ```
 
 ```@docs
 Settings
 simulate_tether
-init_quasistatic
+init_quasisteady
 get_initial_conditions
 get_analytic_catenary
 tether_shape

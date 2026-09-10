@@ -1,4 +1,4 @@
-# Quasi-static tether shape for the MATLAB reference case, compared against the analytic
+# Quasi-steady tether shape for the MATLAB reference case, compared against the analytic
 # catenary that the same case produces without drag.
 #
 # `import`, not `using`: menu.jl runs every example into the same `Main`, and GLMakie
@@ -6,7 +6,7 @@
 # ambiguous in every example run afterwards.
 import GLMakie
 using Tethers: display_if_interactive
-using Tethers.Quasistatic: get_initial_conditions, simulate_tether, get_analytic_catenary
+using Tethers.QuasiSteady: get_initial_conditions, simulate_tether, get_analytic_catenary
 
 const DATA = joinpath(@__DIR__, "..", "..", "test", "data")
 
@@ -25,7 +25,7 @@ fig = GLMakie.Figure()
 ax1 = GLMakie.Axis(fig[1, 1]; xlabel="X [m]", ylabel="Y [m]", autolimitaspect=1)
 l_cat = GLMakie.lines!(ax1, x_cat, y_cat)
 l_qs  = GLMakie.scatterlines!(ax1, x_qs, y_qs)
-GLMakie.Legend(fig[1, 2], [l_cat, l_qs], ["Analytic catenary", "Quasi static model"])
+GLMakie.Legend(fig[1, 2], [l_cat, l_qs], ["Analytic catenary", "Quasi-steady model"])
 
 tether_pos = hcat(p0, tether_pos, [0; 0; 0])
 ax2 = GLMakie.Axis3(fig[2, 1]; title="3D view", xlabel="X [m]", ylabel="Y [m]", zlabel="Z [m]",

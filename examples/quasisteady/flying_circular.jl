@@ -6,7 +6,7 @@
 using LaTeXStrings, StaticArrays, LinearAlgebra
 import GLMakie
 using Tethers: display_if_interactive
-using Tethers.Quasistatic: init_quasistatic, simulate_tether
+using Tethers.QuasiSteady: init_quasisteady, simulate_tether
 
 function main()
     avg_el = deg2rad(70)
@@ -48,7 +48,7 @@ function main()
     # Initialize model
     tether_length = norm(kite_pos)
     segments = 20
-    state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings = init_quasistatic(kite_pos, tether_length, kite_vel = kite_vel, segments = segments)
+    state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings = init_quasisteady(kite_pos, tether_length, kite_vel = kite_vel, segments = segments)
     state_vec, tether_pos, Ft_ground, Ft_kite, p0 =  simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings)
     tether_pos = hcat(p0, tether_pos, [0; 0; 0])
 

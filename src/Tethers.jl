@@ -7,8 +7,8 @@ export docu, display_if_interactive, install_examples, run_python
 # the re-usable, composable tether component of example 10
 include("TetherComponent.jl")
 
-# the quasi-static tether model
-include("Tether_quasistatic.jl")
+# the quasi-steady tether model
+include("Tether_quasisteady.jl")
 
 LAUNCH_BROWSER = true
 

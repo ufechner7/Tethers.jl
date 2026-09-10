@@ -6,7 +6,7 @@ if dirname(Pkg.project().path) != normpath(joinpath(@__DIR__, ".."))
 end
 using BenchmarkTools, StaticArrays
 using StaticArrays: MVector
-using Tethers.Quasistatic: Settings, simulate_tether
+using Tethers.QuasiSteady: Settings, simulate_tether
 
 const segments = 15
 
@@ -16,7 +16,7 @@ const segments = 15
 #
 # state_vec is (elevation [rad], wind-frame azimuth [rad], ground tension [N]); the two
 # angles are the MATLAB-convention pair (0.321750554, -0.306277369) already converted with
-# `Quasistatic.matlab_to_wind`.
+# `QuasiSteady.matlab_to_wind`.
 state_vec     = MVector{3}(1.1302856641844843, -0.7853981636973135, 1.60941384e5)
 kite_pos      = MVector{3}(100.0, 100.0, 300.0)
 kite_vel      = MVector{3}(0.0, 0.0, 0.0)
@@ -35,7 +35,7 @@ simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings
 @benchmark simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings)
 
 #= On Ryzen 7950X
-julia> include("examples/quasistatic/benchmark_qsm.jl")
+julia> include("examples/quasisteady/benchmark_qsm.jl")
 Iterations: 22, retcode: Success, |res|: 4.263256414560601e-14
 BenchmarkTools.Trial: 10000 samples with 1 evaluation per sample.
  Range (min … max):  22.793 μs …  2.311 ms  ┊ GC (min … max): 0.00% … 97.66%

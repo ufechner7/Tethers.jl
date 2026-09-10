@@ -1,4 +1,4 @@
-# Tether shape and tether force as a function of the kite distance, from the quasi-static
+# Tether shape and tether force as a function of the kite distance, from the quasi-steady
 # model.
 #
 # `import`, not `using`: menu.jl runs every example into the same `Main`, and GLMakie
@@ -7,7 +7,7 @@
 using StaticArrays, LinearAlgebra
 import GLMakie
 using Tethers: display_if_interactive
-using Tethers.Quasistatic: get_initial_conditions, simulate_tether
+using Tethers.QuasiSteady: get_initial_conditions, simulate_tether
 
 const segments = 15
 

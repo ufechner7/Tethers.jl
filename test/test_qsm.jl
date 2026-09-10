@@ -1,6 +1,6 @@
 using Test, MAT, StaticArrays
-using Tethers.Quasistatic: get_initial_conditions
-import Tethers.Quasistatic as QSM  # for `res!`, which is internal and not exported
+using Tethers.QuasiSteady: get_initial_conditions
+import Tethers.QuasiSteady as QSM  # for `res!`, which is internal and not exported
 
 const QSM_DATA = joinpath(@__DIR__, "data")
 
@@ -57,7 +57,7 @@ end
     # `dir ~ [sin(θ)cos(φ), sin(φ), cos(θ)cos(φ)]`. `get_initial_conditions` now converts
     # `stateVec` from the MATLAB convention to the elevation/azimuth convention via
     # `matlab_to_wind` on load, so `state_vec` here is already directly comparable.
-    # See docs/quasistatic.md, "Resolved: the angle convention", for the derivation.
+    # See docs/quasisteady.md, "Resolved: the angle convention", for the derivation.
     #
     # The vertical discrepancy that used to remain (~1.9 % on `T0`, ~0.4 % on `p0`) was
     # gravity after all: the `.mat` files store `T.rho_t` as a mass per unit length

@@ -1,6 +1,6 @@
-# Quasi-static tether model: state of the port
+# Quasi-steady tether model: state of the port
 
-Notes on porting the quasi-static tether model from the `andrea_quasistatic`
+Notes on porting the quasi-steady tether model from the `andrea_quasistatic`
 branch onto `main`, and on the open questions that port uncovered.
 
 ## TODO
@@ -10,7 +10,7 @@ convention; each section linked below holds the detail and the reasoning.
 
 1. ~~**Add the conversion helpers.** Create `src/qsm_conventions.jl` with
    `matlab_to_wind(θ_m, φ_m)` and its inverse `wind_to_matlab(β, φ)`, and
-   `include` it from both `src/Tether_quasistatic.jl` and
+   `include` it from both `src/Tether_quasisteady.jl` and
    `src/Tether_qsm_dual.jl`.~~ **Done** — see `src/qsm_conventions.jl`.
 2. ~~**Convert on load.** Apply `matlab_to_wind` to `stateVec` in both copies
    of `get_initial_conditions`. Nothing else in the `.mat` files is
@@ -18,7 +18,7 @@ convention; each section linked below holds the detail and the reasoning.
    frame rotation](#it-is-a-parametrisation-difference-not-a-frame-rotation).
 3. ~~**Bring `src/Tether_qsm_dual.jl` in line.** Its `res!` still uses the
    MATLAB parametrisation, so it must move to the elevation/azimuth form used
-   by `Tether_quasistatic.jl`.~~ **Done**, and the file has since been deleted
+   by `Tether_quasisteady.jl`.~~ **Done**, and the file has since been deleted
    — see [Removed: the dual-number
    copy](#removed-the-dual-number-copy).
 4. ~~**Re-enable the reference comparisons.** Turn the four `@test_broken` in
@@ -69,8 +69,8 @@ In this convention the tether direction at the ground station is
 dir ∝ [cos(β)cos(φ), cos(β)sin(φ), sin(β)]
 ```
 
-which is exactly what `res!` in `src/Tether_quasistatic.jl` already computes,
-and what `init_quasistatic` already produces: `phi_init = atan(kite_pos[2],
+which is exactly what `res!` in `src/Tether_quasisteady.jl` already computes,
+and what `init_quasisteady` already produces: `phi_init = atan(kite_pos[2],
 kite_pos[1])` is anti-clockwise from above, and `theta_init = atan(z, hypot(x,
 y))` is an elevation. So the state vector's `θ` **is** the elevation `β`.
 
@@ -137,7 +137,7 @@ figures rather than two.
 
 The alternative — changing `res!` to the MATLAB parametrisation — would put a
 MATLAB-ism into the public state vector, alter what `state_vec` means for
-`init_quasistatic`, `simulate_tether` and all six examples, and force a
+`init_quasisteady`, `simulate_tether` and all six examples, and force a
 conversion at every user-facing edge instead (`calc_heading`,
 `calc_clock_angle`, `SysState`). `get_initial_conditions` is the only point at
 which MATLAB angle data enters the package, so converting there leaves exactly
@@ -147,7 +147,7 @@ one convention in play everywhere else.
 
 1. Add the conversion and its inverse — the inverse is wanted as soon as the
    MATLAB reference is re-run to regenerate fixtures. `get_initial_conditions`
-   is already duplicated verbatim between `src/Tether_quasistatic.jl` and
+   is already duplicated verbatim between `src/Tether_quasisteady.jl` and
    `src/Tether_qsm_dual.jl`, so a small `src/qsm_conventions.jl` that both
    `include` beats a third copy.
 
@@ -179,9 +179,9 @@ one convention in play everywhere else.
    `FT[1] = Tn·sinθ·cosφ`, `FT[2] = Tn·sinφ`, `FT[3] = Tn·cosθ·cosφ` — the
    MATLAB parametrisation, unconverted. The two implementations of the same
    model therefore disagree with each other today, and both are handed
-   `state_vec` from the same loader (`examples/quasistatic/benchmark_qsm_dual.jl`).
+   `state_vec` from the same loader (`examples/quasisteady/benchmark_qsm_dual.jl`).
    Converting in the loader *requires* this file to move to the
-   elevation/azimuth form used by `Tether_quasistatic.jl`. That is an argument
+   elevation/azimuth form used by `Tether_quasisteady.jl`. That is an argument
    for the loader rather than against it: it collapses the two onto one
    convention instead of letting them drift further apart.
 
@@ -207,7 +207,7 @@ worth raising with whoever owns that code.
 ### Related: the unused frame transforms
 
 `transformFromOtoW` / `transformFromWtoO` sat at the end of
-`src/Tether_quasistatic.jl` as dead code — defined, never called, never
+`src/Tether_quasisteady.jl` as dead code — defined, never called, never
 exported — and their matrix carried both a y-flip and a z-flip, which is a
 second convention in a file whose first one had just taken this much work to
 pin down. They have been deleted rather than reconciled: nothing in the package
@@ -236,8 +236,8 @@ sides.
 the two angles, and the `/A` to `rho_t` — so this measures what is left:
 
 ```julia
-using Tethers.Quasistatic: get_initial_conditions
-import Tethers.Quasistatic as QSM
+using Tethers.QuasiSteady: get_initial_conditions
+import Tethers.QuasiSteady as QSM
 using LinearAlgebra, MAT
 sv, kp, kv, wv, tl, se = get_initial_conditions("test/data/input_basic_test.mat")
 ref = matread("test/data/basic_test_results.mat")
@@ -302,7 +302,7 @@ gravity enters z that the two implementations could disagree about.
   physically correct behaviour for a 29.7 mm Dyneema cable, but tether-shape
   plots will legitimately look different — the old ones were of a nearly
   weightless string. The hardcoded `rho_tether` in both
-  `examples/quasistatic/benchmark_qsm*.jl` was updated to 970.0 to match.
+  `examples/quasisteady/benchmark_qsm*.jl` was updated to 970.0 to match.
 - The fixture stops being physically inconsistent. With a weightless tether the
   only way to close the 100 m between the kite distance (331.7 m) and the
   tether length (431.7 m) was to hang the tether in a deep loop below the
@@ -356,7 +356,7 @@ rejects. It now builds them per column, the way `examples/Tether_08.jl` does.
 
 ## Performance
 
-`simulate_tether` runs `examples/quasistatic/benchmark_qsm.jl` in 23.4 µs
+`simulate_tether` runs `examples/quasisteady/benchmark_qsm.jl` in 23.4 µs
 against 94 µs before, with 63 allocations instead of 1118 and 22 solver
 iterations instead of 36. Three independent changes:
 
@@ -380,7 +380,7 @@ as the log does: uncapped, the first step crosses some thirteen decades and
 lands where the tether hangs limp from the ground station, the residual flattens
 out, and the solve dies with no gradient left to come back on.
 
-**`init_quasistatic` derives its initial tension from the catenary it already
+**`init_quasisteady` derives its initial tension from the catenary it already
 fits.** The catenary parameter `1/coeff` is `H/w`, the horizontal tension over
 the weight per unit length. The tension of a sagging tether is set by its own
 weight, not by how stiff it is, so the previous guess of `0.0002 * c_spring`
@@ -415,7 +415,7 @@ failure costs 1.6 ms, which is too much to risk on a default.
 `src/Tether_qsm_dual.jl` was a second, experimental implementation of the same
 model, wired up so the residual could be differentiated with ForwardDiff by
 routing every buffer through `PreallocationTools.DiffCache`. It has been
-deleted, along with `examples/quasistatic/benchmark_qsm_dual.jl` and its
+deleted, along with `examples/quasisteady/benchmark_qsm_dual.jl` and its
 `menu3.jl` entry. References to it elsewhere in this document are historical.
 
 It was never part of the package: `src/Tethers.jl` did not include it and no
@@ -427,7 +427,7 @@ ones by hand. TODO steps 1 and 3 above were both that maintenance, and the
 The question it existed to answer has since been answered, and not in its
 favour: its own benchmark recorded 328.67 KiB and 2292 allocations per solve,
 against 46.53 KiB and 1118 for the plain version at the same date.
-`Tether_quasistatic.jl` now differentiates its residual with ForwardDiff and no
+`Tether_quasisteady.jl` now differentiates its residual with ForwardDiff and no
 such machinery at all — the residual no longer writes into buffers, so there is
 nothing left for a `DiffCache` to do. See [Performance](#performance).
 
@@ -490,5 +490,5 @@ reel-out speed zeroed.
   the tolerance moved to `1e-6` once the `rho_t` unit mismatch was fixed (TODO
   step 5), which is a four-order-of-magnitude tightening and the check that
   confirms that reading of the fixture.
-- All six `examples/quasistatic/` scripts run.
+- All six `examples/quasisteady/` scripts run.
 - `examples/Tether_11.jl` runs end to end in ~8 s, with no warnings.

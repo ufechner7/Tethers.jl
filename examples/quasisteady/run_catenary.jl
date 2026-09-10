@@ -1,4 +1,4 @@
-# Quasi-static tether shape for a kite at a fixed position, plotted in 3D.
+# Quasi-steady tether shape for a kite at a fixed position, plotted in 3D.
 #
 # `import`, not `using`: menu.jl runs every example into the same `Main`, and GLMakie
 # exports `plot` just like MakieControlPlots, so a `using GLMakie` here would make `plot`
@@ -6,12 +6,12 @@
 using StaticArrays, LinearAlgebra
 import GLMakie
 using Tethers: display_if_interactive
-using Tethers.Quasistatic: init_quasistatic, simulate_tether
+using Tethers.QuasiSteady: init_quasisteady, simulate_tether
 
 # Set initial conditions
 kite_pos = MVector{3}([100.0, 100, 800])
 tether_length = norm(kite_pos)*1.05
-state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings = init_quasistatic(kite_pos, tether_length, segments = 22)
+state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings = init_quasisteady(kite_pos, tether_length, segments = 22)
 
 state_vec, tether_pos, Ft_ground, Ft_kite, p0 =  simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings)
 
