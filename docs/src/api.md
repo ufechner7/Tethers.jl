@@ -18,7 +18,9 @@ m_end
 Point3D
 Tether
 FixedEnd
+MovingEnd
 FreeEnd
+assemble_tether
 ```
 
 ```@meta
