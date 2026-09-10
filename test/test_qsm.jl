@@ -1,3 +1,7 @@
+using Pkg
+if dirname(Pkg.project().path) != @__DIR__
+    Pkg.activate(@__DIR__)
+end
 using Test, MAT, StaticArrays, LinearAlgebra
 using Tethers.QuasiSteady: get_initial_conditions
 import Tethers.QuasiSteady as QSM  # for `res!`, which is internal and not exported
@@ -140,6 +144,120 @@ end
     QSM.clear!(te)
     @test te.state_vec == zeros(3)
     @test te.set === se
+    nothing
+end
+
+@testset "StaticSettings_defaults" begin
+    se = QSM.StaticSettings()
+    @test se.segments == 7
+    @test se.elevation == 70.0
+    @test se.azimuth == 0.0
+    @test se.l_tether == 50.0
+    @test se.slack == 0.05
+    @test se.rho == 1.225
+    @test se.g_earth == [0.0, 0.0, -9.81]
+    @test se.cd_tether == 0.958
+    @test se.d_tether == 4
+    @test se.rho_tether == 724
+    @test se.c_spring == 614600
+    # `alg` needs an explicit `::Any` annotation in the struct - without it, `@deftype
+    # Float64` would force it to Float64 and this construction would fail outright.
+    @test se.alg === QSM.DEFAULT_SOLVER
+    nothing
+end
+
+@testset "Tether_defaults" begin
+    te = QSM.Tether()
+    @test te.set isa QSM.StaticSettings
+    @test size(te.wind_vel) == (3, te.set.segments)
+    @test size(te.tether_pos) == (3, te.set.segments)
+    @test te.state_vec == zeros(3)
+    @test te.kite_pos == zeros(3)
+    @test te.force_gnd == 0.0
+
+    se = QSM.StaticSettings(segments = 5)
+    te2 = QSM.Tether(se)
+    @test te2.set === se
+    @test size(te2.wind_vel) == (3, 5)
+    @test size(te2.tether_pos) == (3, 5)
+    nothing
+end
+
+@testset "check_wind_vel" begin
+    @test QSM.check_wind_vel(zeros(3, 4), 4) === nothing
+    @test_throws ArgumentError QSM.check_wind_vel(zeros(2, 4), 4)   # wrong row count
+    @test_throws ArgumentError QSM.check_wind_vel(zeros(3, 5), 4)   # wrong column count
+    nothing
+end
+
+@testset "step!_defaults" begin
+    # `tether_length`/`wind_vel` default from `te.set`/`te.wind_vel` when omitted; the
+    # equivalence test above always passes `tether_length` explicitly, so this is the only
+    # place that default path is exercised.
+    se = QSM.StaticSettings(segments=8, elevation=60.0, l_tether=100.0, slack=0.05)
+    te = QSM.Tether(se)
+    QSM.init!(te)
+
+    kite_pos = MVector{3}(te.kite_pos .* 1.1)
+    kite_vel = MVector{3}(0.3, -0.2, 0.1)
+    ret = QSM.step!(te, kite_pos, kite_vel)
+
+    @test ret === te   # step! returns te
+    @test te.tether_length ≈ (1 + se.slack) * norm(kite_pos)
+    @test te.wind_vel == zeros(3, se.segments)   # unchanged default wind_vel
+    @test te.kite_pos == kite_pos
+    @test te.kite_vel == kite_vel
+    nothing
+end
+
+@testset "init!_returns_te" begin
+    se = QSM.StaticSettings(segments=6, elevation=50.0, l_tether=80.0)
+    te = QSM.Tether(se)
+    @test QSM.init!(te) === te
+    nothing
+end
+
+@testset "clear!_full_reset" begin
+    se = QSM.StaticSettings(segments=9, elevation=65.0, l_tether=120.0)
+    te = QSM.Tether(se)
+    QSM.init!(te)
+    QSM.step!(te, MVector{3}(te.kite_pos .* 1.05), MVector{3}(0.1, 0.1, 0.1))
+
+    QSM.clear!(te)
+    @test te.state_vec == zeros(3)
+    @test te.kite_pos == zeros(3)
+    @test te.kite_vel == zeros(3)
+    @test te.wind_vel == zeros(3, se.segments)
+    @test te.tether_length == 0.0
+    @test te.tether_pos == zeros(3, se.segments)
+    @test te.force_gnd == 0.0
+    @test te.force_kite == zeros(3)
+    @test te.p0 == zeros(3)
+    @test te.set === se
+
+    # `clear!` resizes the buffers if `te.set.segments` changed since construction.
+    te.set.segments = 3
+    QSM.clear!(te)
+    @test size(te.wind_vel) == (3, 3)
+    @test size(te.tether_pos) == (3, 3)
+    nothing
+end
+
+@testset "simulate_tether_tether_pos_buffer" begin
+    # The `tether_pos` keyword lets `step!` reuse `te.tether_pos` instead of allocating a
+    # fresh matrix every call; omitting it keeps the original allocating behavior.
+    state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings =
+        get_initial_conditions(joinpath(QSM_DATA, "input_basic_test.mat"))
+    segments = size(wind_vel, 2)
+    buf = zeros(3, segments)
+    _, tp, _, _, _ = QSM.simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length,
+                                         settings; tether_pos=buf)
+    @test tp === buf              # written in place, same object returned
+    @test !all(iszero, buf)       # actually populated
+
+    _, tp2, _, _, _ = QSM.simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings)
+    @test tp2 !== buf             # default path allocates a fresh matrix
+    @test tp2 ≈ buf               # same numeric result either way
     nothing
 end
 nothing

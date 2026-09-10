@@ -1,3 +1,7 @@
+using Pkg
+if dirname(Pkg.project().path) != @__DIR__
+    Pkg.activate(@__DIR__)
+end
 using Test, LinearAlgebra
 using Tethers: run_python
 include(joinpath(@__DIR__, "test_utils.jl"))

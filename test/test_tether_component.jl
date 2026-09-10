@@ -6,6 +6,10 @@
 # - drag                  : the drag of a vertical tether in a side wind
 # - catenary              : the shape of a tether hanging between two points at z=0
 # - compression stiffness : the stiffness of a compressed and of a stretched segment
+using Pkg
+if dirname(Pkg.project().path) != @__DIR__
+    Pkg.activate(@__DIR__)
+end
 using Test, LinearAlgebra, ModelingToolkit, OrdinaryDiffEqCore, OrdinaryDiffEqBDF, SteadyStateDiffEq
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using ADTypes: AutoFiniteDiff
