@@ -9,7 +9,8 @@ module QuasiSteady
 
 using LinearAlgebra, StaticArrays, ADTypes, NonlinearSolve, MAT, Parameters#, QuadGK
 
-export Settings, simulate_tether, get_initial_conditions, init_quasisteady, get_analytic_catenary
+export StaticSettings, Settings, Tether, init!, step!, clear!, elevation, azimuth, tension,
+       get_initial_conditions, get_analytic_catenary
 
 include(joinpath(@__DIR__, "qsm_conventions.jl"))
 
@@ -31,29 +32,249 @@ const DEFAULT_SOLVER = TrustRegion(autodiff = AutoForwardDiff(),
 # conditioned, but it fails in different places, which is the point of a fallback.
 const FALLBACK_SOLVER = TrustRegion(autodiff = AutoForwardDiff())
 
-@with_kw mutable struct Settings @deftype Float64
+@with_kw mutable struct StaticSettings @deftype Float64
+    "number of tether segments"
+    segments::Int64 = 7
+    "initial elevation angle β                                     [deg]"
+    elevation = 70.0
+    "initial wind-frame azimuth angle φ                            [deg]"
+    azimuth = 0.0
+    "initial unstretched tether length                               [m]"
+    l_tether = 50.0
+    "initial tether slack, l_tether = (1 + slack) * kite distance"
+    slack = 0.05
+    "density of air                                              [kg/m³]"
     rho = 1.225
+    "gravitational acceleration, W frame                          [m/s²]"
     g_earth::MVector{3, Float64} = [0.0, 0.0, -9.81]
+    "drag coefficient of the tether"
     cd_tether = 0.958
+    "diameter of the tether                                          [mm]"
     d_tether = 4
+    "density of the tether (Dyneema)                              [kg/m³]"
     rho_tether = 724
+    "unit spring constant of the tether (= E*A)                       [N]"
     c_spring = 614600
+    "the nonlinear solver used by init!/step!"
+    alg::Any = DEFAULT_SOLVER
 end
+
+"""
+    StaticSettings
+
+Physical, structural and solver parameters of the quasi-steady tether model, plus the
+initial condition used by [`init!`](@ref). Nothing in it changes while a simulation
+runs - see [`Tether`](@ref) for the state that does.
+
+# Fields
+  - segments::Int64: number of tether segments
+  - elevation::Float64: initial elevation angle β [deg]
+  - azimuth::Float64: initial wind-frame azimuth angle φ [deg]
+  - l_tether::Float64: initial unstretched tether length [m]
+  - slack::Float64: initial tether slack, `l_tether = (1 + slack) * kite distance`
+  - rho::Float64: density of air [kg/m³]
+  - g_earth::MVector{Float64}: gravitational acceleration [m/s²]
+  - cd_tether::Float64: drag coefficient of the tether
+  - d_tether::Float64: diameter of the tether [mm]
+  - rho_tether::Float64: density of the tether (Dyneema) [kg/m³]
+  - c_spring::Float64: unit spring constant [N] (= `E*A`)
+  - alg: the nonlinear solver used by [`init!`](@ref)/[`step!`](@ref), defaults to `DEFAULT_SOLVER`
+"""
+StaticSettings
 
 """
     Settings
 
-Contains the environmental and tether properties
+Deprecated alias for [`StaticSettings`](@ref), kept so that code constructing the
+pre-KiteModels-style settings struct keeps working.
+"""
+const Settings = StaticSettings
+
+"""
+    Tether
+
+Mutable state of one quasi-steady tether simulation: the settings, the persistent
+solver state, the boundary conditions of the last [`step!`](@ref) and its results. All
+vectors are in the W (wind) reference frame. Buffers are sized from `set.segments` at
+construction and reused by every `step!`, so a stepping loop stays allocation free.
+
+Construct with `Tether(se::StaticSettings)`, then call [`init!`](@ref) before the first
+[`step!`](@ref).
 
 # Fields
-  - rho::Float64: density of air [kg/m³]
-  - g_earth::MVector{Float64}: gravitational acceleration [m/s]
-  - cd_tether::Float64: drag coefficient of the tether
-  - d_tether::Float64: diameter of the tether [mm]
-  - rho_tether::Float64: density of the tether (Dyneema) [kg/m³]
-  - c_spring::Float64: axial stiffness of the tether EA [N]
+  - set::StaticSettings: settings, see [`StaticSettings`](@ref)
+  - state_vec::MVector{3, Float64}: (β [rad], φ [rad], Tn [N]) at the ground station
+  - kite_pos::MVector{3, Float64}: kite position of the last step [m]
+  - kite_vel::MVector{3, Float64}: kite velocity of the last step [m/s]
+  - wind_vel::Matrix{Float64}: wind velocity per segment of the last step [m/s]
+  - tether_length::Float64: unstretched tether length of the last step [m]
+  - tether_pos::Matrix{Float64}: node coordinates of the last step [m]
+  - force_gnd::Float64: tension at the ground station [N]
+  - force_kite::MVector{3, Float64}: force on the tether at the kite attachment point [N]
+  - p0::MVector{3, Float64}: kite-tether attachment point [m]
 """
-Settings
+@with_kw mutable struct Tether
+    set::StaticSettings = StaticSettings()
+    # persistent state, updated by init! and step!
+    state_vec::MVector{3, Float64} = zeros(MVector{3})   # (β [rad], φ [rad], Tn [N])
+    # boundary conditions of the last step
+    kite_pos::MVector{3, Float64} = zeros(MVector{3})
+    kite_vel::MVector{3, Float64} = zeros(MVector{3})
+    wind_vel::Matrix{Float64} = zeros(3, set.segments)
+    tether_length::Float64 = 0.0
+    # results of the last step
+    tether_pos::Matrix{Float64} = zeros(3, set.segments)  # node coordinates
+    force_gnd::Float64 = 0.0                              # tension at ground station [N]
+    force_kite::MVector{3, Float64} = zeros(MVector{3})   # force on the tether end
+    p0::MVector{3, Float64} = zeros(MVector{3})           # kite-tether attachment point
+end
+
+"""
+    Tether(se::StaticSettings)
+
+Construct a `Tether` whose buffers are sized for `se.segments`. The state is left at
+zero until [`init!`](@ref) runs.
+"""
+Tether(se::StaticSettings) = Tether(set=se)
+
+"""
+    elevation(te::Tether)
+
+Elevation angle β [rad] at the ground station, from `te.state_vec`.
+"""
+elevation(te::Tether) = te.state_vec[1]
+
+"""
+    azimuth(te::Tether)
+
+Wind-frame azimuth angle φ [rad] at the ground station, from `te.state_vec`.
+"""
+azimuth(te::Tether) = te.state_vec[2]
+
+"""
+    tension(te::Tether)
+
+Tension Tn [N] at the ground station, from `te.state_vec`.
+"""
+tension(te::Tether) = te.state_vec[3]
+
+"""
+    clear!(te::Tether)
+
+Reset `te`'s persistent state and result buffers to zero, resizing them if
+`te.set.segments` has changed since construction. Does not touch `te.set`. Called by
+[`init!`](@ref); also useful on its own to restart a simulation with the same `Tether`.
+
+# Returns
+- te::Tether, cleared
+"""
+function clear!(te::Tether)
+    n = te.set.segments
+    te.state_vec .= 0.0
+    te.kite_pos .= 0.0
+    te.kite_vel .= 0.0
+    size(te.wind_vel, 2) == n ? (te.wind_vel .= 0.0) : (te.wind_vel = zeros(3, n))
+    te.tether_length = 0.0
+    size(te.tether_pos, 2) == n ? (te.tether_pos .= 0.0) : (te.tether_pos = zeros(3, n))
+    te.force_gnd = 0.0
+    te.force_kite .= 0.0
+    te.p0 .= 0.0
+    te
+end
+
+"""
+    check_wind_vel(wind_vel, segments)
+
+Validate that `wind_vel` is a `(3, segments)` matrix, as required by [`init!`](@ref)
+and [`step!`](@ref). `segments` always comes from `te.set.segments` - it is never
+inferred from `size(wind_vel, 2)`, unlike the internal [`simulate_tether`](@ref).
+"""
+function check_wind_vel(wind_vel, segments)
+    size(wind_vel, 1) == 3 ||
+        throw(ArgumentError("wind_vel must have 3 rows, got $(size(wind_vel, 1))"))
+    size(wind_vel, 2) == segments ||
+        throw(ArgumentError("wind_vel must have te.set.segments = $segments columns, " *
+                             "got $(size(wind_vel, 2))"))
+    nothing
+end
+
+"""
+    init!(te::Tether; prn = false)
+
+Initialize `te`: derive the initial kite position from `te.set.elevation`,
+`te.set.azimuth` and `te.set.l_tether`, solve the catenary equation for an initial
+guess of `te.state_vec`, then run one [`step!`](@ref) so that `te` is left in a
+consistent, solved state. Takes no state arguments - everything comes from `te.set`.
+
+# Keyword arguments
+- prn: print the solver statistics of the final `step!`
+
+# Returns
+- te::Tether, initialized and solved
+"""
+function init!(te::Tether; prn = false)
+    clear!(te)
+    se = te.set
+    check_wind_vel(te.wind_vel, se.segments)
+    β0, φ0 = deg2rad(se.elevation), deg2rad(se.azimuth)
+    kite_distance = se.l_tether / (1 + se.slack)
+    kite_pos = MVector{3}(kite_distance * cos(β0) * cos(φ0),
+                           kite_distance * cos(β0) * sin(φ0),
+                           kite_distance * sin(β0))
+
+    state_vec, _, _, _, _, _ = init_quasisteady(kite_pos, se.l_tether; kite_vel=te.kite_vel,
+                                                 segments=se.segments, wind_vel=te.wind_vel,
+                                                 settings=se)
+    te.state_vec .= state_vec
+
+    step!(te, kite_pos, te.kite_vel; tether_length=se.l_tether, wind_vel=te.wind_vel, prn)
+end
+
+"""
+    step!(te::Tether, kite_pos, kite_vel; tether_length = nothing, wind_vel = nothing, prn = false)
+
+Move the loose end of the tether to `kite_pos`/`kite_vel` and re-solve for the tether
+shape and forces, using `te.state_vec` as the initial guess. Writes `state_vec`,
+`kite_pos`, `kite_vel`, `wind_vel`, `tether_length`, `tether_pos`, `force_gnd`,
+`force_kite` and `p0` into `te`.
+
+# Arguments
+- te::Tether: the tether, see [`Tether`](@ref)
+- kite_pos::MVector{3, Float64}: kite position in the W frame [m]
+- kite_vel::MVector{3, Float64}: kite velocity in the W frame [m/s]
+
+# Keyword arguments
+- tether_length: unstretched tether length [m]; defaults to
+  `(1 + te.set.slack) * norm(kite_pos)`
+- wind_vel: `(3, te.set.segments)` matrix, wind velocity per segment [m/s]; defaults to
+  `te.wind_vel`
+- prn: print the solver statistics
+
+# Returns
+- te::Tether, with all fields above updated
+"""
+function step!(te::Tether, kite_pos, kite_vel; tether_length=nothing, wind_vel=nothing,
+               prn=false)
+    se = te.set
+    _tether_length = tether_length === nothing ? (1 + se.slack) * norm(kite_pos) : tether_length
+    _wind_vel = wind_vel === nothing ? te.wind_vel : wind_vel
+    check_wind_vel(_wind_vel, se.segments)
+
+    state_vec, _, force_gnd, force_kite, p0 = simulate_tether(
+        te.state_vec, kite_pos, kite_vel, _wind_vel, _tether_length, se;
+        prn, alg=se.alg, tether_pos=te.tether_pos)
+
+    te.state_vec .= state_vec
+    te.kite_pos .= kite_pos
+    te.kite_vel .= kite_vel
+    te.wind_vel = _wind_vel
+    te.tether_length = _tether_length
+    # te.tether_pos was written in place by simulate_tether via the `tether_pos` keyword
+    te.force_gnd = force_gnd
+    te.force_kite .= force_kite
+    te.p0 .= p0
+    te
+end
 
 """
     simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings)
@@ -61,7 +282,7 @@ Settings
 Function to determine the tether shape and forces, based on a quasi-steady model.
 
 # Arguments
-- state_vec::MVector{3, Float64}: state vector (theta [rad], phi [rad], Tn [N]);  
+- state_vec::MVector{3, Float64}: state vector (beta [rad], phi [rad], Tn [N]);
   tether orientation and tension at ground station
 - kite_pos::MVector{3, Float64}: kite position vector in wind reference frame
 - kite_vel::MVector{3, Float64}: kite velocity vector in wind reference frame
@@ -72,17 +293,20 @@ Function to determine the tether shape and forces, based on a quasi-steady model
 # Keyword arguments
 - prn: print the solver statistics
 - alg: the nonlinear solver, defaults to `DEFAULT_SOLVER`
+- tether_pos: `(3, segments)` matrix that receives the node positions, or `nothing` to
+  allocate a fresh one (the default). Passing a pre-allocated buffer, as [`step!`](@ref)
+  does, avoids that allocation in a stepping loop.
 
 # Returns
-- state_vec::MVector{3, Float64}: state vector (theta [rad], phi [rad], Tn [N]);  
-  tether orientation and tension at ground station 
+- state_vec::MVector{3, Float64}: state vector (beta [rad], phi [rad], Tn [N]);
+  tether orientation and tension at ground station
 - tether_pos::Matrix{Float64}: x,y,z - coordinates of the tether nodes
 - force_gnd::Float64: Line tension at the ground station
 - force_kite::MVector{3, Float64}: force from the kite to the end of tether
 - p0::MVector{3, Float64}:  x,y,z - coordinates of the kite-tether attachment
 """
 function simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings;
-                         prn=false, alg=DEFAULT_SOLVER)
+                         prn=false, alg=DEFAULT_SOLVER, tether_pos=nothing)
     segments = size(wind_vel, 2)
     # The tension is solved for as log(Tn/tension_scale), see `scaled_res`. `tension_scale`
     # is the initial guess itself, so the third unknown simply starts at zero.
@@ -112,18 +336,18 @@ function simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length,
 
     state_vec = MVector(sol.u[1], sol.u[2], tension)
     # Re-run the model at the solution, this time storing the node positions.
-    tether_pos = Matrix{Float64}(undef, 3, segments)
-    _, force_kite, p0 = tether_shape(state_vec[1], state_vec[2], state_vec[3], param, tether_pos)
+    tether_pos_buf = tether_pos === nothing ? Matrix{Float64}(undef, 3, segments) : tether_pos
+    _, force_kite, p0 = tether_shape(state_vec[1], state_vec[2], state_vec[3], param, tether_pos_buf)
 
     force_gnd = state_vec[3]
-    state_vec, tether_pos, force_gnd, MVector(force_kite), MVector(p0)
+    state_vec, tether_pos_buf, force_gnd, MVector(force_kite), MVector(p0)
 end
 
 """
     scaled_res(u, param)
 
 Residual of [`tether_shape`](@ref) as seen by the nonlinear solver: `u` is
-`(theta, phi, log(Tn/tension_scale))`, see [`simulate_tether`](@ref).
+`(beta, phi, log(Tn/tension_scale))`, see [`simulate_tether`](@ref).
 
 The tension is solved for on a logarithmic scale because it spans decades. A taut tether
 pulls with 1e5 N, a tether long enough to sag between kite and ground station with a few N,
@@ -190,7 +414,7 @@ end
 @inline wind_col(w, i) = @inbounds SVector(w[1, i], w[2, i], w[3, i])
 
 """
-    tether_shape(θ, φ, Tn, param, pj)
+    tether_shape(β, φ, Tn, param, pj)
 
 Integrate the quasi-steady tether from the ground station up to the kite and return the
 gap between the kite and the end of the tether.
@@ -201,7 +425,7 @@ acceleration of the *current* node are needed; keeping them in `SVector`s instea
 run straight through it.
 
 # Arguments
-- θ, φ, Tn: elevation [rad], wind-frame azimuth [rad] and tension [N] at the ground station
+- β, φ, Tn: elevation [rad], wind-frame azimuth [rad] and tension [N] at the ground station
 - param: named tuple with `kite_pos`, `kite_vel`, `wind_vel`, `tether_length`, `settings`
   and `segments`, see [`simulate_tether`](@ref)
 - pj: `(3, segments)` matrix that receives the node positions, or `nothing` to skip them.
@@ -213,7 +437,7 @@ run straight through it.
 - T0: force from the kite on the end of the tether
 - p0: x,y,z - coordinates of the kite-tether attachment
 """
-function tether_shape(θ, φ, Tn, param, pj)
+function tether_shape(β, φ, Tn, param, pj)
     (; kite_pos, kite_vel, wind_vel, tether_length, settings, segments) = param
     g = abs(settings.g_earth[3])
     Ls = tether_length / (segments + 1)
@@ -223,7 +447,7 @@ function tether_shape(θ, φ, Tn, param, pj)
     EA = settings.c_spring          # the model's E is c_spring/A, so E*A is c_spring again
 
     # Precompute common values
-    sinθ, cosθ = sin(θ), cos(θ)
+    sinβ, cosβ = sin(β), cos(β)
     sinφ, cosφ = sin(φ), cos(φ)
     kite_p = SVec3(kite_pos)
     kite_v = SVec3(kite_vel)
@@ -233,8 +457,8 @@ function tether_shape(θ, φ, Tn, param, pj)
     ω = cross(kite_p / norm_p^2, kite_v)
 
     # First element: the segment leaving the ground station, ending in node `segments`
-    dir = SVector(cosθ*cosφ, cosθ*sinφ, sinθ)   # cos(elevation)cos(azimuth), ...
-    FT = SVector(Tn*cosθ*cosφ, Tn*cosθ*sinφ, Tn*sinθ)
+    dir = SVector(cosβ*cosφ, cosβ*sinφ, sinβ)   # cos(elevation)cos(azimuth), ...
+    FT = SVector(Tn*cosβ*cosφ, Tn*cosβ*sinφ, Tn*sinβ)
     pos = Ls * dir
     pj === nothing || set_col!(pj, segments, pos)
     vel, acc = node_kinematics(ω, p_unit, v_parallel, pos)
@@ -281,7 +505,7 @@ work with the in-place `(res, state_vec, param)` signature.
 
 # Arguments
 - res::Vector{Float64} difference between tether end and kite segment
-- state_vec::MVector{3, Float64} state vector (theta [rad], phi [rad], Tn [N]);
+- state_vec::MVector{3, Float64} state vector (beta [rad], phi [rad], Tn [N]);
   tether orientation and tension at ground station
 - par:: 8-elements tuple:
     - kite_pos::MVector{3, Float64} kite position vector in wind reference frame
@@ -307,7 +531,8 @@ kite_pos = [100, 100, 300]
 kite_vel = [0, 0, 0]
 wind_vel = rand(3,15)
 tether_length = 500
-settings = Settings(1.225, [0, 0, -9.806], 0.9, 4, 0.85, 500000)
+settings = Settings(; rho=1.225, g_earth=[0, 0, -9.806], cd_tether=0.9, d_tether=4,
+                    rho_tether=0.85, c_spring=500000)
 res!(res, state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings)
 ```
 """
@@ -335,7 +560,7 @@ converted to this package's elevation/wind-frame-azimuth convention via
 - filename: the filename of the mat file to read
 
 # Returns
-- state_vec::MVector{3, Float64} state vector (theta [rad], phi [rad], Tn [N])
+- state_vec::MVector{3, Float64} state vector (beta [rad], phi [rad], Tn [N])
   tether orientation and tension at ground station
 - kite_pos::MVector{3, Float64} kite position vector in wind reference frame
 - kite_vel::MVector{3, Float64} kite velocity vector in wind reference frame
@@ -371,7 +596,8 @@ function get_initial_conditions(filename)
     # test/test_qsm.jl used to document as unexplained.
     rho_tether = get(T, "rho_t", 0) / A
 
-    settings = Settings(rho_air, g_earth, cd_tether, d_tether, rho_tether, c_spring)
+    settings = Settings(; rho=rho_air, g_earth, cd_tether, d_tether, rho_tether, c_spring,
+                        segments=size(wind_vel, 2))
 
     return state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings
 end
@@ -390,7 +616,7 @@ Initialize the quasi-steady tether model providing an initial guess for the stat
 - settings::Settings struct containing environmental and tether parameters: see [`Settings`](@ref)
 
 # Returns
-- state_vec::MVector{3, Float64} state vector (theta [rad], phi [rad], Tn [N])  
+- state_vec::MVector{3, Float64} state vector (beta [rad], phi [rad], Tn [N])  
   tether orientation and tension at ground station
 """
 function init_quasisteady(kite_pos, tether_length; kite_vel = nothing, segments = nothing, wind_vel = nothing, settings = nothing)
@@ -459,7 +685,7 @@ function init_quasisteady(kite_pos, tether_length; kite_vel = nothing, segments 
     # Solve the catenary equation
     x_catenary, y_catenary, z_catenary, coeff = solve_catenary(kite_pos, tether_length, segments)  
     # Calculate the elevation angle
-    theta_init = atan(z_catenary[2], sqrt(x_catenary[2]^2 + y_catenary[2]^2))    
+    beta_init = atan(z_catenary[2], sqrt(x_catenary[2]^2 + y_catenary[2]^2))
 
     # Initial tension, from the catenary itself: its parameter 1/coeff is H/w, the
     # horizontal tension over the weight per unit length, so the shape that was just
@@ -472,7 +698,7 @@ function init_quasisteady(kite_pos, tether_length; kite_vel = nothing, segments 
     tension = sqrt((w / coeff)^2 + (w * tether_length)^2)
 
     # Assemble state vector
-    state_vec = MVector{3}([theta_init, phi_init, tension])        
+    state_vec = MVector{3}([beta_init, phi_init, tension])
     
     return state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings
 end

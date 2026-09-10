@@ -3,6 +3,49 @@
 Notes on porting the quasi-steady tether model from the `andrea_quasistatic`
 branch onto `main`, and on the open questions that port uncovered.
 
+## API
+
+The model lives entirely in the **W (wind) reference frame**, whose origin is the
+anchor point of the tether - which is exactly where the model puts the ground
+station, at `[0, 0, 0]`. Angles follow the
+[KiteUtils.jl reference frames](https://opensourceawe.github.io/KiteUtils.jl/stable/reference_frames/)
+convention: **β** is the elevation angle (zero at the horizon, 90° at zenith) and
+**φ** is the wind-frame azimuth (positive anti-clockwise seen from above), so the
+tether direction at the ground station is `dir ∝ [cos(β)cos(φ), cos(β)sin(φ), sin(β)]`.
+
+The documented, exported API is [`StaticSettings`](@ref), [`Tether`](@ref),
+[`init!`](@ref) and [`step!`](@ref), in the submodule `Tethers.QuasiSteady`.
+`StaticSettings` carries everything that does not change while a simulation runs -
+physical properties, the number of segments, the solver, and the initial condition
+(`elevation`, `azimuth`, `l_tether`, `slack`) - following the same shape as
+`KiteModels.init!(s::AKM; ...)`, which reads its initial condition from `s.set`
+rather than from `init!`'s argument list:
+
+```julia
+using StaticArrays
+using Tethers.QuasiSteady: StaticSettings, Tether, init!, step!
+
+se = StaticSettings(segments=20, elevation=70.0, l_tether=500.0)
+te = Tether(se)
+init!(te)                                    # solves the catenary + one step!
+for ii in 1:length(gamma)
+    step!(te, traj[:, ii], vel[:, ii])       # tether_length defaults from se.slack
+    all_force_kite[:, ii] .= te.force_kite
+end
+```
+
+`te.state_vec` (β, φ, tension) persists between calls and is used as the initial
+guess for the next `step!`'s nonlinear solve; `te.tether_pos` and `te.wind_vel` are
+pre-allocated buffers reused by every `step!`, so a stepping loop does not allocate
+a fresh matrix per iteration. `elevation(te)`, `azimuth(te)` and `tension(te)` read
+`te.state_vec` in the KiteUtils vocabulary, in radians.
+
+`simulate_tether` and `init_quasisteady` are the lower-level functions the new API
+is built on; they remain callable (qualified, `Tethers.QuasiSteady.simulate_tether`)
+for the MATLAB comparison scripts and `test/test_qsm.jl`, but are no longer exported
+or part of the documented API - see `PlanAPI.md` in the repository root for the
+design rationale.
+
 ## TODO
 
 Outstanding work, in the order it should be done. Steps 1–4 are the angle

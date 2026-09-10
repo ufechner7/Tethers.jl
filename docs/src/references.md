@@ -47,9 +47,15 @@ CurrentModule = Tethers.QuasiSteady
 ```
 
 ```@docs
+StaticSettings
 Settings
-simulate_tether
-init_quasisteady
+Tether
+init!
+step!
+clear!
+elevation
+azimuth
+tension
 get_initial_conditions
 get_analytic_catenary
 tether_shape

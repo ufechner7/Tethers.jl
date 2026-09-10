@@ -1,4 +1,4 @@
-using Test, MAT, StaticArrays
+using Test, MAT, StaticArrays, LinearAlgebra
 using Tethers.QuasiSteady: get_initial_conditions
 import Tethers.QuasiSteady as QSM  # for `res!`, which is internal and not exported
 
@@ -52,7 +52,7 @@ end
 
     # `res!` and the MATLAB reference data used to disagree on how the state vector's two
     # angles define the tether direction at the ground station: `res!` uses an
-    # elevation/azimuth convention, `dir ~ [cos(θ)cos(φ), cos(θ)sin(φ), sin(θ)]`, while the
+    # elevation/azimuth convention, `dir ~ [cos(β)cos(φ), cos(β)sin(φ), sin(β)]`, while the
     # `.mat` fixtures store `stateVec` in a z-up convention,
     # `dir ~ [sin(θ)cos(φ), sin(φ), cos(θ)cos(φ)]`. `get_initial_conditions` now converts
     # `stateVec` from the MATLAB convention to the elevation/azimuth convention via
@@ -74,6 +74,72 @@ end
     @test T0 ≈ T0_ref rtol=1e-9
     @test pj ≈ pj_ref rtol=1e-9
     @test p0 ≈ p0_ref rtol=1e-9
+    nothing
+end
+
+@testset "Tether_init_step_equivalence" begin
+    # `Tether`/`init!`/`step!` must reproduce `init_quasisteady`/`simulate_tether` bit for
+    # bit, for a `StaticSettings` whose elevation/azimuth/l_tether/slack correspond to the
+    # kite_pos/tether_length passed to the old API. `init!` derives its initial kite_pos
+    # from exactly this formula, see `src/Tether_quasisteady.jl`.
+    segments  = 12
+    elev_deg  = 55.0
+    azim_deg  = 15.0
+    l_tether  = 200.0
+    slack     = 0.05
+
+    β0, φ0 = deg2rad(elev_deg), deg2rad(azim_deg)
+    kite_dist = l_tether / (1 + slack)
+    kite_pos0 = MVector{3}(kite_dist*cos(β0)*cos(φ0), kite_dist*cos(β0)*sin(φ0), kite_dist*sin(β0))
+    kite_vel0 = MVector{3}(0.0, 0.0, 0.0)
+    wind_vel0 = zeros(3, segments)
+
+    # Old API
+    state_vec_g, kite_pos_g, kite_vel_g, wind_vel_g, tether_length_g, settings_g =
+        QSM.init_quasisteady(kite_pos0, l_tether; kite_vel=kite_vel0, segments, wind_vel=wind_vel0)
+    state_vec_old, tether_pos_old, force_gnd_old, force_kite_old, p0_old =
+        QSM.simulate_tether(state_vec_g, kite_pos_g, kite_vel_g, wind_vel_g, tether_length_g, settings_g)
+
+    # New API
+    se = QSM.StaticSettings(; segments, elevation=elev_deg, azimuth=azim_deg, l_tether, slack)
+    te = QSM.Tether(se)
+    QSM.init!(te)
+
+    @test te.state_vec  ≈ state_vec_old  rtol=1e-12
+    @test te.kite_pos    == kite_pos0
+    @test te.tether_pos ≈ tether_pos_old rtol=1e-12
+    @test te.force_gnd  ≈ force_gnd_old  rtol=1e-12
+    @test te.force_kite ≈ force_kite_old rtol=1e-12
+    @test te.p0         ≈ p0_old         rtol=1e-12
+    @test QSM.elevation(te) == te.state_vec[1]
+    @test QSM.azimuth(te)   == te.state_vec[2]
+    @test QSM.tension(te)   == te.state_vec[3]
+
+    # A subsequent step! must reproduce a subsequent simulate_tether call from the same
+    # solved state.
+    kite_pos_new = MVector{3}(kite_pos0 .* 1.02)
+    kite_vel_new = MVector{3}(1.0, -0.5, 0.2)
+    tether_length_new = 1.05 * norm(kite_pos_new)
+
+    state_vec_old2, tether_pos_old2, force_gnd_old2, force_kite_old2, p0_old2 =
+        QSM.simulate_tether(state_vec_old, kite_pos_new, kite_vel_new, wind_vel0, tether_length_new,
+                            settings_g)
+    QSM.step!(te, kite_pos_new, kite_vel_new; tether_length=tether_length_new)
+
+    @test te.state_vec  ≈ state_vec_old2  rtol=1e-12
+    @test te.tether_pos ≈ tether_pos_old2 rtol=1e-12
+    @test te.force_gnd  ≈ force_gnd_old2  rtol=1e-12
+    @test te.force_kite ≈ force_kite_old2 rtol=1e-12
+    @test te.p0         ≈ p0_old2         rtol=1e-12
+
+    # `wind_vel`/`tether_pos` are pre-allocated buffers reused across `step!` calls.
+    @test size(te.wind_vel) == (3, segments)
+    @test size(te.tether_pos) == (3, segments)
+
+    # `clear!` resets the persistent state without touching `te.set`.
+    QSM.clear!(te)
+    @test te.state_vec == zeros(3)
+    @test te.set === se
     nothing
 end
 nothing

@@ -6,7 +6,7 @@
 using LaTeXStrings, StaticArrays, LinearAlgebra
 import GLMakie
 using Tethers: display_if_interactive
-using Tethers.QuasiSteady: init_quasisteady, simulate_tether
+using Tethers.QuasiSteady: StaticSettings, Tether, init!, step!
 
 function main()
     avg_el = deg2rad(70)
@@ -43,37 +43,38 @@ function main()
     
     # Initial position gamma = 0
     kite_pos = MVector{3}(traj[:, 1])
-    kite_vel = MVector{3}(vel[:, 1])
-    
-    # Initialize model
-    tether_length = norm(kite_pos)
     segments = 20
-    state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings = init_quasisteady(kite_pos, tether_length, kite_vel = kite_vel, segments = segments)
-    state_vec, tether_pos, Ft_ground, Ft_kite, p0 =  simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings)
-    tether_pos = hcat(p0, tether_pos, [0; 0; 0])
+
+    # Initialize model: StaticSettings carries the initial condition as elevation/azimuth/
+    # l_tether, KiteUtils-style, so the trajectory's first point is converted to that form.
+    β0 = asin(kite_pos[3] / norm(kite_pos))
+    φ0 = atan(kite_pos[2], kite_pos[1])
+    se = StaticSettings(segments = segments, elevation = rad2deg(β0), azimuth = rad2deg(φ0),
+                        l_tether = 1.05 * norm(kite_pos))
+    te = Tether(se)
+    init!(te)   # solves the catenary and one step!, leaving te in a consistent, solved state
+    tether_pos = hcat(te.p0, te.tether_pos, [0; 0; 0])
 
     fig1 = GLMakie.Figure()
     ax = GLMakie.Axis3(fig1[1, 1]; title="3D view", xlabel="X [m]", ylabel="Y [m]", zlabel="Z [m]", aspect=:data)
     l_tether = GLMakie.scatterlines!(ax, tether_pos[1,:], tether_pos[2,:], tether_pos[3,:])
     s_origin = GLMakie.scatter!(ax, [0.0], [0.0], [0.0]; markersize=20, marker=:rect, color=:gray)
-    s_kite   = GLMakie.scatter!(ax, [p0[1]], [p0[2]], [p0[3]]; markersize=12, marker=:diamond, color=:green)
+    s_kite   = GLMakie.scatter!(ax, [te.p0[1]], [te.p0[2]], [te.p0[3]]; markersize=12, marker=:diamond, color=:green)
     GLMakie.Legend(fig1[1, 2], [l_tether, s_origin, s_kite], ["Tether", "Origin", "Kite"])
     display_if_interactive(fig1)
 
     all_tether_pos = zeros(length(gamma), 3, segments + 1)
     all_Ft_kite = zeros(3, length(gamma))
     all_Ft_ground = zeros(length(gamma))
-    
+
     for ii = 1:length(gamma)
-        kite_pos .= MVector{3}(traj[:, ii])
+        kite_pos = MVector{3}(traj[:, ii])
         kite_vel = MVector{3}(vel[:, ii])
-        tether_length = 1.05*norm(kite_pos)
-        state_vec, tether_pos, Ft_ground, Ft_kite, p0 = simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings)
-        state_vec .= state_vec
-        tether_pos = hcat(p0, tether_pos)
-        all_tether_pos[ii, :, :] .= tether_pos   
-        all_Ft_kite[:, ii] .= Ft_kite
-        all_Ft_ground .= Ft_ground
+        step!(te, kite_pos, kite_vel)   # tether_length defaults to (1 + se.slack) * norm(kite_pos)
+        tether_pos = hcat(te.p0, te.tether_pos)
+        all_tether_pos[ii, :, :] .= tether_pos
+        all_Ft_kite[:, ii] .= te.force_kite
+        all_Ft_ground[ii] = te.force_gnd
     end
     
     fig2 = GLMakie.Figure()
