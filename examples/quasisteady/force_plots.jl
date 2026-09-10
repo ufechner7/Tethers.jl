@@ -9,6 +9,12 @@ import GLMakie
 using Tethers: display_if_interactive
 using Tethers.QuasiSteady: get_initial_conditions, Tether, step!
 
+# `display(fig)` re-uses the one GLMakie window, so each figure would replace the previous
+# one as soon as it is shown; a fresh `Screen` gives every figure a window of its own, and
+# `title` names it, because every window is called "Makie" otherwise. The `Screen` is created
+# inside the closure so that nothing opens a window on CI.
+show_fig(fig, title) = display_if_interactive(() -> display(GLMakie.Screen(; title), fig))
+
 function main()
     # Read the initial conditions from a .mat file. The fixture supplies its own settings
     # (including segments) and initial state_vec, so there is nothing left for `init!` to
@@ -21,7 +27,10 @@ function main()
 
     kite_pos = MVector(5, 100, 300)
     step!(te, kite_pos, kite_vel; tether_length, wind_vel)
-    tether_pos = Matrix(te.tether_pos)
+    # `te.tether_pos` holds only the inner nodes; the kite attachment point `te.p0` and the
+    # ground station at the origin are not among them, so add them back to get the full
+    # tether. Column 1 is the node closest to the kite, hence `p0` first and the origin last.
+    tether_pos = hcat(te.p0, te.tether_pos, [0.0; 0.0; 0.0])
 
     fig1 = GLMakie.Figure()
     ax = GLMakie.Axis3(fig1[1, 1]; title="3D view", xlabel="X [m]", ylabel="Y [m]", zlabel="Z [m]")
@@ -29,14 +38,14 @@ function main()
     s_origin = GLMakie.scatter!(ax, [0.0], [0.0], [0.0]; markersize=20, marker=:rect, color=:gray)
     s_kite   = GLMakie.scatter!(ax, [te.p0[1]], [te.p0[2]], [te.p0[3]]; markersize=12, marker=:diamond, color=:green)
     GLMakie.Legend(fig1[1, 2], [l_tether, s_origin, s_kite], ["Tether", "Origin", "Kite"])
-    display_if_interactive(fig1)
+    show_fig(fig1, "Tether shape (3D)")
 
     fig2 = GLMakie.Figure()
     ax = GLMakie.Axis(fig2[1, 1]; title="2D view", xlabel="X [m]", ylabel="Z [m]")
     GLMakie.scatterlines!(ax, sqrt.(tether_pos[1,:].^2 + tether_pos[2,:].^2), tether_pos[3,:])
     GLMakie.scatter!(ax, [0.0], [0.0]; markersize=20, marker=:rect, color=:gray)
     GLMakie.scatter!(ax, [sqrt(te.p0[1]^2 + te.p0[2]^2)], [te.p0[3]]; markersize=12, marker=:diamond, color=:green)
-    display_if_interactive(fig2)
+    show_fig(fig2, "Tether shape (2D)")
 
     x_positions = LinRange(100, 300, 6)
 
@@ -49,7 +58,7 @@ function main()
     for ii = 1:length(x_positions)
         kite_pos = MVector(5, x_positions[ii], 300)
         step!(te, kite_pos, kite_vel; tether_length, wind_vel)
-        tether_pos = Matrix(te.tether_pos)
+        tether_pos = hcat(te.p0, te.tether_pos, [0.0; 0.0; 0.0])
 
         l_tether1 = GLMakie.scatterlines!(ax1, sqrt.(tether_pos[1,:].^2 + tether_pos[2,:].^2), tether_pos[3,:]; color=:blue)
         s_ground1 = GLMakie.scatter!(ax1, [0.0], [0.0]; markersize=20, marker=:rect, color=:gray)
@@ -61,7 +70,7 @@ function main()
     end
     GLMakie.Legend(fig3[1, 2], [l_tether1, s_ground1], ["Tether", "Ground station"])
     GLMakie.Legend(fig4[1, 2], [s_gnd_force, s_kite_force], ["Tension at ground station", "Tension at kite"])
-    display_if_interactive(fig3)
-    display_if_interactive(fig4)
+    show_fig(fig3, "Tether shapes for different kite positions")
+    show_fig(fig4, "Force vs. kite distance")
     nothing
 end

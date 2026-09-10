@@ -8,6 +8,12 @@ import GLMakie
 using Tethers: display_if_interactive
 using Tethers.QuasiSteady: StaticSettings, Tether, init!, step!
 
+# `display(fig)` re-uses the one GLMakie window, so each figure would replace the previous
+# one as soon as it is shown; a fresh `Screen` gives every figure a window of its own, and
+# `title` names it, because every window is called "Makie" otherwise. The `Screen` is created
+# inside the closure so that nothing opens a window on CI.
+show_fig(fig, title) = display_if_interactive(() -> display(GLMakie.Screen(; title), fig))
+
 function main()
     avg_el = deg2rad(70)
     cone_ang = deg2rad(10)
@@ -61,9 +67,9 @@ function main()
     s_origin = GLMakie.scatter!(ax, [0.0], [0.0], [0.0]; markersize=20, marker=:rect, color=:gray)
     s_kite   = GLMakie.scatter!(ax, [te.p0[1]], [te.p0[2]], [te.p0[3]]; markersize=12, marker=:diamond, color=:green)
     GLMakie.Legend(fig1[1, 2], [l_tether, s_origin, s_kite], ["Tether", "Origin", "Kite"])
-    display_if_interactive(fig1)
+    show_fig(fig1, "Initial tether shape")
 
-    all_tether_pos = zeros(length(gamma), 3, segments + 1)
+    all_tether_pos = zeros(length(gamma), 3, segments + 2)
     all_Ft_kite = zeros(3, length(gamma))
     all_Ft_ground = zeros(length(gamma))
 
@@ -71,7 +77,7 @@ function main()
         kite_pos = MVector{3}(traj[:, ii])
         kite_vel = MVector{3}(vel[:, ii])
         step!(te, kite_pos, kite_vel)   # tether_length defaults to (1 + se.slack) * norm(kite_pos)
-        tether_pos = hcat(te.p0, te.tether_pos)
+        tether_pos = hcat(te.p0, te.tether_pos, [0.0; 0.0; 0.0])
         all_tether_pos[ii, :, :] .= tether_pos
         all_Ft_kite[:, ii] .= te.force_kite
         all_Ft_ground[ii] = te.force_gnd
@@ -84,7 +90,7 @@ function main()
     ly = GLMakie.lines!(ax, gamma, all_Ft_kite[2, :]./1000)
     lz = GLMakie.lines!(ax, gamma, all_Ft_kite[3, :]./1000)
     GLMakie.Legend(fig2[1, 2], [lx, ly, lz], [L"F_x", L"F_y", L"F_z"])
-    display_if_interactive(fig2)
+    show_fig(fig2, "Tether force at the kite")
     
 
     fig3 = GLMakie.Figure()
@@ -97,6 +103,6 @@ function main()
                                           marker=:xcross, color=:orange, linestyle=:dot)
     end
     GLMakie.Legend(fig3[1, 2], [s_origin, s_traj, l_tethers], ["Origin", "Kite trajectory", "Tethers"])
-    display_if_interactive(fig3)
+    show_fig(fig3, "Tether shapes along the trajectory")
     nothing
 end
