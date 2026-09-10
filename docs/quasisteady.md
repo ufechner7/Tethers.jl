@@ -342,7 +342,9 @@ gravity enters z that the two implementations could disagree about.
 ### Consequences
 
 - The reference agreement improves by four orders of magnitude, so the
-  assertions in `test/test_qsm.jl` move from `rtol=2e-2` to `rtol=1e-6`.
+  assertions in `test/test_qsm.jl` move from `rtol=2e-2` to `rtol=1e-6`, and
+  from there to `rtol=1e-9` once the remaining error was measured as roundoff
+  (see [Verified](#verified)).
 - **Results change for every caller of `get_initial_conditions`.** The tether
   in the basic test case now weighs 2848 N rather than 1.98 N. That is the
   physically correct behaviour for a 29.7 mm Dyneema cable, but tether-shape
@@ -531,10 +533,13 @@ reel-out speed zeroed.
 ## Verified
 
 - The workspace root and the `test` environment both resolve against MTK 11.
-- `test/test_qsm.jl`: 8 pass at `rtol=1e-6`. The four `@test_broken` first
-  became `@test ... rtol=2e-2` once the angle conversion landed (TODO step 4);
-  the tolerance moved to `1e-6` once the `rho_t` unit mismatch was fixed (TODO
-  step 5), which is a four-order-of-magnitude tightening and the check that
-  confirms that reading of the fixture.
-- All six `examples/quasisteady/` scripts run.
+- `test/test_qsm.jl` passes in full. The four `@test_broken` reference
+  comparisons first became `@test ... rtol=2e-2` once the angle conversion
+  landed (TODO step 4); the tolerance moved to `1e-6` once the `rho_t` unit
+  mismatch was fixed (TODO step 5), which is a four-order-of-magnitude
+  tightening and the check that confirms that reading of the fixture. Measured
+  max relative error is now ~1e-16 to ~1e-15 - double-precision roundoff - so
+  they stand at `rtol=1e-9`, leaving ~6 orders of magnitude of margin for
+  BLAS/platform differences.
+- All five `examples/quasisteady/` scripts run.
 - `examples/Tether_11.jl` runs end to end in ~8 s, with no warnings.
