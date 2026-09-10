@@ -58,6 +58,7 @@ this project's `checkdocs = :all` requires every docstring in the module to appe
 in the manual - not part of the recommended interface.
 
 ```@docs
+n_nodes
 check_wind_vel
 simulate_tether
 init_quasisteady
