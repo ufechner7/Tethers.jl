@@ -75,7 +75,7 @@ function main()
     all_Ft_kite = zeros(3, length(gamma))
     all_Ft_ground = zeros(length(gamma))
 
-    for ii = 1:length(gamma)
+    elapsed_time = @elapsed for ii = 1:length(gamma)
         kite_pos = MVector{3}(traj[:, ii])
         kite_vel = MVector{3}(vel[:, ii])
         step!(te, kite_pos, kite_vel)   # tether_length defaults to (1 + se.slack) * norm(kite_pos)
@@ -84,7 +84,9 @@ function main()
         all_Ft_kite[:, ii] .= te.force_kite
         all_Ft_ground[ii] = te.force_gnd
     end
-    
+    duration = 2π / gamma_dot   # simulated time spanned by one full revolution
+    println("Elapsed time: $(elapsed_time) s, speed: $(round(duration/elapsed_time)) times real-time")
+
     fig2 = GLMakie.Figure()
     ax = GLMakie.Axis(fig2[1, 1]; title="Tether force components at kite during a circular trajectory",
                       xlabel=L"\gamma [rad]", ylabel="Force [kN]")
