@@ -31,28 +31,29 @@ const DEFAULT_SOLVER = TrustRegion(autodiff = AutoForwardDiff(),
 # conditioned, but it fails in different places, which is the point of a fallback.
 const FALLBACK_SOLVER = TrustRegion(autodiff = AutoForwardDiff())
 
+@with_kw mutable struct Settings @deftype Float64
+    rho = 1.225
+    g_earth::MVector{3, Float64} = [0.0, 0.0, -9.81]
+    cd_tether = 0.958
+    d_tether = 4
+    rho_tether = 724
+    c_spring = 614600
+end
+
 """
     Settings
 
 Contains the environmental and tether properties
 
 # Fields
-  - rho::Float64: density of air [kg/m³] 
+  - rho::Float64: density of air [kg/m³]
   - g_earth::MVector{Float64}: gravitational acceleration [m/s]
   - cd_tether::Float64: drag coefficient of the tether
   - d_tether::Float64: diameter of the tether [mm]
   - rho_tether::Float64: density of the tether (Dyneema) [kg/m³]
-  - c_spring::Float64: axial stiffness of the tether EA [N] 
-""" 
-
-@with_kw mutable struct Settings @deftype Float64
-    rho = 1.225
-    g_earth::MVector{3, Float64} = [0.0, 0.0, -9.81]
-    cd_tether = 0.958                            
-    d_tether = 4                                 
-    rho_tether = 724                             
-    c_spring = 614600                            
-end
+  - c_spring::Float64: axial stiffness of the tether EA [N]
+"""
+Settings
 
 """
     simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings)
@@ -66,11 +67,11 @@ Function to determine the tether shape and forces, based on a quasi-static model
 - kite_vel::MVector{3, Float64}: kite velocity vector in wind reference frame
 - wind_vel:: (3, segments) MMatrix{Float64} wind velocity vector in wind reference frame for each segment of the tether
 - tether_length: tether length
-- settings:: Settings struct containing environmental and tether parameters: see [Settings](@ref)
+- settings:: Settings struct containing environmental and tether parameters: see [`Settings`](@ref)
 
 # Keyword arguments
 - prn: print the solver statistics
-- alg: the nonlinear solver, see [`DEFAULT_SOLVER`](@ref)
+- alg: the nonlinear solver, defaults to `DEFAULT_SOLVER`
 
 # Returns
 - state_vec::MVector{3, Float64}: state vector (theta [rad], phi [rad], Tn [N]);  
@@ -287,7 +288,7 @@ work with the in-place `(res, state_vec, param)` signature.
     - kite_vel::MVector{3, Float64} kite velocity vector in wind reference frame
     - wind_vel::MMatrix{Float64} wind velocity vector in wind reference frame for each segment of the tether
     - tether_length: tether length
-    - settings:: Settings struct containing environmental and tether parameters: see [Settings](@ref)
+    - settings:: Settings struct containing environmental and tether parameters: see [`Settings`](@ref)
     - buffers:: (5, ) Vector{Matrix{Float64}}  Vector of (3, segments) Matrix{Float64} empty matrices;
       only `buffers[3]` is used, it receives the node positions
     - segments:: number of tether segments
@@ -300,6 +301,7 @@ work with the in-place `(res, state_vec, param)` signature.
 - p0::MVector{3, Float64}  x,y,z - coordinates of the kite-tether attachment
 
 # Example usage
+```julia
 state_vec = rand(3,)
 kite_pos = [100, 100, 300] 
 kite_vel = [0, 0, 0]
@@ -307,6 +309,7 @@ wind_vel = rand(3,15)
 tether_length = 500
 settings = Settings(1.225, [0, 0, -9.806], 0.9, 4, 0.85, 500000)
 res!(res, state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings)
+```
 """
 function res!(res, state_vec, param)
     kite_pos, kite_vel, wind_vel, tether_length, settings, buffers, segments, return_result = param
@@ -338,7 +341,7 @@ converted to this package's elevation/wind-frame-azimuth convention via
 - kite_vel::MVector{3, Float64} kite velocity vector in wind reference frame
 - wind_vel::MMatrix{3, segments, Float64} wind velocity vector in wind reference frame for each segment of the tether
 - tether_length: Float64 tether length
-- settings::Settings struct containing environmental and tether parameters: see [Settings](@ref)
+- settings::Settings struct containing environmental and tether parameters: see [`Settings`](@ref)
 """
 function get_initial_conditions(filename)
     vars = matread(filename)
@@ -384,7 +387,7 @@ Initialize the quasi-static tether model providing an initial guess for the stat
 - kite_vel::MVector{3, Float64} kite velocity vector in wind reference frame
 - segments::Int number of tether segments
 - wind_vel::MMatrix{3, segments, Float64} wind velocity vector in wind reference frame for each segment of the tether
-- settings::Settings struct containing environmental and tether parameters: see [Settings](@ref)
+- settings::Settings struct containing environmental and tether parameters: see [`Settings`](@ref)
 
 # Returns
 - state_vec::MVector{3, Float64} state vector (theta [rad], phi [rad], Tn [N])  

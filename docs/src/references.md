@@ -36,6 +36,37 @@ FreeEnd
 CurrentModule = Tethers
 ```
 
+### Quasi-static tether model
+A quasi-static tether model: solves for tether shape and forces given the
+ground-station orientation/tension and the kite's position and velocity. See
+[`docs/quasistatic.md`](https://github.com/ufechner7/Tethers.jl/blob/main/docs/quasistatic.md)
+for implementation notes. It lives in the submodule `Tethers.Quasistatic`.
+
+```@meta
+CurrentModule = Tethers.Quasistatic
+```
+
+```@docs
+Settings
+simulate_tether
+init_quasistatic
+get_initial_conditions
+get_analytic_catenary
+tether_shape
+res!
+scaled_res
+lin_res
+converged
+node_kinematics
+segment_drag
+matlab_to_wind
+wind_to_matlab
+```
+
+```@meta
+CurrentModule = Tethers
+```
+
 ## Python
 [Assimulo](https://jmodelica.org/assimulo/) offers 14 solvers
 with good documentation for explicit and implicit problems.
