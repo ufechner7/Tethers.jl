@@ -18,8 +18,11 @@ function main()
     avg_el = deg2rad(70)
     cone_ang = deg2rad(10)
     traj_dist = 500
-    gamma = LinRange(0, 2*pi, 20)
     gamma_dot = 0.05
+    dt = 0.02                        # same time step as examples/Tether_11.jl
+    duration = 2π / gamma_dot        # one full revolution
+    ts = 0:dt:duration                # same sample count as examples/Tether_11.jl
+    gamma = LinRange(0, 2*pi, length(ts))
 
     traj_x = traj_dist*sin(cone_ang).*cos.(gamma)
     traj_y = traj_dist*sin(cone_ang).*sin.(gamma)
@@ -75,16 +78,24 @@ function main()
     all_Ft_kite = zeros(3, length(gamma))
     all_Ft_ground = zeros(length(gamma))
 
-    elapsed_time = @elapsed for ii = 1:length(gamma)
-        kite_pos = MVector{3}(traj[:, ii])
-        kite_vel = MVector{3}(vel[:, ii])
-        step!(te, kite_pos, kite_vel)   # tether_length defaults to (1 + se.slack) * norm(kite_pos)
-        tether_pos = hcat(te.p0, te.tether_pos, [0.0; 0.0; 0.0])
-        all_tether_pos[ii, :, :] .= tether_pos
-        all_Ft_kite[:, ii] .= te.force_kite
-        all_Ft_ground[ii] = te.force_gnd
+    # GC disabled around the timed loop so a collection triggered by its small per-iteration
+    # allocations (hcat, MVector) doesn't pollute the wall-clock timing; re-enabled in the
+    # `finally` so a failure inside the loop can't leave it off for the rest of the session.
+    GC.enable(false)
+    local elapsed_time
+    try
+        elapsed_time = @elapsed for ii = 1:length(gamma)
+            kite_pos = MVector{3}(traj[:, ii])
+            kite_vel = MVector{3}(vel[:, ii])
+            step!(te, kite_pos, kite_vel)   # tether_length defaults to (1 + se.slack) * norm(kite_pos)
+            tether_pos = hcat(te.p0, te.tether_pos, [0.0; 0.0; 0.0])
+            all_tether_pos[ii, :, :] .= tether_pos
+            all_Ft_kite[:, ii] .= te.force_kite
+            all_Ft_ground[ii] = te.force_gnd
+        end
+    finally
+        GC.enable(true)
     end
-    duration = 2π / gamma_dot   # simulated time spanned by one full revolution
     println("Elapsed time: $(elapsed_time) s, speed: $(round(duration/elapsed_time)) times real-time")
 
     fig2 = GLMakie.Figure()
@@ -100,13 +111,16 @@ function main()
     fig3 = GLMakie.Figure()
     ax = GLMakie.Axis3(fig3[1, 1]; title="3D view", xlabel="X [m]", ylabel="Y [m]", zlabel="Z [m]", aspect=:data)
     s_origin = GLMakie.scatter!(ax, [0.0], [0.0], [0.0]; markersize=20, marker=:rect, color=:gray)
-    s_traj = GLMakie.scatter!(ax, traj[1, :], traj[2, :], traj[3, :])
+    # `lines!`, not `scatter!`: with this many samples, overlapping opaque 3D markers lose
+    # against each other in the depth test, like in examples/Tether_11.jl
+    l_traj = GLMakie.lines!(ax, traj[1, :], traj[2, :], traj[3, :])
     local l_tethers
-    for ii = 1:length(gamma)
+    stride = max(1, length(gamma) ÷ 20)  # ~20 tether snapshots spread over the full circle, as in examples/Tether_11.jl
+    for ii = 1:stride:length(gamma)
         l_tethers = GLMakie.scatterlines!(ax, all_tether_pos[ii,1,:], all_tether_pos[ii,2,:], all_tether_pos[ii,3,:];
                                           marker=:xcross, color=:orange, linestyle=:dot)
     end
-    GLMakie.Legend(fig3[1, 2], [s_origin, s_traj, l_tethers], ["Origin", "Kite trajectory", "Tethers"])
+    GLMakie.Legend(fig3[1, 2], [s_origin, l_traj, l_tethers], ["Origin", "Kite trajectory", "Tethers"])
     show_fig(fig3, "Tether shapes along the trajectory")
     nothing
 end

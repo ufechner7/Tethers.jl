@@ -57,6 +57,10 @@ const FALLBACK_SOLVER = TrustRegion(autodiff = AutoForwardDiff())
     c_spring = 614600
     "the nonlinear solver used by init!/step!"
     alg::Any = DEFAULT_SOLVER
+    "absolute tolerance of the nonlinear solver used by init!/step!    [m]"
+    abs_tol = 1e-4
+    "relative tolerance of the nonlinear solver used by init!/step!"
+    rel_tol = 1e-4
 end
 
 """
@@ -79,6 +83,8 @@ runs - see [`Tether`](@ref) for the state that does.
   - rho_tether::Float64: density of the tether (Dyneema) [kg/m³]
   - c_spring::Float64: unit spring constant [N] (= `E*A`)
   - alg: the nonlinear solver used by [`init!`](@ref)/[`step!`](@ref), defaults to `DEFAULT_SOLVER`
+  - abs_tol::Float64: absolute tolerance of the nonlinear solver [m]
+  - rel_tol::Float64: relative tolerance of the nonlinear solver
 """
 StaticSettings
 
@@ -323,13 +329,13 @@ function simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length,
     # Out-of-place residual on a static vector, which keeps the solver allocation free.
     u0 = SVec3(state_vec[1], state_vec[2], 0.0)
     prob = NonlinearProblem{false}(scaled_res, u0, param)
-    sol = solve(prob, alg)
-    tol = 1e-6 * tether_length
+    sol = solve(prob, alg; abstol=settings.abs_tol, reltol=settings.rel_tol)
+    tol = settings.abs_tol + settings.rel_tol * tether_length
     if converged(sol, tol)
         tension = tension_scale * exp(sol.u[3])
     else
         sol = solve(NonlinearProblem{false}(lin_res, SVec3(u0[1], u0[2], 1.0), param),
-                    FALLBACK_SOLVER)
+                    FALLBACK_SOLVER; abstol=settings.abs_tol, reltol=settings.rel_tol)
         tension = tension_scale * sol.u[3]
         converged(sol, tol) ||
             @warn "simulate_tether did not converge" sol.retcode norm(sol.resid)
