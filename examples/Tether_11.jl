@@ -12,8 +12,6 @@ tic()
 using ModelingToolkit: t_nounits as t
 using ADTypes: AutoFiniteDiff
 using Tethers: display_if_interactive
-# the re-usable component, see src/TetherComponent.jl; imported by name, so that including
-# this example cannot collide with the globals defined by the other examples
 using Tethers.TetherComponents: TetherSettings, set_diameter!, FixedEnd, MovingEnd, assemble_tether
 import GLMakie
 
@@ -113,10 +111,6 @@ zero.
 """
 function steady_state(se, simple_sys)
     prob = SteadyStateProblem(ODEProblem(simple_sys, nothing, (0.0, se.duration)))
-    # the tether swings as a whole for a long time before the per-segment dampers bring it
-    # to rest, so DynamicSS's tight default termination tolerance (abstol=1e-8, reltol=1e-6)
-    # is never quite met; the result is only a warm start for the real simulation below, so
-    # a looser tolerance here is fine
     sol = solve(prob, DynamicSS(FBDF(autodiff=AutoFiniteDiff())); dt=1e-3, abstol=1e-6, reltol=1e-4)
     SciMLBase.successful_retcode(sol) ||
         error("Steady state solver failed with return code $(sol.retcode)!")
@@ -226,10 +220,6 @@ s_kite   = GLMakie.scatter!(ax, [POS[1][1, end]], [POS[1][2, end]], [POS[1][3, e
 GLMakie.Legend(fig1[1, 2], [l_tether, s_origin, s_kite], ["Tether", "Origin", "Kite"])
 show_fig(fig1, "Initial tether shape")
 
-# this one is a plain 2D plot of three curves over a common x axis, which is exactly what
-# `MakieControlPlots.plot` does, window title and legend included; `fig` names the window,
-# the way `show_fig` does for the two 3D figures. Its labels go through `string`, so they are
-# plain text rather than LaTeXStrings, which would not be rendered as math.
 Ft_kite = reduce(hcat, [F[:, end] for F in Ft])
 p_force = plot(sol.t, [Ft_kite[1, :]./1000, Ft_kite[2, :]./1000, Ft_kite[3, :]./1000];
                xlabel="time [s]", ylabel="Force [kN]", labels=["F_x", "F_y", "F_z"],
