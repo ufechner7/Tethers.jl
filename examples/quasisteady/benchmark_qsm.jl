@@ -8,7 +8,7 @@ using BenchmarkTools, StaticArrays
 using StaticArrays: MVector
 using Tethers.QuasiSteady: StaticSettings, Tether, step!
 
-const segments = 15
+const segments = 16   # = the fixture's 15 nodes + 1, so the timings stay comparable
 
 # Initial conditions, hardcoded. These are the values that `test/data/input_basic_test.mat`
 # used to provide, so the timings below stay comparable; the .mat file itself is only a

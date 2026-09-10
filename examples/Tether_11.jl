@@ -17,18 +17,19 @@ import GLMakie
 
 @with_kw mutable struct Settings3 @deftype Float64
     g_earth::Vector{Float64} = [0.0, 0.0, -9.81] # gravitational acceleration     [m/s²]
-    v_wind_tether::Vector{Float64} = [0.1, 0.0, 0.0]
+    v_wind_tether::Vector{Float64} = [0.0, 0.0, 0.0] # the quasi-steady model runs without wind
     rho = 1.225
     cd_tether = 0.958
-    l0 = 70                                      # initial tether length             [m]
+    l0 = 525                                     # initial tether length             [m]
     v_ro = 0.3                                   # reel-out speed                  [m/s]
     d_tether = 4                                 # tether diameter                  [mm]
     rho_tether = 724                             # density of Dyneema            [kg/m³]
     c_spring = 614600                            # unit spring constant              [N]
     rel_compression_stiffness = 0.01             # relative compression stiffness    [-]
     damping = 473                                # unit damping constant            [Ns]
-    segments::Int64 = 6                          # number of tether segments         [-]
+    segments::Int64 = 20                         # number of tether segments         [-]
     α0 = π/10                                    # initial tether angle            [rad]
+    slack = 0.05                                 # tether slack, l0 = (1 + slack) * kite distance
     avg_el = deg2rad(70)                         # average elevation of the trajectory cone [rad]
     cone_ang = deg2rad(10)                       # half cone angle of the trajectory  [rad]
     gamma_dot = 0.05                             # angular velocity along the trajectory [rad/s]
@@ -230,8 +231,8 @@ Build and simulate the tether while its free end (the kite) flies one full revol
 circular trajectory on a cone, exactly as parameterized in
 `examples/quasisteady/flying_circular.jl`: half angle `cone_ang` around an axis tilted by
 the average elevation `avg_el`, at the constant angular velocity `gamma_dot`. `traj_dist`,
-the radius of that trajectory, defaults to `0.95 * se.l0` so the (slightly slack) tether can
-actually reach it.
+the radius of that trajectory, defaults to `se.l0 / (1 + se.slack)` = 500 m, so that the
+tether is 5% slack, exactly as in the quasi-steady example.
 """
 function main(; avg_el=deg2rad(70), cone_ang=deg2rad(10), gamma_dot=0.05, traj_dist=nothing)
     global sol, pos, vel, total_force, simple_sys, se
@@ -240,7 +241,9 @@ function main(; avg_el=deg2rad(70), cone_ang=deg2rad(10), gamma_dot=0.05, traj_d
     set_tether_diameter!(se, se.d_tether) # adapt spring and damping constants to tether diameter
     se.duration = 2π / se.gamma_dot       # one full revolution
     se.v_ro = 0                           # constant tether length while flying the circle
-    traj_dist = something(traj_dist, 0.95 * se.l0)
+    # same slack convention as the quasi-steady model, whose `step!` uses
+    # `tether_length = (1 + se.slack) * norm(kite_pos)`; with the default `l0` this is 500 m
+    traj_dist = something(traj_dist, se.l0 / (1 + se.slack))
 
     p1 = [0.0, 0.0, 0.0]
     p2, vel2, = circular_kite_state(se, traj_dist, 0.0)

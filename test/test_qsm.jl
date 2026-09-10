@@ -35,13 +35,15 @@ end
     state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings =
         get_initial_conditions(joinpath(QSM_DATA, "input_basic_test.mat"))
     # Set up other parameters
+    # `Ns` is the number of stored nodes, which is what the `.mat` fixtures are sized for;
+    # `segments` counts segments, of which there is one more - see `QSM.n_nodes`
     Ns = size(wind_vel, 2)
     buffers= [zeros(3, Ns), zeros(3, Ns), zeros(3, Ns), zeros(3, Ns), zeros(3, Ns)]
     res = zeros(3)
     # Pack in param named tuple; `return_result=true` makes res! return its intermediates
     param = (kite_pos=kite_pos, kite_vel=kite_vel, wind_vel=wind_vel,
              tether_length=tether_length, settings=settings, buffers=buffers,
-             segments=Ns, return_result=true)
+             segments=Ns + 1, return_result=true)
     # Call objective function
     Fobj, T0, pj, p0 = QSM.res!(res, state_vec, param)
 
@@ -96,7 +98,7 @@ end
     kite_dist = l_tether / (1 + slack)
     kite_pos0 = MVector{3}(kite_dist*cos(β0)*cos(φ0), kite_dist*cos(β0)*sin(φ0), kite_dist*sin(β0))
     kite_vel0 = MVector{3}(0.0, 0.0, 0.0)
-    wind_vel0 = zeros(3, segments)
+    wind_vel0 = zeros(3, QSM.n_nodes(segments))
 
     # Old API
     state_vec_g, kite_pos_g, kite_vel_g, wind_vel_g, tether_length_g, settings_g =
@@ -137,8 +139,8 @@ end
     @test te.p0         ≈ p0_old2         rtol=1e-12
 
     # `wind_vel`/`tether_pos` are pre-allocated buffers reused across `step!` calls.
-    @test size(te.wind_vel) == (3, segments)
-    @test size(te.tether_pos) == (3, segments)
+    @test size(te.wind_vel) == (3, QSM.n_nodes(segments))
+    @test size(te.tether_pos) == (3, QSM.n_nodes(segments))
 
     # `clear!` resets the persistent state without touching `te.set`.
     QSM.clear!(te)
@@ -149,7 +151,7 @@ end
 
 @testset "StaticSettings_defaults" begin
     se = QSM.StaticSettings()
-    @test se.segments == 7
+    @test se.segments == 8
     @test se.elevation == 70.0
     @test se.azimuth == 0.0
     @test se.l_tether == 50.0
@@ -169,8 +171,8 @@ end
 @testset "Tether_defaults" begin
     te = QSM.Tether()
     @test te.set isa QSM.StaticSettings
-    @test size(te.wind_vel) == (3, te.set.segments)
-    @test size(te.tether_pos) == (3, te.set.segments)
+    @test size(te.wind_vel) == (3, QSM.n_nodes(te.set.segments))
+    @test size(te.tether_pos) == (3, QSM.n_nodes(te.set.segments))
     @test te.state_vec == zeros(3)
     @test te.kite_pos == zeros(3)
     @test te.force_gnd == 0.0
@@ -178,15 +180,16 @@ end
     se = QSM.StaticSettings(segments = 5)
     te2 = QSM.Tether(se)
     @test te2.set === se
-    @test size(te2.wind_vel) == (3, 5)
-    @test size(te2.tether_pos) == (3, 5)
+    @test size(te2.wind_vel) == (3, 4)
+    @test size(te2.tether_pos) == (3, 4)
     nothing
 end
 
 @testset "check_wind_vel" begin
-    @test QSM.check_wind_vel(zeros(3, 4), 4) === nothing
-    @test_throws ArgumentError QSM.check_wind_vel(zeros(2, 4), 4)   # wrong row count
-    @test_throws ArgumentError QSM.check_wind_vel(zeros(3, 5), 4)   # wrong column count
+    # one column per node, so a tether of 5 segments wants 4 of them
+    @test QSM.check_wind_vel(zeros(3, 4), 5) === nothing
+    @test_throws ArgumentError QSM.check_wind_vel(zeros(2, 4), 5)   # wrong row count
+    @test_throws ArgumentError QSM.check_wind_vel(zeros(3, 5), 5)   # wrong column count
     nothing
 end
 
@@ -204,7 +207,7 @@ end
 
     @test ret === te   # step! returns te
     @test te.tether_length ≈ (1 + se.slack) * norm(kite_pos)
-    @test te.wind_vel == zeros(3, se.segments)   # unchanged default wind_vel
+    @test te.wind_vel == zeros(3, QSM.n_nodes(se.segments))   # unchanged default wind_vel
     @test te.kite_pos == kite_pos
     @test te.kite_vel == kite_vel
     nothing
@@ -227,9 +230,9 @@ end
     @test te.state_vec == zeros(3)
     @test te.kite_pos == zeros(3)
     @test te.kite_vel == zeros(3)
-    @test te.wind_vel == zeros(3, se.segments)
+    @test te.wind_vel == zeros(3, QSM.n_nodes(se.segments))
     @test te.tether_length == 0.0
-    @test te.tether_pos == zeros(3, se.segments)
+    @test te.tether_pos == zeros(3, QSM.n_nodes(se.segments))
     @test te.force_gnd == 0.0
     @test te.force_kite == zeros(3)
     @test te.p0 == zeros(3)
@@ -238,8 +241,8 @@ end
     # `clear!` resizes the buffers if `te.set.segments` changed since construction.
     te.set.segments = 3
     QSM.clear!(te)
-    @test size(te.wind_vel) == (3, 3)
-    @test size(te.tether_pos) == (3, 3)
+    @test size(te.wind_vel) == (3, 2)
+    @test size(te.tether_pos) == (3, 2)
     nothing
 end
 
@@ -248,8 +251,8 @@ end
     # fresh matrix every call; omitting it keeps the original allocating behavior.
     state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings =
         get_initial_conditions(joinpath(QSM_DATA, "input_basic_test.mat"))
-    segments = size(wind_vel, 2)
-    buf = zeros(3, segments)
+    nodes = size(wind_vel, 2)   # the .mat stores one wind column per node
+    buf = zeros(3, nodes)
     _, tp, _, _, _ = QSM.simulate_tether(state_vec, kite_pos, kite_vel, wind_vel, tether_length,
                                          settings; tether_pos=buf)
     @test tp === buf              # written in place, same object returned

@@ -69,7 +69,9 @@ function main()
     GLMakie.Legend(fig1[1, 2], [l_tether, s_origin, s_kite], ["Tether", "Origin", "Kite"])
     show_fig(fig1, "Initial tether shape")
 
-    all_tether_pos = zeros(length(gamma), 3, segments + 2)
+    # `te.tether_pos` holds the `segments - 1` inner nodes, plus the kite point and the
+    # ground station added below, which makes `segments + 1` points per tether
+    all_tether_pos = zeros(length(gamma), 3, segments + 1)
     all_Ft_kite = zeros(3, length(gamma))
     all_Ft_ground = zeros(length(gamma))
 
