@@ -89,7 +89,7 @@ function model(se; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false, acc_p2 = [
         # it to rest, so DynamicSS's tight default termination tolerance (abstol=1e-8,
         # reltol=1e-6) is never quite met; POS0 is only a warm start for the real
         # simulation below, so a looser tolerance here is fine
-        sol1 = solve(prob1, DynamicSS(FBDF(autodiff=AutoFiniteDiff())); abstol=1e-6, reltol=1e-4)
+        sol1 = solve(prob1, DynamicSS(FBDF(autodiff=AutoFiniteDiff())); dt=1e-3, abstol=1e-6, reltol=1e-4)
     finally
         se.v_ro = v_ro  # restore the reel-out speed, also if the steady state solver failed
     end

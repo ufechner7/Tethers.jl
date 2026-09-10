@@ -81,7 +81,7 @@ is zero.
 """
 function steady_state(se, simple_sys)
     prob = SteadyStateProblem(ODEProblem(simple_sys, nothing, (0.0, se.duration)))
-    sol = solve(prob, DynamicSS(FBDF(autodiff=AutoFiniteDiff())))
+    sol = solve(prob, DynamicSS(FBDF(autodiff=AutoFiniteDiff())); dt=1e-3)
     SciMLBase.successful_retcode(sol) ||
         error("Steady state solver failed with return code $(sol.retcode)!")
     # `DynamicSS` integrates the model until it stops changing, and `sol.original` is that
