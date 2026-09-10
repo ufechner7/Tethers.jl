@@ -71,7 +71,13 @@ jobs:
             echo "no pinned manifest for Julia $v, resolving the latest versions"
           fi
       - uses: julia-actions/julia-buildpkg@v1
-      - uses: julia-actions/julia-runtest@v1
+      # Not julia-actions/julia-runtest: it calls `Pkg.test()`, which copies test/Project.toml
+      # into a temp sandbox without making the `[sources]` path absolute, so `path = ".."` no
+      # longer points at the package. Activate the test project in place instead.
+      - name: Instantiate the test project
+        run: julia --project=test -e 'using Pkg; Pkg.instantiate(); Pkg.precompile()'
+      - name: Run the tests
+        run: julia --project=test --color=yes --check-bounds=yes --code-coverage=user test/runtests.jl
       - uses: julia-actions/julia-processcoverage@v1
       - uses: codecov/codecov-action@v5
         with:
