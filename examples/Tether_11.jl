@@ -7,7 +7,6 @@
 using ModelingToolkit, OrdinaryDiffEqCore, OrdinaryDiffEqBDF, SteadyStateDiffEq, LinearAlgebra, Timers, Parameters, MakieControlPlots
 tic()
 using ModelingToolkit: t_nounits as t, D_nounits as D
-using LaTeXStrings
 using ADTypes: AutoFiniteDiff, AutoForwardDiff
 using Tethers: display_if_interactive
 # `import`, not `using`: menu.jl runs every example into the same `Main`, and GLMakie
@@ -66,6 +65,55 @@ function circular_kite_state(se, traj_dist, t)
     rot_mat*pos0, rot_mat*vel0, rot_mat*acc0
 end
 
+"""
+    catenary_positions(p1, p2, L, segments)
+
+The `segments+1` node positions of a tether of unstretched length `L` hanging at rest
+between `p1` and `p2` under gravity alone, spaced at equal arc length.
+
+This is the static equilibrium that the mass-spring model settles into, which makes it a
+far better starting point for the steady state solver than a straight line: with the 5%
+slack of `main` the middle of a 500 m span sags by almost 70 m, and letting the tether fall
+that far and then swing itself to rest - on nothing but its own weak aerodynamic drag -
+takes more integration steps than the solver is allowed to take.
+
+Returns `nothing` when there is no catenary to compute, i.e. when the tether is not longer
+than the straight line between its end points or when it hangs vertically; the caller then
+falls back to that straight line.
+"""
+function catenary_positions(p1, p2, L, segments)
+    Δ = p2 - p1
+    h = norm(Δ[1:2])                # horizontal span
+    v = Δ[3]                        # height difference
+    (h < 1e-6 || L <= norm(Δ))    && return nothing
+    # A catenary `z(x) = A*cosh((x - x0)/A)` spanning `h` with the height difference `v` has
+    # the arc length `2A*sinh(h/(2A)) = sqrt(L² - v²)`. Substituting `u = h/(2A)` turns that
+    # into `sinh(u)/u = sqrt(L² - v²)/h`, whose left hand side grows monotonically from 1,
+    # so bisection solves it without pulling a nonlinear solver into this example.
+    r = sqrt(L^2 - v^2) / h
+    lo, hi = 0.0, 1.0
+    while sinh(hi)/hi < r
+        hi *= 2
+    end
+    for _ in 1:100
+        mid = (lo + hi)/2
+        sinh(mid)/mid < r ? (lo = mid) : (hi = mid)
+    end
+    A  = h / (lo + hi)              # = h/(2u)
+    x0 = (h - A*log((L + v)/(L - v))) / 2  # abscissa of the lowest point, from z(h) - z(0) = v
+    ê  = Δ[1:2] / h                 # horizontal direction from p1 to p2
+    s0 = A*sinh(-x0/A)              # arc length coordinate of p1
+    z0 = A*cosh(-x0/A)
+    POS = zeros(3, segments+1)
+    for i in 1:segments+1
+        s = (i-1)/segments * L      # equal arc length steps, because all segments are equally long
+        x = x0 + A*asinh((s + s0)/A)
+        POS[1:2, i] .= p1[1:2] .+ ê .* x
+        POS[3, i]    = p1[3] + A*cosh((x - x0)/A) - z0
+    end
+    POS
+end
+
 function calc_initial_state(se; p1, p2)
     # calculate p2 based on se.α0 and se.l0 if not given
     if isnothing(p2)
@@ -74,12 +122,15 @@ function calc_initial_state(se; p1, p2)
         p2 = [p1[1], p1[2] - y, p1[3] - z]
         println("p2: ", p2)
     end
-    POS0 = zeros(3, se.segments+1)
     VEL0 = zeros(3, se.segments+1)
-    # use a linear interpolation between p1 and p2 for the intermediate points
-    for i in 1:se.segments+1
-        Δ = (p2-p1) / se.segments
-        POS0[:, i] .= p1 + (i-1) * Δ
+    POS0 = catenary_positions(p1, p2, se.l0, se.segments)
+    if isnothing(POS0)
+        # taut or vertical tether: a linear interpolation between p1 and p2 is the best guess
+        POS0 = zeros(3, se.segments+1)
+        for i in 1:se.segments+1
+            Δ = (p2-p1) / se.segments
+            POS0[:, i] .= p1 + (i-1) * Δ
+        end
     end
     POS0, VEL0
 end
@@ -98,7 +149,7 @@ function model(se; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false, acc_p2 = [
     else
         @assert ! fix_p2                || error("if p2 undefined it cannot be fixed")
     end
-    # straight line approximation for the tether
+    # catenary (or, for a taut tether, straight line) approximation of the tether shape
     POS0, VEL0 = calc_initial_state(se; p1, p2)
     # find steady state
     v_ro = se.v_ro      # save the reel-out speed
@@ -171,7 +222,13 @@ function model(se, p1, p2, fix_p1, fix_p2, POS0, VEL0, acc_p2)
                                      + damping * spring_vel[i]) * unit_vector[:, i],
                v_apparent[:, i]   ~ se.v_wind_tether .- (vel[:, i] + vel[:, i+1])/2,
                v_app_perp[:, i]   ~ v_apparent[:, i] - (v_apparent[:, i] ⋅ unit_vector[:, i]) .* unit_vector[:, i],
-               norm_v_app[i]      ~ norm(v_app_perp[:, i]),
+               # `sqrt(v⋅v + ε)`, not `norm(v)`: at t = 0 the tether is at rest and the wind
+               # is zero, so `v_app_perp` is exactly the zero vector for every segment but
+               # the last, and `norm` is not differentiable there - the Jacobian that
+               # `AutoForwardDiff` builds for the first step comes out `NaN` and the solver
+               # aborts with `dt` below eps. The offset is far below any velocity that
+               # matters, so the drag force is unchanged wherever it is not already zero.
+               norm_v_app[i]      ~ sqrt(v_app_perp[:, i] ⋅ v_app_perp[:, i] + 1e-12),
                half_drag_force[:, i] ~ 0.25 * se.rho * se.cd_tether * norm_v_app[i] * (len[i]*se.d_tether/1000.0)
                                         * v_app_perp[:, i]]
         eqs2 = vcat(eqs2, reduce(vcat, eqs))
@@ -221,6 +278,10 @@ function simulate(se, simple_sys)
     toc()
     elapsed_time = @elapsed sol = solve(prob, FBDF(autodiff=AutoForwardDiff()); dt, abstol=tol, reltol=tol, saveat=ts)
     elapsed_time = @elapsed sol = solve(prob, FBDF(autodiff=AutoForwardDiff()); dt, abstol=tol, reltol=tol, saveat=ts)
+    # without this an aborted solve is only a warning, and the plots below happily show the
+    # handful of time steps that were computed before it gave up
+    SciMLBase.successful_retcode(sol) ||
+        error("Simulation failed with return code $(sol.retcode)!")
     sol, elapsed_time
 end
 
@@ -263,7 +324,6 @@ sol, pos, vel, total_force, simple_sys = main();
 
 POS = sol[pos]              # one 3×(segments+1) matrix per saved time step
 Ft  = sol[total_force]
-gamma_vec = se.gamma_dot .* sol.t
 
 # `display(fig)` re-uses the one GLMakie window, so each figure would replace the previous
 # one as soon as it is shown; a fresh `Screen` gives every figure a window of its own, and
@@ -279,15 +339,16 @@ s_kite   = GLMakie.scatter!(ax, [POS[1][1, end]], [POS[1][2, end]], [POS[1][3, e
 GLMakie.Legend(fig1[1, 2], [l_tether, s_origin, s_kite], ["Tether", "Origin", "Kite"])
 show_fig(fig1, "Initial tether shape")
 
-fig2 = GLMakie.Figure()
-ax = GLMakie.Axis(fig2[1, 1]; title="Tether force components at kite during a circular trajectory",
-                  xlabel=L"\gamma [rad]", ylabel="Force [kN]")
+# this one is a plain 2D plot of three curves over a common x axis, which is exactly what
+# `MakieControlPlots.plot` does, window title and legend included; `fig` names the window,
+# the way `show_fig` does for the two 3D figures. Its labels go through `string`, so they are
+# plain text rather than LaTeXStrings, which would not be rendered as math.
 Ft_kite = reduce(hcat, [F[:, end] for F in Ft])
-lx = GLMakie.lines!(ax, gamma_vec, Ft_kite[1, :]./1000)
-ly = GLMakie.lines!(ax, gamma_vec, Ft_kite[2, :]./1000)
-lz = GLMakie.lines!(ax, gamma_vec, Ft_kite[3, :]./1000)
-GLMakie.Legend(fig2[1, 2], [lx, ly, lz], [L"F_x", L"F_y", L"F_z"])
-show_fig(fig2, "Tether force at the kite")
+p_force = plot(sol.t, [Ft_kite[1, :]./1000, Ft_kite[2, :]./1000, Ft_kite[3, :]./1000];
+               xlabel="time [s]", ylabel="Force [kN]", labels=["F_x", "F_y", "F_z"],
+               title="Tether force components at kite during a circular trajectory",
+               fig="Tether force at the kite")
+display_if_interactive(p_force)
 
 fig3 = GLMakie.Figure()
 ax = GLMakie.Axis3(fig3[1, 1]; title="3D view", xlabel="X [m]", ylabel="Y [m]", zlabel="Z [m]", aspect=:data)
