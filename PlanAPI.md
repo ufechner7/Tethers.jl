@@ -175,9 +175,10 @@ kite_pos = kite_distance * [cos(β)cos(φ), cos(β)sin(φ), sin(β)]
 
 which is the `dir` formula of `src/qsm_conventions.jl`.
 
-`Settings` is kept as a deprecated alias (`const Settings = StaticSettings`) for
-one release, because `test/test_qsm.jl` and the MATLAB comparison scripts
-construct it directly.
+`Settings` was kept briefly as a deprecated alias (`const Settings = StaticSettings`)
+while `test/test_qsm.jl` and the examples were ported, since they constructed it
+directly; once every caller in this repository used `StaticSettings`, the alias was
+removed rather than carried forward indefinitely. **Decided.**
 
 ### 2. `struct Tether`
 
@@ -334,9 +335,10 @@ boundary condition, it does not advance time.
    are the same number. Comment-only change.
 3. Rename `Settings` → `StaticSettings` and add the `segments`, `elevation`,
    `azimuth`, `l_tether`, `slack` and `alg` fields; keep
-   `const Settings = StaticSettings` as a deprecated alias so the existing tests
-   and MATLAB scripts keep working. Document every field with the KiteUtils
-   wording and units.
+   `const Settings = StaticSettings` as a deprecated alias while porting so the
+   existing tests and MATLAB scripts keep working, then remove the alias once
+   every caller in this repository uses `StaticSettings` directly. Document every
+   field with the KiteUtils wording and units.
 4. Add `Tether`, `Tether(se::StaticSettings)`, `clear!` and the
    `elevation`/`azimuth`/`tension` accessors; export them together with
    `StaticSettings`. Keep `simulate_tether` unchanged so nothing breaks mid-way.

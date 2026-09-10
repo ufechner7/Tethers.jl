@@ -23,6 +23,7 @@ makedocs(;
         "Readme" => "index.md",
         "Theory" => "theory.md",
         "Examples" => "examples.md",
+        "API" => "api.md",
         "VSCode IDE" => "vscode.md",
         "Python and Julia" => "python.md",
         "References" => "references.md"

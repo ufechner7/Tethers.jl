@@ -9,7 +9,7 @@ module QuasiSteady
 
 using LinearAlgebra, StaticArrays, ADTypes, NonlinearSolve, MAT, Parameters#, QuadGK
 
-export StaticSettings, Settings, Tether, init!, step!, clear!, elevation, azimuth, tension,
+export StaticSettings, Tether, init!, step!, clear!, elevation, azimuth, tension,
        get_initial_conditions, get_analytic_catenary
 
 include(joinpath(@__DIR__, "qsm_conventions.jl"))
@@ -81,14 +81,6 @@ runs - see [`Tether`](@ref) for the state that does.
   - alg: the nonlinear solver used by [`init!`](@ref)/[`step!`](@ref), defaults to `DEFAULT_SOLVER`
 """
 StaticSettings
-
-"""
-    Settings
-
-Deprecated alias for [`StaticSettings`](@ref), kept so that code constructing the
-pre-KiteModels-style settings struct keeps working.
-"""
-const Settings = StaticSettings
 
 """
     Tether
@@ -288,7 +280,7 @@ Function to determine the tether shape and forces, based on a quasi-steady model
 - kite_vel::MVector{3, Float64}: kite velocity vector in wind reference frame
 - wind_vel:: (3, segments) MMatrix{Float64} wind velocity vector in wind reference frame for each segment of the tether
 - tether_length: tether length
-- settings:: Settings struct containing environmental and tether parameters: see [`Settings`](@ref)
+- settings:: StaticSettings struct containing environmental and tether parameters: see [`StaticSettings`](@ref)
 
 # Keyword arguments
 - prn: print the solver statistics
@@ -512,7 +504,7 @@ work with the in-place `(res, state_vec, param)` signature.
     - kite_vel::MVector{3, Float64} kite velocity vector in wind reference frame
     - wind_vel::MMatrix{Float64} wind velocity vector in wind reference frame for each segment of the tether
     - tether_length: tether length
-    - settings:: Settings struct containing environmental and tether parameters: see [`Settings`](@ref)
+    - settings:: StaticSettings struct containing environmental and tether parameters: see [`StaticSettings`](@ref)
     - buffers:: (5, ) Vector{Matrix{Float64}}  Vector of (3, segments) Matrix{Float64} empty matrices;
       only `buffers[3]` is used, it receives the node positions
     - segments:: number of tether segments
@@ -531,7 +523,7 @@ kite_pos = [100, 100, 300]
 kite_vel = [0, 0, 0]
 wind_vel = rand(3,15)
 tether_length = 500
-settings = Settings(; rho=1.225, g_earth=[0, 0, -9.806], cd_tether=0.9, d_tether=4,
+settings = StaticSettings(; rho=1.225, g_earth=[0, 0, -9.806], cd_tether=0.9, d_tether=4,
                     rho_tether=0.85, c_spring=500000)
 res!(res, state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings)
 ```
@@ -566,7 +558,7 @@ converted to this package's elevation/wind-frame-azimuth convention via
 - kite_vel::MVector{3, Float64} kite velocity vector in wind reference frame
 - wind_vel::MMatrix{3, segments, Float64} wind velocity vector in wind reference frame for each segment of the tether
 - tether_length: Float64 tether length
-- settings::Settings struct containing environmental and tether parameters: see [`Settings`](@ref)
+- settings::StaticSettings struct containing environmental and tether parameters: see [`StaticSettings`](@ref)
 """
 function get_initial_conditions(filename)
     vars = matread(filename)
@@ -588,7 +580,7 @@ function get_initial_conditions(filename)
     E = get(T, "E", 0) 
     A = get(T, "A", 0)
     c_spring = E*A 
-    # `rho_t` in the .mat files is the mass per unit length [kg/m], while `Settings` wants
+    # `rho_t` in the .mat files is the mass per unit length [kg/m], while `StaticSettings` wants
     # a density [kg/m^3] - the model multiplies by the cross section itself. For these
     # fixtures the quotient is 970.0 kg/m^3, the density of Dyneema, which is what makes
     # the interpretation unambiguous. Passing `rho_t` through unconverted made the tether
@@ -596,7 +588,7 @@ function get_initial_conditions(filename)
     # test/test_qsm.jl used to document as unexplained.
     rho_tether = get(T, "rho_t", 0) / A
 
-    settings = Settings(; rho=rho_air, g_earth, cd_tether, d_tether, rho_tether, c_spring,
+    settings = StaticSettings(; rho=rho_air, g_earth, cd_tether, d_tether, rho_tether, c_spring,
                         segments=size(wind_vel, 2))
 
     return state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings
@@ -613,7 +605,7 @@ Initialize the quasi-steady tether model providing an initial guess for the stat
 - kite_vel::MVector{3, Float64} kite velocity vector in wind reference frame
 - segments::Int number of tether segments
 - wind_vel::MMatrix{3, segments, Float64} wind velocity vector in wind reference frame for each segment of the tether
-- settings::Settings struct containing environmental and tether parameters: see [`Settings`](@ref)
+- settings::StaticSettings struct containing environmental and tether parameters: see [`StaticSettings`](@ref)
 
 # Returns
 - state_vec::MVector{3, Float64} state vector (beta [rad], phi [rad], Tn [N])  
@@ -640,9 +632,9 @@ function init_quasisteady(kite_pos, tether_length; kite_vel = nothing, segments 
     end
 
     if isnothing(settings)
-        settings = Settings()
+        settings = StaticSettings()
     else
-        @assert typeof(settings) == Settings || error("settings should be of type Settings!")
+        @assert typeof(settings) == StaticSettings || error("settings should be of type StaticSettings!")
     end
 
     kite_dist = norm(kite_pos)

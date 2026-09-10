@@ -61,7 +61,7 @@ end
     #
     # The vertical discrepancy that used to remain (~1.9 % on `T0`, ~0.4 % on `p0`) was
     # gravity after all: the `.mat` files store `T.rho_t` as a mass per unit length
-    # [kg/m], while `Settings.rho_tether` is a density [kg/m^3] that the model multiplies
+    # [kg/m], while `StaticSettings.rho_tether` is a density [kg/m^3] that the model multiplies
     # by the cross section itself, so the tether came out 1/A = 1442 times too light.
     # `get_initial_conditions` now divides by `A` on load, which yields 970.0 kg/m^3 -
     # Dyneema. With that, `T0 - Tn*dir` is `16*Ls*g*rho_t` = 2848.49 N against the

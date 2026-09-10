@@ -43,10 +43,11 @@ a fresh matrix per iteration. `elevation(te)`, `azimuth(te)` and `tension(te)` r
 `simulate_tether` and `init_quasisteady` are the lower-level functions the new API
 is built on; they remain callable (qualified, `Tethers.QuasiSteady.simulate_tether`)
 for the MATLAB comparison scripts and `test/test_qsm.jl`, but are unexported and no
-longer the recommended entry point - see the [References](@ref) page for their
-docstrings (kept there only because this project's `checkdocs = :all` requires every
-docstring to appear in the manual) and `PlanAPI.md` in the repository root for the
-design rationale.
+longer the recommended entry point - see
+[docs/src/api.md](https://github.com/ufechner7/Tethers.jl/blob/main/docs/src/api.md)
+for their docstrings (kept there only because this project's `checkdocs = :all`
+requires every docstring to appear in the manual) and `PlanAPI.md` in the repository
+root for the design rationale.
 
 ## TODO
 
