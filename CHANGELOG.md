@@ -1,4 +1,4 @@
-### Unreleased
+### Tethers v2.0.0 2026-09-11
 #### Added
 - `examples/Project.toml` and `test/Project.toml`, joined to the root package as workspace members on Julia 1.12, so the example and test dependencies no longer bloat the main `Project.toml`
 - `example_packages()` in `Tethers.jl`, deriving the package list for `install_examples` from `examples/Project.toml` instead of a hardcoded (and, until now, incomplete) list

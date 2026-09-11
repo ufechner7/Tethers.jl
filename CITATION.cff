@@ -20,8 +20,8 @@ doi: 10.5281/zenodo.19220562
 repository-code: "https://github.com/ufechner7/Tethers.jl"
 url: "https://ufechner7.github.io/Tethers.jl/dev/"
 license: MIT
-version: "1.2.3"
-date-released: "2026-09-07"
+version: "2.0.0"
+date-released: "2026-09-11"
 keywords:
   - tether
   - cable
