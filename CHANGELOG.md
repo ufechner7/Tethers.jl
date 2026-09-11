@@ -11,6 +11,7 @@
 - `docs/quasisteady.md`, documenting the port of the quasi-steady model, the investigations along the way and their outcomes
 - Julia 1.13 support, with the pinned `Manifest-v1.13.toml.default`
 - reference to Williams, *Cable Modeling Approximations for Rapid Simulation* (2017), in `README.md` and `docs/src/references.md`
+
 #### Fixed
 - `install_examples` no longer omits `Symbolics`, which several examples need directly
 - `copy_examples` no longer copies `examples/Project.toml` or leftover `Manifest*.toml` files into the destination directory
@@ -20,8 +21,11 @@
 - `Tether_11.jl` was dead code (its body sat inside a triple-quoted string) and did not build under MTK 11 (`vcat` of heterogeneous equations produced an uninferable `Vector{Any}`)
 - stale `PreallocationTools` compat bound that made the workspace root unresolvable against 1.x
 - CI no longer uses `julia-actions/julia-runtest`, whose `Pkg.test()` sandbox broke the `[sources]` path in `test/Project.toml`; the test project is now activated and run in place
-#### Changed
+
+#### Breaking
 - the main `Project.toml` now only lists the packages needed by `src/`; `ADTypes`, `GLMakie`, `LaTeXStrings`, `LinearSolve`, `MakieControlPlots`, `OrdinaryDiffEq`, `PackageCompiler`, `StatsBase`, `SteadyStateDiffEq`, `Test` and `Timers` moved to `examples/Project.toml` and/or `test/Project.toml`
+
+#### Changed
 - `LiveServer` is no longer a dependency of Tethers; `docu()` now expects it in your default Julia environment, and `bin/install` adds it there if missing
 - `bin/run_julia` and `bin/create_sys_image` now activate `examples`/`test` instead of the root project, matching where their dependencies now live
 - `bin/install` also instantiates the `examples` and `test` subprojects; on Julia 1.11 (whose `Pkg` does not support workspaces) `docs/` is seeded from the pinned root manifest as before, while `examples/` and `test/` resolve independently since seeding them from the now much smaller root manifest can make their resolve unsatisfiable
@@ -46,6 +50,7 @@
 - out-of memory error when running `create_sys_image` on systems with 16GB RAM
 - error on Windows when using the `Tether_6c.jl` example
 - numerous bugs in the Python examples (`Tether_01.py` .. `Tether_08.py`), now producing results consistent with the Julia versions
+
 #### Changed
 - renamed ODESystem to System
 - update the `create_sys_image` script; the GC heap size hint now scales with the available RAM instead of always being 8000M
