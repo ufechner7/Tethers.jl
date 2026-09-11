@@ -6,7 +6,7 @@
 
 ## Contributors
 
-- Andrea Bertozzi, Politecnico di Milano  – initial Julia port of the quasi-steady tether model (`Tethers.QuasiSteady`) from the MATLAB implementation, and the first quasi-steady examples
+- Andrea Bertozzi, Delft University of Technology, now at Politecnico di Milano ([ORCID 0009-0005-1214-1737](https://orcid.org/0009-0005-1214-1737)) – initial Julia port of the quasi-steady tether model (`Tethers.QuasiSteady`) from the MATLAB implementation, and the first quasi-steady examples
 - Bart van de Lint – early examples, project structure and dependency management
 - Friso Broekhuizen – kite power system models and video examples used during development
 
