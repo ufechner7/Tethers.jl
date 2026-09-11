@@ -12,7 +12,9 @@ a full segmented tether model with real-out and aerodynamic drag attached.
 | Tether_06  | [Multi-segment tether reeling out](@ref)  | Learn to model a tether with changing unstretched length |
 | Tether_07  | [Segmented tether with aerodynamic drag](@ref) | Learn how to model tether drag |
 | Tether_08  | [Tether with arbitrary endpoints](@ref) | Learn how to use a steady state solver |
+| Tether_09  | [Labeled tether shape diagram](@ref) | Learn how to annotate a plot with `LaTeXStrings` |
 | Tether_10  | [Re-usable tether component](@ref) | Learn how to build composable, acausal components |
+| Tether_11  | [Kite flying a circular trajectory](@ref) | Learn how to drive a tether end point along a prescribed trajectory |
 
 **Nomenclature:**
 - ODE: Ordinary differential equations
@@ -436,6 +438,34 @@ The following call was used to create this video: `main(p2=[-40,0,-47], fix_p2=f
 
 In the video, you can at the beginning nicely see the catenary line which is a result of the steady state solver, and then the normal dynamic simulation, which results in a line that is pushed to the right by the wind.
 
+## Labeled tether shape diagram
+This example re-uses the model of [Tether with arbitrary endpoints](@ref) to compute the
+steady-state shape of a tether with one end fixed and the other pulled sideways, and then
+plots it with the particles and segments labeled $P_1 \ldots P_n$ and $S_1 \ldots S_{n-1}$.
+It exists to produce the nomenclature diagram used in the [Theory](@ref) section, rather
+than to introduce a new modeling feature.
+
+See: [Tether_09.jl](https://github.com/ufechner7/Tethers.jl/blob/main/examples/Tether_09.jl)
+
+```julia
+include("examples/Tether_09.jl")
+```
+
+The labels are placed with `LaTeXStrings` and `GLMakie.text!`, and the axis decorations and
+spines are hidden so that only the tether line, the particles and the labels remain:
+```julia
+labels = [(L"P_1", x[end]+O1, OFFSET),
+          (L"P_2", x[end-1]+O1, z[end-1] + OFFSET),
+          ...
+          (L"S_1", mean(x[end-1:end])+2O1, -4OFFSET),
+          ...]
+for (label, lx, lz) in labels
+    GLMakie.text!(ax, lx, lz; text=label, fontsize=14)
+end
+GLMakie.hidedecorations!(ax)
+GLMakie.hidespines!(ax)
+```
+
 ## Re-usable tether component
 The last example builds the whole system in one function. That works, but you cannot re-use
 it: if you want two tethers, or a different boundary condition at one of the end points, you
@@ -534,4 +564,54 @@ of the composed system fails with `Cyclic guesses detected in the system`, and i
 points get a default *and* are fixed by a `FixedEnd`, the initialization problem is
 overdetermined. Note that ModelingToolkit treats a symbolic array as atomic, so a guess has
 to be given for the whole array (`pos => POS0`), not element by element.
+
+## Kite flying a circular trajectory
+This example re-uses the `Tether` component from [Re-usable tether component](@ref), but
+drives its free end (the kite) along a prescribed circular trajectory on a cone instead of
+attaching it to a `FreeEnd` point mass. The trajectory is the same one flown by the
+quasi-steady catenary model in `examples/quasisteady/flying_circular.jl`, so the two
+examples can be compared directly: one resolves the tether dynamically as a mass-spring-damper
+chain, the other quasi-statically as a catenary.
+
+See: [Tether_11.jl](https://github.com/ufechner7/Tethers.jl/blob/main/examples/Tether_11.jl)
+
+```julia
+include("examples/Tether_11.jl")
+```
+
+### Driving an end point with `MovingEnd`
+`TetherComponent.jl` provides a `MovingEnd` connector component, which imposes a
+time-dependent position expression on the node it is connected to, instead of leaving it
+free or holding it fixed like `FixedEnd`. The kite's position on the cone is defined
+symbolically, so the tether component gets its velocity for free by differentiating the
+expression, rather than requiring a hand-derived velocity:
+```julia
+function circular_kite_pos(avg_el, cone_ang, gamma_dot, traj_dist, t)
+    γ = gamma_dot * t
+    s, c = sin(cone_ang), cos(cone_ang)
+    pos0 = traj_dist .* [s*cos(γ), s*sin(γ), c]
+    rot_mat = [1 0 0; 0 cos(avg_el) -sin(avg_el); 0 sin(avg_el) cos(avg_el)]
+    rot_mat*pos0
+end
+...
+pos_expr = circular_kite_pos(avg_el, cone_ang, gamma_dot, traj_dist, t)  # symbolic in `t`
+assemble_tether(se; end1, end2=MovingEnd(; name=:end2, pos0=p2, pos_expr), POS0, VEL0)
+```
+
+### Initial shape from a catenary, not a straight line
+[Tether with arbitrary endpoints](@ref) starts the steady-state solve from a straight line
+between the end points. Here the tether is 5% slack at a 525 m span, so a straight-line
+start lets the middle of the tether fall almost 70 m before the solver settles it, which
+takes more integration steps than the solver is allowed. Instead, `catenary_positions`
+computes the static catenary shape a hanging tether of the given length would settle into
+under gravity alone, by solving `sinh(u)/u = sqrt(L² - v²)/h` for `u` with bisection, and
+uses that as the warm start for the steady-state solve. This means the model is built
+twice: once with both ends fixed at their `t=0` position and `v_ro=0` to find the
+steady-state shape, and once more with the real settings and the kite end driven by
+`MovingEnd`, using that shape as the initial condition.
+
+### Results
+The example plots the initial (steady-state) tether shape, the tether force components at
+the kite over one full revolution, and the tether shapes at about 20 points spread over the
+trajectory, together with the kite's circular flight path.
 
