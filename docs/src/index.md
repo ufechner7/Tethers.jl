@@ -51,18 +51,18 @@ cd test
 julia --project="."
 ```
 
-Then add `Tethers`. It is not registered yet, so install the main branch from its URL:
+Then add `Tethers`.
 
 ```julia
 using Pkg
-pkg"add https://github.com/ufechner7/Tethers.jl#main"
+pkg"add Tethers"
 ```
 
 Copy the example scripts and the `bin` helper scripts to your project with:
 
 ```julia
 using Tethers
-Tethers.install_examples()
+install_examples()
 ```
 
 This also adds the extra packages needed by the example scripts. You can now run the examples with:
@@ -137,6 +137,7 @@ If you compare the Python and the Julia scripts you can see that:
 
 - the Julia script is shorter and easier to read
 - Julia is about 16 times faster when running the simulation  
+
 For a stiff, segmented tether (example 6 and 7) the Julia solvers are 13 to 30 times faster than Python.
 
 Have a look at the [Examples](https://ufechner7.github.io/Tethers.jl/dev/examples/) that teach you how to construct a full tether model step by step.
@@ -173,10 +174,11 @@ If you use Tethers.jl in your research, please cite it using the metadata in [CI
 
 ```bibtex
 @software{fechner_tethers_jl,
-  author  = {Fechner, Uwe},
+  author  = {Fechner, Uwe and Bertozzi, Andrea},
   title   = {{Tethers.jl}},
   url     = {https://github.com/ufechner7/Tethers.jl},
-  version = {1.2.1},
-  date    = {2026-03-20},
+  version = {2.0.0},
+  date    = {2026-09-11},
+  doi     = {10.5281/zenodo.19220562},
 }
 ```
