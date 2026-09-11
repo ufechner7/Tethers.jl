@@ -57,11 +57,11 @@ cd test
 julia --project="."
 ```
 
-Then add `Tethers`. It is not registered yet, so install the main branch from its URL:
+Then add `Tethers`.
 
 ```julia
 using Pkg
-pkg"add https://github.com/ufechner7/Tethers.jl#main"
+pkg"add Tethers"
 ```
 
 Copy the example scripts and the `bin` helper scripts to your project with:
