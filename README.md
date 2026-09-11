@@ -180,7 +180,7 @@ If you use Tethers.jl in your research, please cite it using the metadata in [CI
 
 ```bibtex
 @software{fechner_tethers_jl,
-  author  = {Fechner, Uwe},
+  author  = {Fechner, Uwe and Bertozzi, Andrea},
   title   = {{Tethers.jl}},
   url     = {https://github.com/ufechner7/Tethers.jl},
   version = {1.2.3},
