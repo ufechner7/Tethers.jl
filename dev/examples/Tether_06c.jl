@@ -27,8 +27,14 @@ end
 function calc_initial_state(se)
     POS0 = zeros(3, se.segments+1)
     VEL0 = zeros(3, se.segments+1)
+    # start each segment a hair (1e-9 relative) below its natural length so the
+    # continuous_events condition (norm(segment) == length/segments) isn't satisfied
+    # exactly at t=0; sitting exactly on that boundary makes the initial-step-size
+    # estimate degenerate and the event detector chatter (10^4-10^5 spurious events
+    # right after t=0) on some platforms/Julia versions, blowing up the runtime.
+    l0_scale = 1 - 1e-9
     for i in 1:se.segments+1
-        l0 = -(i-1)*se.l0/se.segments
+        l0 = -(i-1)*se.l0/se.segments * l0_scale
         v0 = (i-1)*se.v0/se.segments
         POS0[:, i] .= [sin(se.α0) * l0, 0, cos(se.α0) * l0]
         VEL0[:, i] .= [sin(se.α0) * v0, 0, cos(se.α0) * v0]
