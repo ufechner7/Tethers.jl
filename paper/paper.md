@@ -116,10 +116,35 @@ shape, and checks the quasi-steady model against the analytic catenary and MATLA
 reference data. Documentation, including the full derivation and all examples, is
 published online.
 
+# AI usage disclosure
+
+Generative AI tools were used in the development of this software and in the preparation
+of this paper, as follows.
+
+*Software.* The tutorial examples, the Python implementations and the re-usable tether
+component were written by the authors without AI assistance. The quasi-steady model was
+first ported from MATLAB to Julia by hand. During its integration into the package, Claude
+Code (Anthropic) was used as a coding assistant for refactoring the port to the exported
+`init!`/`step!` API, for the performance work on the nonlinear solve, for writing tests
+against the MATLAB reference data, and for parts of the accompanying documentation. Every
+AI-assisted change was reviewed by the authors, and the results were verified by the test
+suite, which compares the model against the analytic catenary and the MATLAB reference
+results. GitHub Copilot's automated pull-request review was used to flag issues in some
+changes; its suggestions were evaluated and applied by the authors.
+
+*Documentation.* Parts of the documentation of the quasi-steady model were drafted with
+Claude Code and edited by the authors. The tutorial text and the derivation of the model
+were written by the authors.
+
+*Paper.* The authors wrote this paper. Claude Code was used to update the summary and
+functionality sections after the quasi-steady model was added, to check citation metadata
+for consistency, and to draft this disclosure. All text was reviewed and edited by the
+authors, who take full responsibility for its content.
+
 # Acknowledgements
 
 The tether model implemented here originates in earlier work on kite power systems at Delft
-University of Technology. The author thanks the developers of ModelingToolkit.jl and the
+University of Technology. The authors thank the developers of ModelingToolkit.jl and the
 wider SciML ecosystem, on which this package depends.
 
 # References
