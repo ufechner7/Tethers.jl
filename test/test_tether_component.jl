@@ -1,15 +1,22 @@
 # Unit tests of the re-usable tether component (src/TetherComponent.jl), independent of the
-# examples. Each test composes one `Tether` with a `FixedEnd` or a `FreeEnd` at each of its
-# two end points, and checks the result against what can be calculated analytically:
+# examples. Each test composes one `Tether` with a `FixedEnd`, `MovingEnd` or `FreeEnd` at
+# each of its two end points, and checks the result against what can be calculated
+# analytically:
 #
 # - steady state          : the segment lengths of a tether hanging from a fixed point
 # - drag                  : the drag of a vertical tether in a side wind
 # - catenary              : the shape of a tether hanging between two points at z=0
 # - compression stiffness : the stiffness of a compressed and of a stretched segment
+# - MovingEnd             : a node driven along a prescribed trajectory tracks it exactly
+using Pkg
+if dirname(Pkg.project().path) != @__DIR__
+    Pkg.activate(@__DIR__)
+end
 using Test, LinearAlgebra, ModelingToolkit, OrdinaryDiffEqCore, OrdinaryDiffEqBDF, SteadyStateDiffEq
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using ADTypes: AutoFiniteDiff
-using Tethers.TetherComponents: TetherSettings, set_diameter!, Tether, FixedEnd, FreeEnd
+using Tethers.TetherComponents: TetherSettings, set_diameter!, Tether, FixedEnd, MovingEnd, FreeEnd,
+                                 assemble_tether
 
 # `runtests.jl` includes all test scripts and examples into the same `Main`, and
 # `Tether_10.jl` defines the globals `linear_positions`, `build` and `steady_state` there.
@@ -130,10 +137,14 @@ condition of the model. Solving over the empty time span `(0.0, 0.0)` is the sim
 to get at the observed variables of the system: it initializes the model and returns the
 initial state, without taking a single step. Do not integrate instead; a model that is far
 from its equilibrium just fails with `Unstable`, even though its state at `t=0` is fine.
+
+The time span has zero length, so there is nothing for the automatic initial-step-size
+heuristic to size a step against; it hits machine epsilon and warns before falling back to
+`dt=0.0`. Passing `dt` explicitly skips that heuristic - no step is taken either way.
 """
 function initial_values(simple_sys, vars)
     prob = ODEProblem(simple_sys, nothing, (0.0, 0.0))
-    sol = solve(prob, FBDF())
+    sol = solve(prob, FBDF(); dt=1e-3)
     SciMLBase.successful_retcode(sol) ||
         error("Solver failed with return code $(sol.retcode)!")
     [sol[var][1] for var in vars]
@@ -312,5 +323,50 @@ end
 
     # a stretched segment pulls its end points together, a compressed one pushes them apart
     @test all(spring_force[3, 1:2:end] .* spring_force[3, 2:2:end] .< 0)
+end
+
+@testset "TetherComponent, MovingEnd" begin
+    se = TetherSettings()
+    set_diameter!(se, se.d_tether)
+    se.v_wind_tether = zeros(3)  # no wind, keep the dynamics simple
+    se.v_ro = 0.0                # no reel-out, so l_seg stays constant
+    se.duration = 3.0
+
+    p1 = [0.0, 0.0, 0.0]         # held fixed
+    p2 = [0.0, 0.0, -se.l0]      # start of the driven end, se.l0 below p1
+
+    # a circular trajectory, so that D(pos_expr) is non-trivial and genuinely exercises the
+    # automatic differentiation `MovingEnd` relies on instead of a constant velocity that a
+    # bug could satisfy by accident
+    ω, r = 0.3, 5.0
+    traj(τ)     = p2 .+ r .* [cos(ω*τ) - 1, sin(ω*τ), 0.0]
+    traj_vel(τ) = r*ω .* [-sin(ω*τ), cos(ω*τ), 0.0]
+
+    POS0 = component_positions(se, p1, p2)
+    VEL0 = zeros(3, se.segments+1)
+    VEL0[:, end] = traj_vel(0.0)   # consistent with the trajectory at t=0
+
+    end1 = FixedEnd(; name=:end1, pos0=p1)
+    end2 = MovingEnd(; name=:end2, pos0=p2, pos_expr=traj(t))
+    simple_sys, = assemble_tether(se; end1, end2, POS0, VEL0)
+
+    prob = ODEProblem(simple_sys, nothing, (0.0, se.duration))
+    sol = solve(prob, FBDF(autodiff=AutoFiniteDiff()); abstol=1e-8, reltol=1e-8,
+                saveat=0:0.5:se.duration)
+    SciMLBase.successful_retcode(sol) ||
+        error("Simulation failed with return code $(sol.retcode)!")
+
+    # `MovingEnd` imposes both the position and, via D(pos_expr), the velocity of the node it
+    # drives; this must hold at every time step, regardless of how the tether in between
+    # stretches, swings or oscillates in response.
+    for (i, τ) in enumerate(sol.t)
+        @test sol[simple_sys.tether.pos][i][:, end] ≈ traj(τ)     atol=1e-6
+        @test sol[simple_sys.tether.vel][i][:, end] ≈ traj_vel(τ) atol=1e-6
+    end
+
+    # the FixedEnd at the other end point must hold p1 throughout
+    for i in eachindex(sol.t)
+        @test sol[simple_sys.tether.pos][i][:, 1] ≈ p1 atol=1e-6
+    end
 end
 nothing

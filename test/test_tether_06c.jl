@@ -1,6 +1,14 @@
+using Pkg
+if dirname(Pkg.project().path) != @__DIR__
+    Pkg.activate(@__DIR__)
+end
 using Test, LinearAlgebra
 using Tethers: run_python
 include(joinpath(@__DIR__, "test_utils.jl"))
+
+# shared CI runners (notably macOS aarch64) are noticeably slower and noisier
+# than a local dev machine, so the timing budget below needs more headroom there
+const ELAPSED_TIME_LIMIT = get(ENV, "CI", "false") == "true" ? 2.0 : 1.0
 
 @testset "Tether_06c" begin
     # without callbacks
@@ -10,7 +18,7 @@ include(joinpath(@__DIR__, "test_utils.jl"))
     set.callbacks = false
     simple_sys, pos, vel = model(set)
     sol, elapsed_time = simulate(set, simple_sys)
-    @test elapsed_time < 1.0
+    @test elapsed_time < ELAPSED_TIME_LIMIT
     l_tether_theoretical = set.l0 + set.v_ro * set.duration
     @test l_tether(sol, pos) ≈ l_tether_theoretical rtol=2e-3
     events = Int64(round(length(sol.t)- set.duration/set.dt)-1)
@@ -20,7 +28,7 @@ include(joinpath(@__DIR__, "test_utils.jl"))
     set.callbacks = true
     simple_sys, pos, vel = model(set)
     sol, elapsed_time = simulate(set, simple_sys)
-    @test elapsed_time < 1.0
+    @test elapsed_time < ELAPSED_TIME_LIMIT
     l_tether_theoretical = set.l0 + set.v_ro * set.duration
     @test l_tether(sol, pos) ≈ l_tether_theoretical rtol=2e-3
     events = Int64(round(length(sol.t)- set.duration/set.dt)-1)

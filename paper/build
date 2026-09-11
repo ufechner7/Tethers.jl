@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Build paper.pdf from paper.md using the openbases-pdf Docker image.
+# Run this script from within the paper/ directory.
+set -euo pipefail
+
+docker run --rm -v "$PWD":/data openbases/openbases-pdf paper.md

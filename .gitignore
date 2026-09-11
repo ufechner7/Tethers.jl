@@ -27,3 +27,5 @@ bin/kps-image-1.13.so
 bin/kps-image-.so
 .markdownlint.json
 bin/kps-image-1.12.so.bak
+paper/paper.bib
+paper/paper.pdf

@@ -1,3 +1,7 @@
+using Pkg
+if dirname(Pkg.project().path) != @__DIR__
+    Pkg.activate(@__DIR__)
+end
 using Test, LinearAlgebra
 
 __BENCH__ = true;
@@ -14,6 +18,7 @@ __BENCH__ = true;
     include("test_tether_08.jl")
     include("test_tether_10.jl")
     include("test_tether_component.jl")
+    include("test_qsm.jl")
     include("test_tether_06c.jl")
     include("test_copy_install.jl")
 end

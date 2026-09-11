@@ -180,10 +180,14 @@ If you use Tethers.jl in your research, please cite it using the metadata in [CI
 
 ```bibtex
 @software{fechner_tethers_jl,
-  author  = {Fechner, Uwe},
+  author  = {Fechner, Uwe and Bertozzi, Andrea},
   title   = {{Tethers.jl}},
   url     = {https://github.com/ufechner7/Tethers.jl},
-  version = {1.2.1},
-  date    = {2026-03-20},
+  version = {1.2.3},
+  date    = {2026-09-07},
+  doi     = {10.5281/zenodo.19220562},
 }
 ```
+
+## References
+- Paul Williams. (2017). [*Cable Modeling Approximations for Rapid Simulation*](https://arc.aiaa.org/doi/10.2514/1.G002354) describes the quasi-steady tether model implemented in `Tethers.QuasiSteady`. Journal of Guidance, Control, and Dynamics, 40(7), 1779–1788.

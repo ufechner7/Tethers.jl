@@ -1,41 +1,5 @@
 # References
 
-## API
-```@docs
-display_if_interactive
-run_python
-Tethers.copy_bin
-Tethers.copy_file
-Tethers.copy_examples
-Tethers.example_packages
-install_examples
-```
-
-### Tether component
-The composable components used by [Tether_10.jl](https://github.com/ufechner7/Tethers.jl/blob/main/examples/Tether_10.jl),
-explained in [Re-usable tether component](@ref). They live in the submodule
-`Tethers.TetherComponents`.
-
-```@meta
-CurrentModule = Tethers.TetherComponents
-```
-
-```@docs
-TetherSettings
-set_diameter!
-mass_per_meter
-l_spring
-m_end
-Point3D
-Tether
-FixedEnd
-FreeEnd
-```
-
-```@meta
-CurrentModule = Tethers
-```
-
 ## Python
 [Assimulo](https://jmodelica.org/assimulo/) offers 14 solvers
 with good documentation for explicit and implicit problems.
@@ -48,6 +12,7 @@ with good documentation for explicit and implicit problems.
 
 ## Scientific papers
 - Uwe Fechner, Rolf van der Vlugt, Edwin Schreuder, Roland Schmehl. (2015). [*Dynamic Model of a Pumping Kite Power System*](https://www.sciencedirect.com/science/article/pii/S0960148115003080)  describes the tether model used in this tutorial, but also a model of a complete kite power system with experimental validation. Renewable Energy. [Preprint](http://arxiv.org/abs/1406.6218).
+- Paul Williams. (2017). [*Cable Modeling Approximations for Rapid Simulation*](https://arc.aiaa.org/doi/10.2514/1.G002354) describes the quasi-steady tether model implemented in `Tethers.QuasiSteady`. Journal of Guidance, Control, and Dynamics, 40(7), 1779–1788.
 - Yingbo Ma, Shashi Gowda, Ranjan Anantharaman, Chris Laughman, Viral Shah, and Chris Rackauckas. (2021). [*ModelingToolkit: A Composable Graph Transformation System For Equation-Based Modeling.*](https://arxiv.org/abs/2103.05244)
 - Rackauckas, Christopher and Nie, Qing (2017). [*DifferentialEquations.jl--a performant and feature-rich ecosystem for solving differential equations in Julia}*](https://openresearchsoftware.metajnl.com/articles/10.5334/jors.151) Journal of Open Research Software.
 - D.F. Duda1, H. Fuest, T. Islam, T. Ostermann, D. Moormann1. (2022). [*Hybrid modeling approach for the tether of an airborne wind energy system*](https://link.springer.com/article/10.1007/s13272-022-00581-7) CEAS Aeronautical Journal.

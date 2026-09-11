@@ -11,11 +11,17 @@ concurrency:
   # Cancel intermediate builds: only if it is a pull request build.
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+permissions:
+  # needed to allow julia-actions/cache to delete old caches that it has created
+  actions: write
+  contents: read
 jobs:
   test:
     name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ github.event_name }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 60
+    # Windows precompilation (ModelingToolkit, Symbolics, GLMakie, ...) is much slower than on
+    # Linux/macOS, so it needs a bigger budget than the other platforms.
+    timeout-minutes: ${{ matrix.os == 'windows-latest' && 120 || 60 }}
     strategy:
       fail-fast: false
       matrix:
@@ -39,16 +45,17 @@ jobs:
         with:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
-      - uses: actions/cache@v5
-        env:
-          cache-name: cache-artifacts
-        with:
-          path: ~/.julia/artifacts
-          key: ${{ runner.os }}-test-${{ env.cache-name }}-${{ hashFiles('**/Project.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-test-${{ env.cache-name }}-
-            ${{ runner.os }}-test-
-            ${{ runner.os }}-
+      # Caches the whole depot (packages, compiled images, artifacts, registries), not just
+      # artifacts, so cached runs don't have to recompile the full ModelingToolkit/Symbolics/
+      # GLMakie dependency stack from scratch.
+      - uses: julia-actions/cache@v3
+      # Precompiling that same dependency stack is much slower on Windows, in large part
+      # because Windows Defender real-time scanning inspects every file the compiler writes;
+      # excluding the Julia depot from scanning cuts precompilation time substantially.
+      - name: Exclude the Julia depot from Windows Defender scanning (Windows only)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: Add-MpPreference -ExclusionPath "$env:USERPROFILE\.julia"
       - name: Start virtual display (Linux)
         if: runner.os == 'Linux'
         run: |
@@ -71,7 +78,13 @@ jobs:
             echo "no pinned manifest for Julia $v, resolving the latest versions"
           fi
       - uses: julia-actions/julia-buildpkg@v1
-      - uses: julia-actions/julia-runtest@v1
+      # Not julia-actions/julia-runtest: it calls `Pkg.test()`, which copies test/Project.toml
+      # into a temp sandbox without making the `[sources]` path absolute, so `path = ".."` no
+      # longer points at the package. Activate the test project in place instead.
+      - name: Instantiate the test project
+        run: julia --project=test -e 'using Pkg; Pkg.instantiate(); Pkg.precompile()'
+      - name: Run the tests
+        run: julia --project=test --color=yes --check-bounds=yes --code-coverage=user test/runtests.jl
       - uses: julia-actions/julia-processcoverage@v1
       - uses: codecov/codecov-action@v5
         with:

@@ -1,3 +1,7 @@
+using Pkg
+if dirname(Pkg.project().path) != @__DIR__
+    Pkg.activate(@__DIR__)
+end
 using Test
 using Tethers: copy_examples, copy_bin, copy_files, install_examples, example_packages
 

@@ -7,17 +7,25 @@ authors = ["Uwe Fechner <uwe.fechner.msc@gmail.com> and contributors"]
 projects = ["docs", "examples", "test"]
 
 [deps]
+ADTypes = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
 CondaPkg = "992eb4ea-22a4-4c89-a5bb-47a3300528ab"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+MAT = "23992714-dd62-5051-b70f-ba57cb901cac"
 ModelingToolkit = "961ee093-0014-501f-94e3-6117800e7a78"
+NonlinearSolve = "8913a72c-1f9b-4ce2-8d82-65094dcecaec"
 Parameters = "d96e819e-fc66-5662-9728-84c9c7592b0a"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
 
 [compat]
+ADTypes = "1.21"
 CondaPkg = "0.2.23"
+MAT = "0.10"
 ModelingToolkit = "11"
+NonlinearSolve = "4"
 Parameters = "0.12.3, 0.13"
-Pkg = "1.10.0, 1.11.0, 1.12"
+Pkg = "1.10.0, 1.11.0, 1.12, 1.13"
+StaticArrays = "1.9"
 Symbolics = "7.16"
 julia = "1.11, 1.12, 1.13"

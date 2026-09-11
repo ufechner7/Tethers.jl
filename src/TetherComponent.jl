@@ -8,14 +8,15 @@
 # - `Point3D`      : the connector; across variable `pos`, flow variable `force`
 # - `Tether`       : `segments` spring-damper segments with drag, two connectors `p1`, `p2`
 # - `FixedEnd`     : holds the point it is attached to at a fixed position
+# - `MovingEnd`    : imposes a prescribed, time-dependent position on the point
 # - `FreeEnd`      : a point mass, falling under gravity and the tether forces
 #
 # Connection rule
 # ---------------
 # `Tether` has no inertia at its two end points; it only reports the force it exerts there.
 # Therefore **every node must have exactly one component that defines its kinematics**,
-# i.e. every `Tether` connector must be connected to a `FixedEnd` or a `FreeEnd` (two
-# tethers are joined by connecting both of them to the same `FreeEnd`).
+# i.e. every `Tether` connector must be connected to a `FixedEnd`, a `MovingEnd` or a
+# `FreeEnd` (two tethers are joined by connecting both of them to the same `FreeEnd`).
 #
 # This is a submodule of `Tethers`, so that its names do not end up in `Main`: `runtests.jl`
 # includes all examples into the same `Main`, and `Tether_06.jl` defines a global
@@ -30,8 +31,8 @@ using ModelingToolkit: t_nounits as t, D_nounits as D
 # `Tether_06.jl` defines a global `mass_per_meter` in `Main`, and a name exported here that
 # collides with one of the other examples breaks `runtests.jl`, which includes all of them
 # into the same `Main`. Use `TetherComponents.mass_per_meter(se)` to reach them.
-export TetherSettings, set_diameter!, m_end
-export Point3D, Tether, FixedEnd, FreeEnd
+export TetherSettings, set_diameter!, m_end, assemble_tether
+export Point3D, Tether, FixedEnd, MovingEnd, FreeEnd
 
 """
     TetherSettings
@@ -304,6 +305,22 @@ anchor. The force needed to do so is the force flowing through its connector `fl
 end
 
 """
+    MovingEnd(; name, pos0, pos_expr)
+
+Imposes a prescribed motion on the node it is connected to, e.g. a kite whose flight path is
+known in advance. `pos_expr` is a length-3 vector of expressions in the symbolic time `t`
+(see `ModelingToolkit.t_nounits`); wherever the rest of the system needs the velocity of this
+node, it takes `D(pos)`, so differentiating `pos_expr` symbolically is enough - no separate
+velocity or acceleration needs to be supplied. `pos0` is only the numeric guess for the
+connector, typically `pos_expr` evaluated at `t = 0`.
+"""
+@component function MovingEnd(; name, pos0, pos_expr)
+    @named flange = Point3D(pos0=pos0)
+    eqs = collect(flange.pos .~ collect(pos_expr))
+    System(eqs, t; name, systems=[flange])
+end
+
+"""
     FreeEnd(; name, se, m_extra=0.0, pos0, vel0=zeros(3))
 
 A point mass at the end of (or between) tethers, free to move under gravity and the forces
@@ -329,6 +346,30 @@ the same settings `se` as for those tethers. `m_extra` is the payload mass, e.g.
     guesses = [acc  => copy(se.g_earth),
                mass => m_extra + 0.5 * n_tethers * mass_per_meter(se) * se.l0/se.segments]
     System(reduce(vcat, Symbolics.scalarize.(eqs)), t; name, systems=[flange], guesses)
+end
+
+# ---------------------------------------------------------------------------------------
+# assembly
+# ---------------------------------------------------------------------------------------
+
+"""
+    assemble_tether(se; end1, end2, POS0, VEL0)
+
+Compose one [`Tether`](@ref) built from `se`, `POS0` and `VEL0`, connected between the two
+already constructed end components `end1` (attached to `p1`) and `end2` (attached to
+`p2`) - each typically a [`FixedEnd`](@ref), [`MovingEnd`](@ref) or [`FreeEnd`](@ref).
+Which kind of boundary condition each end has is the caller's decision; this function only
+wires the three components together and simplifies the result.
+
+Returns `(simple_sys, sys)`, the `mtkcompile`d system and the system before simplification.
+"""
+function assemble_tether(se; end1, end2, POS0, VEL0)
+    @named tether = Tether(; se, POS0, VEL0)
+    eqs = [connect(end1.flange, tether.p1),
+           connect(tether.p2, end2.flange)]
+    @named sys = System(eqs, t; systems=[tether, end1, end2])
+    simple_sys = mtkcompile(sys)
+    simple_sys, sys
 end
 
 end # module TetherComponents
