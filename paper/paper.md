@@ -13,7 +13,8 @@ authors:
     orcid: 0009-0008-2532-9458
     affiliation: 1
   - name: Andrea Bertozzi
-    affiliation: 2
+    orcid: 0009-0005-1214-1737
+    affiliation: 1, 2
 affiliations:
   - name: Delft University of Technology, The Netherlands
     index: 1
