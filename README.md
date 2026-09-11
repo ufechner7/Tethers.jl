@@ -189,5 +189,15 @@ If you use Tethers.jl in your research, please cite it using the metadata in [CI
 }
 ```
 
+## License
+This project is licensed under the MIT License. Please see the [LICENSE](LICENSE) file for details.
+
+## Copyright notice
+Copyright (c) 2023, 2024 Uwe Fechner and Bart van de Lint. See the copyright notices in the source files.
+
 ## References
-- Paul Williams. (2017). [*Cable Modeling Approximations for Rapid Simulation*](https://arc.aiaa.org/doi/10.2514/1.G002354) describes the quasi-steady tether model implemented in `Tethers.QuasiSteady`. Journal of Guidance, Control, and Dynamics, 40(7), 1779–1788.
+- Uwe Fechner, Rolf van der Vlugt, Edwin Schreuder, Roland Schmehl. (2015). [*Dynamic model of a pumping kite power system*](https://doi.org/10.1016/j.renene.2015.04.028). Renewable Energy, 83, 705–716.
+- Paul Williams. (2017). [*Cable Modeling Approximations for Rapid Simulation*](https://arc.aiaa.org/doi/10.2514/1.G002354) describes the quasi-steady tether model. Journal of Guidance, Control, and Dynamics, 40(7), 1779–1788.
+
+
+
