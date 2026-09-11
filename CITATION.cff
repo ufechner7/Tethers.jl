@@ -12,6 +12,10 @@ authors:
     given-names: "Uwe"
     email: uwe.fechner.msc@gmail.com
     orcid: "https://orcid.org/0009-0008-2532-9458"
+  - family-names: "Bertozzi"
+    given-names: "Andrea"
+    email: andrea.bertozzi@polimi.it
+    orcid: "https://orcid.org/0009-0005-1214-1737"
 doi: 10.5281/zenodo.19220562
 repository-code: "https://github.com/ufechner7/Tethers.jl"
 url: "https://ufechner7.github.io/Tethers.jl/dev/"
