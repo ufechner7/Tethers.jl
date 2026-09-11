@@ -83,6 +83,41 @@ end
     nothing
 end
 
+@testset "wind_to_matlab" begin
+    # `wind_to_matlab` and `matlab_to_wind` (src/qsm_conventions.jl) both parameterize the
+    # same unit direction vector, just with a different pair of angles:
+    #   wind:   dir ∝ [cos(β)cos(φ), cos(β)sin(φ), sin(β)]
+    #   MATLAB: dir ∝ [sin(θ)cos(φ), sin(φ), cos(θ)cos(φ)]
+    # so the strongest check is that converting the angles reproduces the *same* direction
+    # vector, not just that the round trip returns the original numbers (which would also
+    # pass for, e.g., a sign error that happens to be its own inverse).
+    dir_wind(β, φ)     = [cos(β)*cos(φ), cos(β)*sin(φ), sin(β)]
+    dir_matlab(θm, φm) = [sin(θm)*cos(φm), sin(φm), cos(θm)*cos(φm)]
+
+    # away from the poles (β = ±π/2), where φ is not well defined and both conventions
+    # degenerate to the same single point
+    for β in range(-π/2 + 0.05, π/2 - 0.05; length=5), φ in range(-π + 0.1, π - 0.1; length=7)
+        θm, φm = QSM.wind_to_matlab(β, φ)
+        @test dir_matlab(θm, φm) ≈ dir_wind(β, φ) atol=1e-12
+
+        # and it must actually be the inverse of matlab_to_wind
+        β2, φ2 = QSM.matlab_to_wind(θm, φm)
+        @test β2 ≈ β atol=1e-12
+        @test φ2 ≈ φ atol=1e-12
+    end
+
+    # zenith: straight up is θ_m = 0 from the vertical, at φ_m = 0
+    θm, φm = QSM.wind_to_matlab(π/2, 0.0)
+    @test θm ≈ 0.0 atol=1e-12
+    @test φm ≈ 0.0 atol=1e-12
+
+    # horizon, wind-frame azimuth 0: MATLAB sees this as horizontal, θ_m = π/2
+    θm, φm = QSM.wind_to_matlab(0.0, 0.0)
+    @test θm ≈ π/2 atol=1e-12
+    @test φm ≈ 0.0 atol=1e-12
+    nothing
+end
+
 @testset "Tether_init_step_equivalence" begin
     # `Tether`/`init!`/`step!` must reproduce `init_quasisteady`/`simulate_tether` bit for
     # bit, for a `StaticSettings` whose elevation/azimuth/l_tether/slack correspond to the
