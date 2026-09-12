@@ -54,9 +54,11 @@
   CasADi work
 - `paper/paper.bib` cites CasADi [Andersson2019] instead of Assimulo, which the
   examples no longer use
-- `paper/build` used the third-party `openbases/openbases-pdf` image, which does
-  not produce the journal's layout; it now uses `openjournals/inara`, and points
-  at the CI workflow as the primary route
+- `paper/build` no longer needs a container. It used the third-party
+  `openbases/openbases-pdf` image, which does not produce the journal's layout
+  anyway; it now builds a readable PDF with pandoc and a local LaTeX
+  installation in a couple of seconds, and points at the CI workflow for the
+  journal's own layout
 - `docs/julia_vs_python.md` now compares like with like: both sides get an
   analytic sparse Jacobian and a BDF integrator, which closes most of the gap it
   used to report

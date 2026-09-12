@@ -92,43 +92,34 @@ simulations.
 
 Every tutorial example exists twice: as a Julia script using ModelingToolkit.jl and the
 solvers of DifferentialEquations.jl [@Rackauckas2017; @Bezanson2017], and as a Python
-script using CasADi [@Andersson2019] and the SUNDIALS solvers it ships with
-[@Hindmarsh2005]. The test suite checks that the two produce the same trajectories, which
-makes the comparison a controlled one rather than an anecdote.
+script using CasADi [@Andersson2019] and the CVODES solver of SUNDIALS [@Hindmarsh2005]
+that it ships with. Both sides integrate with a backward differentiation formula and both
+derive an exact, sparse Jacobian from the model itself rather than by hand, and the test
+suite checks that the two produce the same trajectories. This makes the comparison a
+controlled one rather than an anecdote.
 
-Making that comparison fair took some care, and the naive version of it is misleading. A
-stiff tether needs an exact, sparse Jacobian on both sides, and neither ecosystem supplies
-one by default. In Julia, `ODEProblem(sys, ...; jac=true, sparse=true)` makes
-ModelingToolkit generate and compile the analytic Jacobian ahead of time; without those two
-keywords the solver rebuilds a dense one by automatic differentiation at every step, which
-costs a factor of 1.4 at five segments and 7.2 at forty. In Python, `ca.jacobian` derives
-the same Jacobian from the model expression and finds its block-tridiagonal sparsity
-automatically. The Jacobian of the forty-segment model has 2391 non-zeros out of 60516, and
-exploiting that matters more than the analytic derivative itself: at forty segments the
-analytic Jacobian alone gains about 15% over automatic differentiation, because a dense
-factorisation then dominates the cost, while adding sparsity gains a factor of 7.2.
+A stiff tether needs that Jacobian, and neither ecosystem supplies one by default. In
+Julia, `ODEProblem(sys, ...; jac=true, sparse=true)` makes ModelingToolkit generate and
+compile it ahead of time; without those two keywords the solver rebuilds a dense Jacobian
+by automatic differentiation at every step, which costs a factor of 1.4 at five segments
+and 7.2 at forty. In Python, `ca.jacobian` derives it from the model expression and finds
+its sparsity. The Jacobian of the forty-segment model is 4% dense, and exploiting that
+matters more than the analytic derivative itself: at forty segments the analytic Jacobian
+alone gains about 15% over automatic differentiation, because a dense factorisation then
+dominates the cost, while adding sparsity gains a factor of 7.2.
 
-With both sides compiled, analytic and sparse, a ten-second simulation of the ten-segment
-model, sampled every 20 ms at a relative and absolute tolerance of $10^{-6}$, takes 17.1 ms
-in Julia and 20.7 ms in Python; at forty segments, 603 ms and 617 ms. The two are within
-about 20% of each other in either direction. Earlier versions of this package reported
-Julia as 13 to 30 times faster, and that number is worth explaining rather than quietly
-dropping: it compared compiled Julia against a Jacobian derived by hand and evaluated in
-interpreted NumPy, which costs 707 µs per call against 33 µs for the same Jacobian as a
-compiled CasADi function. It measured the language binding, not the language.
-
-What does differ is everything around the solve. The Julia examples are roughly half the
-length, and they never write a Jacobian at all; replacing the hand-derived Jacobians of the
-Python examples with `ca.jacobian` removed 614 lines. Julia pays a one-time
+For a ten-second simulation of the ten-segment model, sampled every 20 ms at a relative and
+absolute tolerance of $10^{-6}$, the two implementations take 17.1 ms and 20.7 ms; at forty
+segments, 603 ms and 617 ms. They are within about 20% of each other in either direction,
+and the differences between the ecosystems lie elsewhere. The Julia examples are roughly
+half the length in lines of code and never write a Jacobian at all. Julia pays a one-time
 compilation cost of seconds to tens of seconds, of which 0.4 to 4.1 seconds is the symbolic
-Jacobian alone, so a script that solves once pays more than it saves and only repeated
-solves get the speed back. Installing the Julia stack takes considerably longer than
-installing the Python one. Event handling is the one place where the Python side is clearly
-behind: Julia's `ContinuousCallback` is four lines, while CasADi's event support is
-experimental and fails on one of the two examples that need it, which therefore locates the
-taut/slack crossing by bisection instead. Presenting both sides, including the parts that
-do not favour Julia, lets readers make an informed choice instead of taking the benchmark
-on faith.
+Jacobian, so a script that solves once pays more than it saves, and installing the Julia
+stack takes considerably longer than installing the Python one. Event handling favours
+Julia: a `ContinuousCallback` is four lines, while CasADi's event support is experimental
+and fails on one of the two examples that need it, which locates the taut/slack crossing by
+bisection instead. Presenting both sides lets readers make an informed choice instead of
+taking the benchmark on faith.
 
 # Functionality
 
