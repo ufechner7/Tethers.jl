@@ -17,6 +17,7 @@ using ModelingToolkit, OrdinaryDiffEqCore, OrdinaryDiffEqBDF
 using SteadyStateDiffEq, PackageCompiler, GLMakie, Timers, REPL.TerminalMenus
 
 FAST=true
+const MIN_RAM_SWAP_GB = 34
 
 @info "Creating sysimage ..."
 push!(LOAD_PATH,joinpath(pwd(),"src"))
@@ -60,8 +61,8 @@ end
 
 let total = total_ram_swap_gb()
     @info "Total RAM + swap: $(round(total; digits=1)) GB"
-    if total < 34
-        msg = "At least 30 GB of RAM + swap is recommended to create a system image, " *
+    if total < MIN_RAM_SWAP_GB
+        msg = "At least $MIN_RAM_SWAP_GB GB of RAM + swap is recommended to create a system image, " *
               "but only $(round(total; digits=1)) GB is available."
         if Sys.iswindows()
             # Windows' pagefile is commonly "System managed" and can grow on demand,
