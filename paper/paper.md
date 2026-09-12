@@ -101,19 +101,26 @@ controlled one rather than an anecdote.
 A stiff tether needs that Jacobian, and neither ecosystem supplies one by default. In
 Julia, `ODEProblem(sys, ...; jac=true, sparse=true)` makes ModelingToolkit generate and
 compile it ahead of time; without those two keywords the solver rebuilds a dense Jacobian
-by automatic differentiation at every step, which costs a factor of 1.4 at five segments
-and 7.2 at forty. In Python, `ca.jacobian` derives it from the model expression and finds
-its sparsity. The Jacobian of the forty-segment model is 4% dense, and exploiting that
-matters more than the analytic derivative itself: at forty segments the analytic Jacobian
-alone gains about 15% over automatic differentiation, because a dense factorisation then
-dominates the cost, while adding sparsity gains a factor of 7.2.
+by automatic differentiation at every step. In Python, `ca.jacobian` derives it from the
+model expression and finds its sparsity. That sparsity is what matters most: the Jacobian
+is block-tridiagonal, 4% dense at forty segments, and exploiting it gains far more than the
+analytic derivative does on its own.
 
-For a ten-second simulation of the ten-segment model, sampled every 20 ms at a relative and
-absolute tolerance of $10^{-6}$, the two implementations take 17.1 ms and 20.7 ms; at forty
-segments, 603 ms and 617 ms. They are within about 20% of each other in either direction,
-and the differences between the ecosystems lie elsewhere. The Julia examples are roughly
-half the length in lines of code and never write a Jacobian at all. Julia pays a one-time
-compilation cost of seconds to tens of seconds, of which 0.4 to 4.1 seconds is the symbolic
+| Segments | States | Julia, AD | Julia, analytic | Julia, analytic + sparse | Python, analytic + sparse |
+| -------: | -----: | --------: | --------------: | -----------------------: | ------------------------: |
+|        5 |     36 |      13.0 |            12.7 |                      9.1 |                      12.3 |
+|       10 |     66 |      31.9 |            27.9 |                     17.1 |                      20.7 |
+|       20 |    126 |       485 |             438 |                      178 |                       170 |
+|       40 |    246 |      4333 |            3766 |                      603 |                       617 |
+
+Table: Solve time in ms for a ten-second simulation of the tether with drag and reel-out,
+sampled every 20 ms at a relative and absolute tolerance of $10^{-6}$, on an AMD Ryzen 9
+7950X. \label{tab:speed}
+
+With an analytic sparse Jacobian on both sides the two implementations are within about 20%
+of each other, and the differences between the ecosystems lie elsewhere. The Julia examples
+are roughly half the length in lines of code and never write a Jacobian at all. Julia pays
+a one-time compilation cost of seconds to tens of seconds, part of it for the symbolic
 Jacobian, so a script that solves once pays more than it saves, and installing the Julia
 stack takes considerably longer than installing the Python one. Event handling favours
 Julia: a `ContinuousCallback` is four lines, while CasADi's event support is experimental
