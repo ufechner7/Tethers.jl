@@ -12,6 +12,10 @@
   against the dynamic one over 4 to 32 tether segments, both per simulated
   second; the quasi-steady solve is 5.6x cheaper at four segments and 49x at
   thirty-two
+- `.github/workflows/draft-paper.yml`, building the JOSS paper with the
+  journal's own `openjournals/inara` image on every push that touches `paper/`
+  and uploading it as the `paper` artifact, so no local Docker or LaTeX
+  toolchain is needed
 - Bart van de Lint as a third author of the JOSS paper, and Andrea Bertozzi to
   `.zenodo.json`, which listed only one creator
 
@@ -42,6 +46,17 @@
   is experimental and aborts on this model with "tout too far back in direction
   of integration". `Tether_06c.py`, whose events fire once per segment, uses it
   successfully
+- `paper/paper.md` describes what the package now does: the Python examples use
+  CasADi and SUNDIALS rather than Assimulo's IDA, both implementations use an
+  analytic sparse Jacobian, and the performance comparison reports them within
+  about 20% of each other instead of the earlier 13-30x, with an explanation of
+  where that number came from. The AI usage disclosure covers the Jacobian and
+  CasADi work
+- `paper/paper.bib` cites CasADi [Andersson2019] instead of Assimulo, which the
+  examples no longer use
+- `paper/build` used the third-party `openbases/openbases-pdf` image, which does
+  not produce the journal's layout; it now uses `openjournals/inara`, and points
+  at the CI workflow as the primary route
 - `docs/julia_vs_python.md` now compares like with like: both sides get an
   analytic sparse Jacobian and a BDF integrator, which closes most of the gap it
   used to report

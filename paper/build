@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
-# Build paper.pdf from paper.md using the openbases-pdf Docker image.
-# Run this script from within the paper/ directory.
+# Build paper.pdf from paper.md locally, with the same image the journal uses.
+#
+# You do not need this: pushing to GitHub builds the PDF through
+# .github/workflows/draft-paper.yml and uploads it as the "paper" artifact. This
+# script is only for iterating without pushing, and it needs a running Docker daemon.
+#
+# Run it from within the paper/ directory.
 set -euo pipefail
 
-docker run --rm -v "$PWD":/data openbases/openbases-pdf paper.md
+docker run --rm --volume "$PWD":/data --user "$(id -u):$(id -g)" \
+    --env JOURNAL=joss openjournals/inara

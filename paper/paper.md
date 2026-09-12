@@ -91,21 +91,44 @@ simulations.
 # Julia and Python side by side
 
 Every tutorial example exists twice: as a Julia script using ModelingToolkit.jl and the
-solvers of DifferentialEquations.jl [@Rackauckas2017; @Bezanson2017], and as a Python script
-using the IDA solver of SUNDIALS [@Hindmarsh2005] through Assimulo [@Andersson2015]. Both
-versions solve the same differential-algebraic system with an exact analytic Jacobian, and
-the test suite checks that they produce the same trajectories. This makes the comparison a
-controlled one rather than an anecdote.
+solvers of DifferentialEquations.jl [@Rackauckas2017; @Bezanson2017], and as a Python
+script using CasADi [@Andersson2019] and the SUNDIALS solvers it ships with
+[@Hindmarsh2005]. The test suite checks that the two produce the same trajectories, which
+makes the comparison a controlled one rather than an anecdote.
 
-For a ten-second simulation of the full model, sampled every 20 ms at a relative and
-absolute tolerance of $10^{-6}$, the Julia implementations run 13 to 30 times faster than
-the Python ones and are roughly half the length in lines of code. The remaining gap is
-explained by the fact that ModelingToolkit generates and compiles native residual and
-Jacobian functions ahead of time, while the Python versions re-enter the interpreter on
-every Newton iteration. The trade-off is also documented: Julia pays a one-time compilation
-cost of seconds to tens of seconds, and installing the Julia stack takes considerably
-longer than installing the Python one. Presenting both sides lets readers make an informed
-choice instead of taking the benchmark on faith.
+Making that comparison fair took some care, and the naive version of it is misleading. A
+stiff tether needs an exact, sparse Jacobian on both sides, and neither ecosystem supplies
+one by default. In Julia, `ODEProblem(sys, ...; jac=true, sparse=true)` makes
+ModelingToolkit generate and compile the analytic Jacobian ahead of time; without those two
+keywords the solver rebuilds a dense one by automatic differentiation at every step, which
+costs a factor of 1.4 at five segments and 7.2 at forty. In Python, `ca.jacobian` derives
+the same Jacobian from the model expression and finds its block-tridiagonal sparsity
+automatically. The Jacobian of the forty-segment model has 2391 non-zeros out of 60516, and
+exploiting that matters more than the analytic derivative itself: at forty segments the
+analytic Jacobian alone gains about 15% over automatic differentiation, because a dense
+factorisation then dominates the cost, while adding sparsity gains a factor of 7.2.
+
+With both sides compiled, analytic and sparse, a ten-second simulation of the ten-segment
+model, sampled every 20 ms at a relative and absolute tolerance of $10^{-6}$, takes 17.1 ms
+in Julia and 20.7 ms in Python; at forty segments, 603 ms and 617 ms. The two are within
+about 20% of each other in either direction. Earlier versions of this package reported
+Julia as 13 to 30 times faster, and that number is worth explaining rather than quietly
+dropping: it compared compiled Julia against a Jacobian derived by hand and evaluated in
+interpreted NumPy, which costs 707 µs per call against 33 µs for the same Jacobian as a
+compiled CasADi function. It measured the language binding, not the language.
+
+What does differ is everything around the solve. The Julia examples are roughly half the
+length, and they never write a Jacobian at all; replacing the hand-derived Jacobians of the
+Python examples with `ca.jacobian` removed 614 lines. Julia pays a one-time
+compilation cost of seconds to tens of seconds, of which 0.4 to 4.1 seconds is the symbolic
+Jacobian alone, so a script that solves once pays more than it saves and only repeated
+solves get the speed back. Installing the Julia stack takes considerably longer than
+installing the Python one. Event handling is the one place where the Python side is clearly
+behind: Julia's `ContinuousCallback` is four lines, while CasADi's event support is
+experimental and fails on one of the two examples that need it, which therefore locates the
+taut/slack crossing by bisection instead. Presenting both sides, including the parts that
+do not favour Julia, lets readers make an informed choice instead of taking the benchmark
+on faith.
 
 # Functionality
 
@@ -118,33 +141,39 @@ and `step!` functions; helper functions to copy the examples and launcher script
 user's own project; and a test suite that compares the Julia and Python results, checks
 the component against analytic results for the steady state, the drag and the catenary
 shape, and checks the quasi-steady model against the analytic catenary and MATLAB
-reference data. Documentation, including the full derivation and all examples, is
-published online.
+reference data; and benchmarks for the Jacobian strategies of both ecosystems and for the
+cost of the quasi-steady model against the dynamic one as the segment count grows.
+Documentation, including the full derivation and all examples, is published online.
 
 # AI usage disclosure
 
 Generative AI tools were used in the development of this software and in the preparation
 of this paper, as follows.
 
-*Software.* The tutorial examples, the Python implementations and the re-usable tether
-component were written by the authors without AI assistance. The quasi-steady model was
-first ported from MATLAB to Julia by hand. During its integration into the package, Claude
-Code (Anthropic) was used as a coding assistant for refactoring the port to the exported
-`init!`/`step!` API, for the performance work on the nonlinear solve, for writing tests
-against the MATLAB reference data, and for parts of the accompanying documentation. Every
-AI-assisted change was reviewed by the authors, and the results were verified by the test
-suite, which compares the model against the analytic catenary and the MATLAB reference
-results. GitHub Copilot's automated pull-request review was used to flag issues in some
-changes; its suggestions were evaluated and applied by the authors.
+*Software.* The tutorial examples in their original form, the first Python implementations
+and the re-usable tether component were written by the authors without AI assistance. The
+quasi-steady model was first ported from MATLAB to Julia by hand. Claude Code (Anthropic)
+was subsequently used as a coding assistant for four pieces of work: refactoring the
+quasi-steady port to the exported `init!`/`step!` API and the performance work on its
+nonlinear solve; giving the Julia examples an analytic sparse Jacobian and measuring what
+that is worth; rewriting the Python examples around CasADi, which replaced the Jacobians
+that had previously been derived by hand; and the benchmarks behind the comparison in the
+section above. Every AI-assisted change was reviewed by the authors. The results were
+verified by the test suite, which compares every Python example against its Julia
+counterpart and the quasi-steady model against the analytic catenary and the MATLAB
+reference results. GitHub Copilot's automated pull-request review was used to flag issues
+in some changes; its suggestions were evaluated and applied by the authors.
 
-*Documentation.* Parts of the documentation of the quasi-steady model were drafted with
-Claude Code and edited by the authors. The tutorial text and the derivation of the model
-were written by the authors.
+*Documentation.* Parts of the documentation of the quasi-steady model, and the comparison
+of the two ecosystems in `docs/julia_vs_python.md`, were drafted with Claude Code and
+edited by the authors. The tutorial text and the derivation of the model were written by
+the authors.
 
 *Paper.* The authors wrote this paper. Claude Code was used to update the summary and
-functionality sections after the quasi-steady model was added, to check citation metadata
-for consistency, and to draft this disclosure. All text was reviewed and edited by the
-authors, who take full responsibility for its content.
+functionality sections after the quasi-steady model was added, to rewrite the comparison
+section once both implementations used an analytic sparse Jacobian, to check citation
+metadata for consistency, and to draft this disclosure. All text was reviewed and edited by
+the authors, who take full responsibility for its content.
 
 # Acknowledgements
 
