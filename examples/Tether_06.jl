@@ -101,7 +101,7 @@ tol = 1e-6
 tspan = (0.0, duration)
 ts    = 0:dt:duration
 
-prob = ODEProblem(simple_sys, nothing, tspan)
+prob = ODEProblem(simple_sys, nothing, tspan; jac=true, sparse=true)
 # first call triggers JIT compilation; call again so @time measures only execution time
 solve(prob, FBDF(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
 @time sol = solve(prob, FBDF(), dt=dt, abstol=tol, reltol=tol, saveat=ts)

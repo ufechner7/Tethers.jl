@@ -3,7 +3,6 @@
 using ModelingToolkit, OrdinaryDiffEqCore, OrdinaryDiffEqBDF, LinearAlgebra, Timers, Parameters, MakieControlPlots
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using MakieControlPlots
-using ADTypes: AutoFiniteDiff
 using Tethers: display_if_interactive
 
 @with_kw mutable struct Settings2 @deftype Float64
@@ -123,10 +122,10 @@ function simulate(se, simple_sys)
     tol = 1e-6
     tspan = (0.0, se.duration)
     ts    = 0:se.dt:se.duration
-    prob = ODEProblem(simple_sys, nothing, tspan)
+    prob = ODEProblem(simple_sys, nothing, tspan; jac=true, sparse=true)
     solve_kwargs = (; dt=se.dt, abstol=tol, reltol=tol, saveat=ts)
-    sol = solve(prob, FBDF(autodiff=AutoFiniteDiff()); solve_kwargs...)
-    elapsed_time = @elapsed sol = solve(prob, FBDF(autodiff=AutoFiniteDiff()); solve_kwargs...)
+    sol = solve(prob, FBDF(); solve_kwargs...)
+    elapsed_time = @elapsed sol = solve(prob, FBDF(); solve_kwargs...)
     sol, elapsed_time
 end
 

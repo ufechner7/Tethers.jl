@@ -8,7 +8,7 @@ using ModelingToolkit, OrdinaryDiffEqCore, OrdinaryDiffEqBDF, SteadyStateDiffEq,
 tic()
 using ModelingToolkit: t_nounits as t, D_nounits as D
 using MakieControlPlots
-using ADTypes: AutoFiniteDiff, AutoForwardDiff
+using ADTypes: AutoFiniteDiff
 using Tethers: display_if_interactive
 close("all")
 
@@ -169,10 +169,10 @@ function simulate(se, simple_sys)
     tol = 1e-6
     tspan = (0.0, se.duration)
     ts    = 0:dt:se.duration
-    prob = ODEProblem(simple_sys, nothing, tspan)
+    prob = ODEProblem(simple_sys, nothing, tspan; jac=true, sparse=true)
     toc()
-    elapsed_time = @elapsed sol = solve(prob, FBDF(autodiff=AutoForwardDiff()); dt, abstol=tol, reltol=tol, saveat=ts)
-    elapsed_time = @elapsed sol = solve(prob, FBDF(autodiff=AutoForwardDiff()); dt, abstol=tol, reltol=tol, saveat=ts)
+    elapsed_time = @elapsed sol = solve(prob, FBDF(); dt, abstol=tol, reltol=tol, saveat=ts)
+    elapsed_time = @elapsed sol = solve(prob, FBDF(); dt, abstol=tol, reltol=tol, saveat=ts)
     sol, elapsed_time
 end
 

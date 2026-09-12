@@ -15,11 +15,15 @@ authors:
   - name: Andrea Bertozzi
     orcid: 0009-0005-1214-1737
     affiliation: 1, 2
+  - name: Bart van de Lint
+    affiliation: 3
 affiliations:
   - name: Delft University of Technology, The Netherlands
     index: 1
   - name: Politecnico di Milano, Italy
     index: 2
+  - name: Open Source AWE
+    index: 3
 date: 8 September 2026
 bibliography: paper.bib
 ---

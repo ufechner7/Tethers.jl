@@ -1,3 +1,34 @@
+### Tethers v2.1.0 (unreleased)
+
+#### Added
+
+- `examples/python/bench_casadi.py`, deriving the Jacobian of the `Tether_08`
+  model with `ca.jacobian` instead of by hand, checking it against the
+  hand-derived `calc_acc_jac` of `Tether_08.py`, and timing the SUNDIALS
+  integrators CasADi ships; needs `pip install casadi` and is not part of the
+  tutorial
+- `examples/quasisteady/benchmark_scaling.jl` and
+  `docs/images/qsm_vs_dynamic.png`, comparing the cost of the quasi-steady model
+  against the dynamic one over 4 to 32 tether segments, both per simulated
+  second; the quasi-steady solve is 5.6x cheaper at four segments and 49x at
+  thirty-two
+- Bart van de Lint as a third author of the JOSS paper, and Andrea Bertozzi to
+  `.zenodo.json`, which listed only one creator
+
+#### Changed
+
+- every example's time simulation now builds its `ODEProblem` with
+  `jac=true, sparse=true`, so ModelingToolkit generates and compiles the
+  analytic, sparse Jacobian ahead of time instead of the solver rebuilding a
+  dense one by automatic differentiation at every step; the `autodiff=` keyword
+  these solves passed to `FBDF` is now redundant and was dropped, and with it
+  the `ADTypes` import where nothing else used it
+- `examples/Tether_11.jl` keeps its finite-difference Jacobian: with a forward-mode or an analytic one, `FBDF` drives dt below eps at t = 0 and returns `Unstable`. This predates the change - plain `FBDF()` with no Jacobian at all already fails there - so the example is left as it was
+- the steady-state solves are unchanged; only the time simulations were touched
+- `docs/julia_vs_python.md` now compares like with like: both sides get an
+  analytic sparse Jacobian and a BDF integrator, which closes most of the gap it
+  used to report
+
 ### Tethers v2.0.0 2026-09-11
 #### Added
 - `examples/Project.toml` and `test/Project.toml`, joined to the root package as workspace members on Julia 1.12, so the example and test dependencies no longer bloat the main `Project.toml`

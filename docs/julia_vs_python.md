@@ -1,44 +1,86 @@
-# Julia vs. Python performance — Tether_06
+# Julia vs. Python performance
 
-Comparison of the two `Tether_06` implementations, both solving the same DAE (5-segment
-damped tether, taut/slack spring with a smoothed 1% compression floor) with an exact
-analytic Jacobian.
+Both ecosystems can give a stiff tether model an analytic, symbolically
+generated, sparse Jacobian, and neither is fast without one. This page compares
+them on the `Tether_08` model (ten segments unless stated otherwise, tether
+drag, reel-out, one fixed and one free end point), over 10 s, sampled every 20
+ms, at a relative and absolute tolerance of $10^{-6}$, from a straight-line
+initial condition. CPU: Ryzen 9 7950X, Julia 1.13, ModelingToolkit 11, CasADi
+3.8.
 
-| | Julia (`FBDF`, ModelingToolkit) | Python (`IDA`, Assimulo) |
-|---|---|---|
-| Solve time | ~0.002–0.003s | ~0.041s |
-| Output points | 501 (`saveat`, exact) | 501 (resampled onto exact grid) |
-| Steps taken | not reported by SciML by default | 436 |
-| Jacobian evals | analytic, symbolically generated (compiled once, ~free per call) | 83 (analytic, hand-derived) |
-| Setup/compile cost | `mtkcompile` symbolic pipeline (one-time, amortized across repeat solves — not counted here) | negligible (Python interpreted, no compile step) |
-| Lines of code | 140 (`examples/Tether_06.jl`) | 313 (`examples/python/Tether_06.py`) |
+|            | Julia                          | Python                                           |
+| ---------- | ------------------------------ | ------------------------------------------------ |
+| Model      | ModelingToolkit `System`       | CasADi `SX` expression graph                     |
+| Jacobian   | `ODEProblem(sys, …; jac=true)` | `ca.jacobian(ydot, y)`                           |
+| Sparsity   | `sparse=true`                  | found by CasADi, always                          |
+| Integrator | `FBDF`                         | SUNDIALS CVODES, `linear_multistep_method='bdf'` |
 
-**Julia is about 15–20x faster** than Python for this problem, even with both now using
-exact analytic Jacobians. The Julia code is also much more compact, at less than half the
-line count of the Python version.
+`FBDF` is a fixed-leading-coefficient BDF, which is the variant SUNDIALS
+implements, so CVODES-BDF is the like-for-like match. IDAS solves the same
+formulas for an implicit DAE and is what `examples/python/Tether_0*.py` use; it
+is 15-25% slower than CVODES here.
 
-## Why the gap remains
+## The Jacobian dominates
 
-Despite both being "Newton + analytic Jacobian" DAE solvers:
+Solve time in ms, median and interquartile range over the samples
+`BenchmarkTools` fits into twelve seconds per configuration:
 
-- **Compiled vs. interpreted inner loop**: ModelingToolkit generates and compiles native
-  Julia functions for the residual and Jacobian ahead of time; Python's `res`/`jac`
-  methods re-run interpreted NumPy code (with per-call array allocation, Python-level
-  loops, function-call overhead) on every single Newton iteration.
-- **Allocation overhead**: Julia's solve reused ~5,000 small allocations total across the
-  whole 10s run; Python's `res`/`jac` allocate fresh NumPy arrays (segment vectors, outer
-  products, etc.) on every call — 436 steps × several evaluations per step × several
-  small array allocations each adds up in Python's interpreter/GC overhead in a way it
-  doesn't in compiled Julia.
-- **Fixed cost per Python↔C boundary crossing**: Assimulo's IDA is itself compiled
-  Sundials C code, but every residual/Jacobian evaluation has to cross back into the
-  Python interpreter, whereas Julia's whole pipeline (solver + residual + Jacobian) is
-  native compiled code with no language-boundary crossings.
+| segments | states | Julia AD, dense |   Julia `jac` | Julia `jac+sparse` | CasADi CVODES sparse |
+| -------: | -----: | --------------: | ------------: | -----------------: | -------------------: |
+|        5 |     36 |       13.0 ±0.4 |     12.7 ±0.7 |           9.1 ±1.0 |            10.8 ±0.5 |
+|       10 |     66 |       31.9 ±1.1 |     27.9 ±0.2 |          17.1 ±1.9 |            20.5 ±0.4 |
+|       20 |    126 |      485.0 ±6.1 |    438.4 ±6.1 |        177.9 ±31.6 |           171.9 ±6.5 |
+|       40 |    246 |    4332.9 ±22.5 | 3765.9 ±154.5 |        603.1 ±10.5 |           601.5 ±7.9 |
 
-## Context
+CasADi with a dense linear solver instead costs 14.4, 30.1, 1143.7 and 5677.5
+ms, so the sparse factorization is worth 9.4x at forty segments there.
 
-Both are fast in absolute terms for this problem (2ms vs 41ms is imperceptible either
-way). The practically important result is that the Python side went from **79.2s to
-0.04s** (~2000x) over the course of this optimization work, closing nearly all of the
-gap that existed purely from using a finite-difference Jacobian instead of an analytic
-one.
+The Jacobian is block-tridiagonal: 591 of 4356 entries at ten segments, 2391 of
+60516 at forty. The analytic Jacobian alone buys little, because the dense
+factorization then dominates; it is the two together that pay, by 1.4x at five
+segments and 7.2x at forty; the same holds on the CasADi side.
+
+With `jac=true` the `autodiff` keyword no longer affects anything: the solver
+uses the supplied Jacobian and never differentiates. `FBDF()` and
+`FBDF(autodiff=AutoForwardDiff())` measure the same within noise.
+
+Head to head, with both sides analytic and sparse, Julia's `FBDF` and SUNDIALS
+CVODES-BDF are within 20% of each other, Julia ahead on the small models and
+CVODES on the large ones. CVODES beats IDAS at every size here (10.8 against
+13.2 ms at five segments, 601 against 703 at forty), so the implicit-DAE
+formulation costs a little.
+
+Generating the Jacobian is not free. ModelingToolkit needs 0.5 s at five
+segments and 4.1 s at forty, on top of `mtkcompile`; `ca.jacobian` needs 2 ms
+and 16 ms. For a script that solves once, that build cost outweighs the saving;
+it pays back when a compiled model is re-solved.
+
+## Where the old numbers came from
+
+Earlier versions of this page reported Julia as 13 to 30 times faster than
+Python. That compared compiled Julia against a hand-derived Jacobian evaluated
+in interpreted NumPy, which costs 707 µs per call against 33 µs for the same
+Jacobian as a CasADi function — a factor of 21 in the inner loop of every Newton
+iteration. It measured the binding, not the language. With both sides compiled
+and sparse, they are within 20% of each other.
+
+What has not changed is the code size. The hand-derived Jacobians in
+`Tether_06.py`, `Tether_06c.py`, `Tether_07.py` and `Tether_08.py` are 86 to 150
+lines each of pen-and-paper calculus. `ca.jacobian(ydot, y)` is one line and
+agrees with the hand-derived `calc_acc_jac` of `Tether_08.py` to 1.8e-12;
+`examples/python/bench_casadi.py` runs that check. The Julia examples never
+wrote a Jacobian at all.
+
+## Caveats
+
+- `FBDF` and CVODES are different BDF implementations, with their own step-size
+  and order heuristics; they take different paths through the same problem.
+- The CasADi timings cross into Python once per solve, not once per Newton
+  iteration. A model driven from a Python callback per step, as Assimulo does,
+  pays the interpreter cost the table above avoids.
+- The tether's taut/slack switch is a hard step. Its exact derivative is zero on
+  either side, which is what ModelingToolkit, CasADi's `if_else` and ForwardDiff
+  all report, and what the hand-derived Python Jacobians assume. Finite
+  differences instead return a large secant slope across the step, and some
+  configurations only converge because of it — see the steady-state solves of
+  `Tether_08`–`Tether_11`, and `Tether_11`'s time simulation.

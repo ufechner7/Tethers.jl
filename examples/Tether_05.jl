@@ -2,7 +2,6 @@
 # for l < l_0) and n tether segments. 
 using ModelingToolkit, OrdinaryDiffEqCore, OrdinaryDiffEqBDF, LinearAlgebra, Timers, MakieControlPlots
 using ModelingToolkit: t_nounits as t, D_nounits as D
-using ADTypes: AutoFiniteDiff
 using Tethers: display_if_interactive
 
 G_EARTH::Vector{Float64} = [0.0, 0.0, -9.81]    # gravitational acceleration     [m/s²]
@@ -78,9 +77,9 @@ tol = 1e-6
 tspan = (0.0, duration)
 ts    = 0:dt:duration
 
-prob = ODEProblem(simple_sys, nothing, tspan)
-elapsed_time = @elapsed sol = solve(prob, FBDF(autodiff=AutoFiniteDiff()); dt, abstol=tol, reltol=tol, saveat=ts)
-elapsed_time = @elapsed sol = solve(prob, FBDF(autodiff=AutoFiniteDiff()); dt, abstol=tol, reltol=tol, saveat=ts)
+prob = ODEProblem(simple_sys, nothing, tspan; jac=true, sparse=true)
+elapsed_time = @elapsed sol = solve(prob, FBDF(); dt, abstol=tol, reltol=tol, saveat=ts)
+elapsed_time = @elapsed sol = solve(prob, FBDF(); dt, abstol=tol, reltol=tol, saveat=ts)
 println("Elapsed time: $(elapsed_time) s, speed: $(round(duration/elapsed_time)) times real-time")
 
 # saving the result of the lowest mass for comparison with the Python implementation

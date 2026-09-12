@@ -458,6 +458,59 @@ variants are the fastest warm and would be worth a cheap-first,
 fall-back-to-robust structure if this is ever called per time step — but a cold
 failure costs 1.6 ms, which is too much to risk on a default.
 
+## Cost against the dynamic model
+
+`examples/quasisteady/benchmark_scaling.jl` runs both models on the same 50 m
+tether and plots how they scale with the number of segments. Both are measured
+**per simulated second**, which is the only comparison that means anything: the
+quasi-steady model has no time step of its own, so it is stepped at 0.02 s along
+a trajectory exactly as `flying_circular.jl` steps it, and the dynamic solve is
+divided by its simulated duration.
+
+![Quasi-steady solve against dynamic integration](images/qsm_vs_dynamic.png)
+
+| segments | states | quasi-steady [ms/simulated s] | dynamic [ms/simulated s] | ratio |
+| -------: | -----: | ----------------------------: | -----------------------: | ----: |
+|        4 |     30 |                  0.174 ±0.004 |               0.97 ±0.11 |   5.6 |
+|        8 |     54 |                  0.227 ±0.002 |               2.53 ±0.37 |    11 |
+|       16 |    102 |                  0.340 ±0.003 |               8.73 ±1.84 |    26 |
+|       32 |    198 |                  0.572 ±0.014 |              27.94 ±6.82 |    49 |
+
+Median and interquartile range over repeated runs. The quasi-steady cost is
+close to linear in the segment count - its residual walks the tether one segment
+at a time and solves for three unknowns whatever the length - while the dynamic
+cost grows roughly as the square, because both the `6*(segments+1)` states and
+the stiffness grow with the segment count.
+
+The dynamic model also pays a one-off build cost - `mtkcompile` plus the
+symbolic Jacobian - of 0.4 s at four segments and 4.8 s at thirty-two, which the
+quasi-steady model does not have at all.
+
+Two things are easy to get wrong when measuring this, and both were got wrong
+here first:
+
+- **Comparing a `step!` against a simulated second.** A per-call quasi-steady
+  cost is 50x smaller than a per-simulated-second one at `dt = 0.02`, which
+  turns a factor of 26 into a factor of 1300.
+- **Benchmarking `step!` in a loop without moving the kite.** `step!` writes the
+  converged answer back into `te.state_vec`, so the second call onwards starts
+  from the solution and returns almost immediately. The kite has to actually
+  move between calls, as it does here and in `flying_circular.jl`.
+
+Uwe measured the quasi-steady model as only 1.5x faster than the dynamic one,
+against the 1000x that @Williams2017 reports for MATLAB. That is a whole-script
+comparison of `flying_circular.jl` against `examples/Tether_11.jl`, where the
+dynamic side's one-off symbolic build dominates the wall clock; the numbers
+above are solve time only. Both framings are worth keeping - a user who runs an
+example once feels the build, a user who runs a controller in a loop does not -
+but they are not the same measurement, and the 1000x baseline is a MATLAB
+dynamic model, which a compiled BDF with an analytic sparse Jacobian has largely
+closed.
+
+This is a cost comparison, not an accuracy one: the quasi-steady model has no
+tether inertia, so it cannot represent the swinging that `examples/Tether_11.jl`
+shows. `examples/quasisteady/flying_circular.jl` and `examples/Tether_11.jl` fly
+the same circular trajectory with the two models for that comparison.
 ## Removed: the dual-number copy
 
 `src/Tether_qsm_dual.jl` was a second, experimental implementation of the same
