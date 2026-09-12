@@ -126,7 +126,7 @@ From the Julia prompt execute:
 run_python("Tether_01")
 ```
 
-This will install Python, Matplotlib and Assimulo and execute the script `Tether_01.py`.
+This will install Python, Matplotlib, NumPy, SciPy and CasADi and execute the script `Tether_01.py`.
 
 **Python code:** [Tether_01.py](https://github.com/ufechner7/Tethers.jl/blob/main/examples/python/Tether_01.py)
 
@@ -167,10 +167,14 @@ LOC counts exclude blank lines and comment lines.
 **Tradeoff Julia vs Python:** In Julia, the code is compiled before it is executed, which can cause about 5 to 30 seconds delay when running a simulation the first time, but speeds up the execution a lot afterward. In addition,
 the Julia code is much more compact and better readable due to the use of symbolic differential equations.
 
-In Python, the IDA solver needs an analytic Jacobian to handle a simulation with the very
-stiff Dyneema tether at all, which increases code size and complexity. Even then, the Julia solvers achieve 13 to 30 times the performance. On the other hand, installing the required packages in Python takes less
-than a minute, while installing and compiling the Julia software might take half an hour. The reason is,
-that currently Julia packages are only distributed as source code and have to be compiled locally.
+Both sides need an exact, sparse Jacobian to handle the very stiff Dyneema tether at all.
+Julia gets one from ModelingToolkit with `jac=true, sparse=true`; Python gets one from CasADi,
+which differentiates the model expression and finds its sparsity by itself. With both compiled
+and sparse the two land within about 20% of each other - see
+[docs/julia_vs_python.md](https://github.com/ufechner7/Tethers.jl/blob/main/docs/julia_vs_python.md).
+The remaining trade-off is setup: installing the required packages in Python takes less than a
+minute, while installing and compiling the Julia software might take half an hour, because Julia
+packages are distributed as source code and have to be compiled locally.
 
 See also: [Why Julia?](https://ufechner7.github.io/2022/08/13/why-julia.html) and read the [documentation](https://ufechner7.github.io/Tethers.jl/dev/) or go straight to the [examples](https://ufechner7.github.io/Tethers.jl/dev/examples/).
 

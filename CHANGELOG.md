@@ -25,6 +25,23 @@
   the `ADTypes` import where nothing else used it
 - `examples/Tether_11.jl` keeps its finite-difference Jacobian: with a forward-mode or an analytic one, `FBDF` drives dt below eps at t = 0 and returns `Unstable`. This predates the change - plain `FBDF()` with no Jacobian at all already fails there - so the example is left as it was
 - the steady-state solves are unchanged; only the time simulations were touched
+- the Python examples no longer use Assimulo. Each model is now written once as
+  a CasADi expression graph, CasADi derives its exact Jacobian and sparsity, and
+  SUNDIALS' CVODES integrates it with a sparse Newton solve - the same
+  fixed-leading-coefficient BDF family as the Julia examples' `FBDF`. The
+  hand-written Jacobians of `Tether_06.py`, `Tether_06c.py`, `Tether_07.py` and
+  `Tether_08.py`, 86 to 150 lines of calculus each, are gone; the ten examples
+  lost about 700 lines between them. All ten still reproduce the Julia
+  trajectories within the tolerances `test/test_tether_*.jl` apply
+- `CondaPkg.toml` swaps `assimulo` for `casadi` and adds `scipy`, which
+  `Tether_08.py`'s steady-state solve uses
+- `examples/python/bench_casadi.py` now imports the model from `Tether_08.py`
+  instead of defining its own copy
+- `Tether_03b.py` locates the taut/slack crossings itself, by bisection between
+  output points: CasADi's event detection (a `zero` entry in the DAE dictionary)
+  is experimental and aborts on this model with "tout too far back in direction
+  of integration". `Tether_06c.py`, whose events fire once per segment, uses it
+  successfully
 - `docs/julia_vs_python.md` now compares like with like: both sides get an
   analytic sparse Jacobian and a BDF integrator, which closes most of the gap it
   used to report

@@ -17,8 +17,8 @@ initial condition. CPU: Ryzen 9 7950X, Julia 1.13, ModelingToolkit 11, CasADi
 
 `FBDF` is a fixed-leading-coefficient BDF, which is the variant SUNDIALS
 implements, so CVODES-BDF is the like-for-like match. IDAS solves the same
-formulas for an implicit DAE and is what `examples/python/Tether_0*.py` use; it
-is 15-25% slower than CVODES here.
+formulas for an implicit DAE; it is 3-11% slower than CVODES here, so the
+examples use CVODES.
 
 ## The Jacobian dominates
 
@@ -27,13 +27,15 @@ Solve time in ms, median and interquartile range over the samples
 
 | segments | states | Julia AD, dense |   Julia `jac` | Julia `jac+sparse` | CasADi CVODES sparse |
 | -------: | -----: | --------------: | ------------: | -----------------: | -------------------: |
-|        5 |     36 |       13.0 ±0.4 |     12.7 ±0.7 |           9.1 ±1.0 |            10.8 ±0.5 |
-|       10 |     66 |       31.9 ±1.1 |     27.9 ±0.2 |          17.1 ±1.9 |            20.5 ±0.4 |
-|       20 |    126 |      485.0 ±6.1 |    438.4 ±6.1 |        177.9 ±31.6 |           171.9 ±6.5 |
-|       40 |    246 |    4332.9 ±22.5 | 3765.9 ±154.5 |        603.1 ±10.5 |           601.5 ±7.9 |
+|        5 |     36 |       13.0 ±0.4 |     12.7 ±0.7 |           9.1 ±1.0 |            12.3 ±0.5 |
+|       10 |     66 |       31.9 ±1.1 |     27.9 ±0.2 |          17.1 ±1.9 |            20.7 ±0.2 |
+|       20 |    126 |      485.0 ±6.1 |    438.4 ±6.1 |        177.9 ±31.6 |           170.0 ±4.9 |
+|       40 |    246 |    4332.9 ±22.5 | 3765.9 ±154.5 |        603.1 ±10.5 |          617.1 ±13.8 |
 
-CasADi with a dense linear solver instead costs 14.4, 30.1, 1143.7 and 5677.5
-ms, so the sparse factorization is worth 9.4x at forty segments there.
+CasADi with a dense linear solver instead costs 13.9, 28.7, 1037.2 and 4551.8
+ms, so the sparse factorization is worth 7.4x at forty segments there. The Julia
+column comes from `ODEProblem(sys, …; jac, sparse)`, the CasADi one from
+`examples/python/bench_casadi.py`.
 
 The Jacobian is block-tridiagonal: 591 of 4356 entries at ten segments, 2391 of
 60516 at forty. The analytic Jacobian alone buys little, because the dense
@@ -64,23 +66,23 @@ Jacobian as a CasADi function — a factor of 21 in the inner loop of every Newt
 iteration. It measured the binding, not the language. With both sides compiled
 and sparse, they are within 20% of each other.
 
-What has not changed is the code size. The hand-derived Jacobians in
-`Tether_06.py`, `Tether_06c.py`, `Tether_07.py` and `Tether_08.py` are 86 to 150
-lines each of pen-and-paper calculus. `ca.jacobian(ydot, y)` is one line and
-agrees with the hand-derived `calc_acc_jac` of `Tether_08.py` to 1.8e-12;
-`examples/python/bench_casadi.py` runs that check. The Julia examples never
-wrote a Jacobian at all.
+The code size changed with it. The Python examples used to carry the Jacobian of
+every model as hand-written calculus - 86 to 150 lines per file in
+`Tether_06.py`, `Tether_06c.py`, `Tether_07.py` and `Tether_08.py`.
+`ca.jacobian` replaced all of it, and the ten examples lost about 700 lines
+between them. The Julia examples never wrote a Jacobian at all.
 
 ## Caveats
 
 - `FBDF` and CVODES are different BDF implementations, with their own step-size
   and order heuristics; they take different paths through the same problem.
 - The CasADi timings cross into Python once per solve, not once per Newton
-  iteration. A model driven from a Python callback per step, as Assimulo does,
-  pays the interpreter cost the table above avoids.
+  iteration, because the whole model is compiled into the integrator. A model
+  driven from a Python callback per step pays an interpreter cost that the table
+  above avoids.
 - The tether's taut/slack switch is a hard step. Its exact derivative is zero on
   either side, which is what ModelingToolkit, CasADi's `if_else` and ForwardDiff
-  all report, and what the hand-derived Python Jacobians assume. Finite
-  differences instead return a large secant slope across the step, and some
-  configurations only converge because of it — see the steady-state solves of
-  `Tether_08`–`Tether_11`, and `Tether_11`'s time simulation.
+  all report. Finite differences instead return a large secant slope across the
+  step, and some configurations only converge because of it — see the
+  steady-state solves of `Tether_08`–`Tether_11`, and `Tether_11`'s time
+  simulation.

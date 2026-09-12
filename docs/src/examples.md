@@ -77,7 +77,7 @@ From the Julia prompt execute:
 ```
 run_python("Tether_01")
 ```
-This will install Python, Matplotlib and Assimulo and execute the script `Tether_01.py`.
+This will install Python, Matplotlib, NumPy, SciPy and CasADi and execute the script `Tether_01.py`.
 
 **Python code:** [Tether_01.py](https://github.com/ufechner7/Tethers.jl/blob/main/examples/python/Tether_01.py)
 
@@ -144,35 +144,47 @@ sol = solve(prob, FBDF(), dt=dt, abstol=tol, reltol=tol, saveat=ts, callback = c
 ```
 
 ### Using a callback with Python
-In Python you would have to add the following attribute:
+
+This is the one place in the tutorial where Python is clearly behind. CasADi does have event
+detection - a `zero` entry in the DAE dictionary, as `Tether_06c.py` uses - but it is
+experimental, and on this model it aborts part way through with *"tout too far back in
+direction of integration"*: after restarting at an event it can no longer interpolate back to
+the requested output point. So the crossing has to be located by hand:
+
 ```Python
-    sw0 = [vel_1[2] > 0] # array of booleans; true means the tether segment is loose (l < l_0)
+def run_example():
+    sim, indicator, y0 = build_integrator()
+
+    def step(state, dt):
+        return np.array(sim(x0=state, p=dt)['xf']).flatten()
+
+    for k in range(len(time) - 1):
+        dt = time[k+1] - time[k]
+        before = float(indicator(current))
+        after = step(current, dt)
+        if before * float(indicator(after)) < 0.0:
+            # the segment changed between taut and slack inside this interval: bisect for
+            # the crossing and restart the integration exactly there
+            lo, hi = 0.0, dt
+            for _ in range(40):
+                mid = 0.5 * (lo + hi)
+                if before * float(indicator(step(current, mid))) < 0.0:
+                    hi = mid
+                else:
+                    lo = mid
+            current = step(step(current, hi), dt - hi)
+        else:
+            current = after
 ```
-and the following methods:
-```Python
-    def state_events(self, t, y, yd, sw):
-        """
-        This is our function that keeps track of our events. When the sign
-        of any of the events has changed, we have an event.
-        """
-        # calculate the norm of the vector from mass1 to mass0 minus the initial segment length
-        event_0 = np.linalg.norm(y[3:6]) - L_0
-        return np.array([event_0])
-    
-    def handle_event(self, solver, event_info):
-        """
-        Event handling. This functions is called when Assimulo finds an event as
-        specified by the event functions.
-        """
-        state_info = event_info[0] # We are only interested in state events
-        if state_info[0] != 0:     # Check if the first event function has been triggered
-            if solver.sw[0]:       # If the switch is True the pendulum bounces
-                print(solver.t)
-```
+
+To advance by an arbitrary step length without rebuilding the integrator, the time is scaled:
+the solver integrates `tau` from 0 to 1 over an ODE multiplied by the step length `h`, which is
+passed as a parameter. Against that, the Julia version is the four lines of `ContinuousCallback`
+shown above.
+
 **Example:** [Tether_03b.py](https://github.com/ufechner7/Tethers.jl/blob/main/examples/python/Tether_03b.py).  
-As you can see, logging of calculated variables is not
-possible with Assimulo (easy with ModelingToolkit in Julia). You need to re-calculate them
-after the simulation.
+As you can see, logging of calculated variables is not possible from inside the solver (easy
+with ModelingToolkit in Julia). You need to re-calculate them after the simulation.
 
 ## Benchmarking non-linear simulation
 Using a callback slows the simulation down, but not much. Try it out:
@@ -278,9 +290,6 @@ damping           ~ DAMPING  / (length/segments)
 where `L0` is the unstretched length of the complete tether at $t=0$. 
 
 **Julia code:** [Tether_06.jl](https://github.com/ufechner7/Tethers.jl/blob/main/examples/Tether_06.jl)
-
-The IDA solver, used for Python has a very high numerical damping. Therefore we had to multiply
-the damping coefficient with a factor of $0.045$ to achieve a more-or-less realistic result.
 
 **Python code:** [Tether_06.py](https://github.com/ufechner7/Tethers.jl/blob/main/examples/python/Tether_06.py)
 
