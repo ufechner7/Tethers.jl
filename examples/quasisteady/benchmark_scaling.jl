@@ -24,7 +24,9 @@ using BenchmarkTools, LinearAlgebra, Printf, StaticArrays, Statistics
 using ModelingToolkit: t_nounits as t
 using ADTypes: AutoFiniteDiff
 using StaticArrays: MVector
-using Tethers.QuasiSteady: StaticSettings, Tether, init!, step!
+# `import ... as`, not `using`: QuasiSteady and TetherComponents both define a `Tether`,
+# and menu3.jl runs every quasi-steady example into the same `Main`
+import Tethers.QuasiSteady as QSM
 using Tethers.TetherComponents: TetherSettings, set_diameter!, FixedEnd, FreeEnd, assemble_tether
 import GLMakie
 
@@ -63,7 +65,7 @@ returns immediately. The kite has to actually move between calls.
 Returns the `stats` of one revolution's solve loop, scaled to one simulated second.
 """
 function quasisteady_time(segments; reps = 7)
-    se = StaticSettings(; segments, elevation = ELEVATION, l_tether = L_TETHER)
+    se = QSM.StaticSettings(; segments, elevation = ELEVATION, l_tether = L_TETHER)
     kite_distance = L_TETHER / (1 + se.slack)
     ts = 0:DT:DURATION
     # a small circle around the initial kite position, flown once per DURATION
@@ -74,10 +76,10 @@ function quasisteady_time(segments; reps = 7)
 
     times = Float64[]
     for _ in 1:reps
-        te = Tether(se)
-        init!(te)
+        te = QSM.Tether(se)
+        QSM.init!(te)
         elapsed = @elapsed for pos in traj
-            step!(te, pos, te.kite_vel; tether_length = L_TETHER)
+            QSM.step!(te, pos, te.kite_vel; tether_length = L_TETHER)
         end
         push!(times, elapsed)
     end
