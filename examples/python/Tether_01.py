@@ -1,48 +1,39 @@
 # -*- coding: utf-8 -*-
 """
-Tutorial example showing how to use the implicit solver RADAU. 
-It simulates a falling mass.
+Tutorial example showing how to use an implicit solver. It simulates a falling mass.
+
+The model is written as a CasADi expression graph and integrated with SUNDIALS' CVODES,
+which CasADi supplies with the exact Jacobian of the model.
 """
 import os
 import numpy as np
 import pylab as plt
-from assimulo.problem import Implicit_Problem # Imports the problem formulation from Assimulo
-from assimulo.solvers import Radau5DAE        # Imports the solver RADAU from Assimulo
+import casadi as ca
 
 G_EARTH  = np.array([0.0, 0.0, -9.81]) # gravitational acceleration
-  
+
 # Example one: Falling mass
-# State vector y   = mass.pos, mass.vel
-# Derivative   yd  = mass.vel, mass.acc
-# Residual     res = (y.vel - yd.vel), (yd.acc - G_EARTH)     
-def res1(t, y, yd):
-    res_0 = y[3:6]  - yd[0:3]
-    res_1 = yd[3:6] - G_EARTH 
-    return np.append(res_0, res_1)
+# State vector y = mass.pos, mass.vel
+def build_model():
+    """ The falling mass as one CasADi expression graph. Returns the state vector `y`,
+        its derivative `ydot` and the initial state `y0`. """
+    y = ca.SX.sym('y', 6)
+    ydot = ca.vertcat(y[3:6], ca.DM(G_EARTH))
+    y0 = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 50.0])   # pos, vel
+    return y, ydot, y0
 
 def run_example():
-    # Set the initial conditions
-    t0  = 0.0                   # Initial time
-    vel_0 = [0.0, 0.0, 50.0]    # Initial velocity
-    pos_0 = [0.0, 0.0,  0.0]    # Initial position
-    acc_0 = [0.0, 0.0, -9.81]   # Initial acceleration
-    y0  = pos_0 + vel_0         # Initial pos, vel
-    yd0 = vel_0 + acc_0         # Initial vel, acc
-
-    model = Implicit_Problem(res1, y0, yd0, t0) # Create an Assimulo problem
-    model.name = 'Falling mass' # Specifies the name of problem (optional)
-
-    sim = Radau5DAE(model)      # Create the IDA solver
-        
+    y, ydot, y0 = build_model()
     tfinal = 10.0           # Specify the final time
     ncp    = 500            # Number of communication points (number of return points)
+    time = np.linspace(0.0, tfinal, ncp + 1)
+    sim = ca.integrator('sim', 'cvodes', {'x': y, 'ode': ydot}, 0.0, time[1:],
+                        {'abstol': 1.0e-6, 'reltol': 1.0e-6})
+    y_sol = np.column_stack([y0, np.array(sim(x0=y0)['xf'])]).T
 
-    # Use the .simulate method to simulate and provide the final time and ncp (optional)    
-    time, y, yd = sim.simulate(tfinal, ncp) 
-    
     # plot the result
-    pos_z = y[:,2]
-    vel_z = y[:,5]
+    pos_z = y_sol[:, 2]
+    vel_z = y_sol[:, 5]
 
     # saving the result for comparison with the Julia implementation
     os.makedirs("output", exist_ok=True)

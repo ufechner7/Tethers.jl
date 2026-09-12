@@ -23,7 +23,7 @@ SMOOTH_REL_WIDTH::Float64 = 1e-3                # width of the taut/slack blend,
 
 # 0 for x<=0, 1 for x>=1, cubic (C1) ramp in between. Blending the taut/slack switch
 # this way (instead of a hard step) keeps the spring force differentiable, which
-# matters once a solver relies on an exact analytic Jacobian there (see Tether_06.py).
+# matters once a solver relies on an exact analytic Jacobian there, as both sides now do.
 smoothstep(x) = (xc = clamp(x, 0.0, 1.0); xc^2 * (3 - 2xc))
 
 # calculating consistent initial conditions
@@ -101,7 +101,7 @@ tol = 1e-6
 tspan = (0.0, duration)
 ts    = 0:dt:duration
 
-prob = ODEProblem(simple_sys, nothing, tspan)
+prob = ODEProblem(simple_sys, nothing, tspan; jac=true, sparse=true)
 # first call triggers JIT compilation; call again so @time measures only execution time
 solve(prob, FBDF(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
 @time sol = solve(prob, FBDF(), dt=dt, abstol=tol, reltol=tol, saveat=ts)

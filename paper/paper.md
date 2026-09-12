@@ -15,11 +15,15 @@ authors:
   - name: Andrea Bertozzi
     orcid: 0009-0005-1214-1737
     affiliation: 1, 2
+  - name: Bart van de Lint
+    affiliation: 3
 affiliations:
   - name: Delft University of Technology, The Netherlands
     index: 1
   - name: Politecnico di Milano, Italy
     index: 2
+  - name: Open Source AWE
+    index: 3
 date: 8 September 2026
 bibliography: paper.bib
 ---
@@ -87,21 +91,62 @@ simulations.
 # Julia and Python side by side
 
 Every tutorial example exists twice: as a Julia script using ModelingToolkit.jl and the
-solvers of DifferentialEquations.jl [@Rackauckas2017; @Bezanson2017], and as a Python script
-using the IDA solver of SUNDIALS [@Hindmarsh2005] through Assimulo [@Andersson2015]. Both
-versions solve the same differential-algebraic system with an exact analytic Jacobian, and
-the test suite checks that they produce the same trajectories. This makes the comparison a
+solvers of DifferentialEquations.jl [@Rackauckas2017; @Bezanson2017], and as a Python
+script using CasADi [@Andersson2019] and the CVODES solver of SUNDIALS [@Hindmarsh2005]
+that it ships with. Both sides integrate with a backward differentiation formula and both
+derive an exact, sparse Jacobian from the model itself rather than by hand, and the test
+suite checks that the two produce the same trajectories. This makes the comparison a
 controlled one rather than an anecdote.
 
-For a ten-second simulation of the full model, sampled every 20 ms at a relative and
-absolute tolerance of $10^{-6}$, the Julia implementations run 13 to 30 times faster than
-the Python ones and are roughly half the length in lines of code. The remaining gap is
-explained by the fact that ModelingToolkit generates and compiles native residual and
-Jacobian functions ahead of time, while the Python versions re-enter the interpreter on
-every Newton iteration. The trade-off is also documented: Julia pays a one-time compilation
-cost of seconds to tens of seconds, and installing the Julia stack takes considerably
-longer than installing the Python one. Presenting both sides lets readers make an informed
-choice instead of taking the benchmark on faith.
+A stiff tether needs that Jacobian, and neither ecosystem supplies one by default. In
+Julia, `ODEProblem(sys, ...; jac=true, sparse=true)` makes ModelingToolkit generate and
+compile it ahead of time; without those two keywords the solver rebuilds a dense Jacobian
+by automatic differentiation at every step. In Python, `ca.jacobian` derives it from the
+model expression and finds its sparsity. That sparsity is what matters most: the Jacobian
+is block-tridiagonal, 4% dense at forty segments, and exploiting it gains far more than the
+analytic derivative does on its own.
+
+| Segments | States | Julia AD | Julia analytic | Julia sparse | Python sparse | Python sparse, JIT |
+| -------: | -----: | -------: | -------------: | -----------: | ------------: | -----------------: |
+|        5 |     36 |     13.0 |           12.7 |          9.1 |          12.4 |                7.2 |
+|       10 |     66 |     31.9 |           27.9 |         17.1 |          20.4 |               11.9 |
+|       20 |    126 |      485 |            438 |          178 |           165 |                 91 |
+|       40 |    246 |     4333 |           3766 |          603 |           561 |                300 |
+
+Table: Solve time in ms for a ten-second simulation of the tether with drag and reel-out,
+sampled every 20 ms at a relative and absolute tolerance of $10^{-6}$, on an Intel Core
+i7-11850H. \label{tab:speed}
+
+With an analytic sparse Jacobian on both sides the two implementations are within about 20%
+of each other. CasADi evaluates the model as a tape of elementary operations inside its own
+compiled library; asking it to compile that tape to machine code instead, with `jit=True`,
+takes a further factor of 1.8 and produces bit-identical trajectories, at the cost of a C
+compiler at run time and a compilation step of its own, 0.6 s at five segments and 7.3 s at
+forty. The examples leave it off, because a tutorial example is run once and the
+compilation costs more than the solve saves.
+
+Raw speed is not the whole comparison, and the rest of it runs the other way. A CasADi
+model is a closed expression graph: everything in it has to be a CasADi expression, so
+arbitrary host-language code cannot appear inside the model, and the graph is handed to one
+of the four integrators CasADi ships with. A ModelingToolkit model is a symbolic object
+that any of the solvers of DifferentialEquations.jl can consume, and it can be simplified
+before it is solved: the ten-segment model is written as 386 equations and `mtkcompile`
+reduces it to the 66 that are actually integrated, which in the CasADi version the author
+has to do by hand. It can also be composed, which is what the tether component of this
+package is for, and CasADi has no acausal equivalent. The trade-off is therefore a real
+one rather than a verdict: CasADi is the better tool when the model is fixed and the next
+step is optimal control or deployment as generated C, and ModelingToolkit is the better
+tool when the model itself is still being built.
+
+The differences that remain are practical ones. The Julia examples are roughly half the
+length in lines of code and never write a Jacobian at all. Julia pays a one-time
+compilation cost of seconds to tens of seconds, part of it for the symbolic Jacobian, so a
+script that solves once pays more than it saves, and installing the Julia stack takes
+considerably longer than installing the Python one. Event handling favours Julia: a
+`ContinuousCallback` is four lines, while CasADi's event support is experimental and fails
+on one of the two examples that need it, which locates the taut/slack crossing by bisection
+instead. Presenting both sides lets readers make an informed choice instead of
+taking the benchmark on faith.
 
 # Functionality
 
@@ -114,33 +159,39 @@ and `step!` functions; helper functions to copy the examples and launcher script
 user's own project; and a test suite that compares the Julia and Python results, checks
 the component against analytic results for the steady state, the drag and the catenary
 shape, and checks the quasi-steady model against the analytic catenary and MATLAB
-reference data. Documentation, including the full derivation and all examples, is
-published online.
+reference data; and benchmarks for the Jacobian strategies of both ecosystems and for the
+cost of the quasi-steady model against the dynamic one as the segment count grows.
+Documentation, including the full derivation and all examples, is published online.
 
 # AI usage disclosure
 
 Generative AI tools were used in the development of this software and in the preparation
 of this paper, as follows.
 
-*Software.* The tutorial examples, the Python implementations and the re-usable tether
-component were written by the authors without AI assistance. The quasi-steady model was
-first ported from MATLAB to Julia by hand. During its integration into the package, Claude
-Code (Anthropic) was used as a coding assistant for refactoring the port to the exported
-`init!`/`step!` API, for the performance work on the nonlinear solve, for writing tests
-against the MATLAB reference data, and for parts of the accompanying documentation. Every
-AI-assisted change was reviewed by the authors, and the results were verified by the test
-suite, which compares the model against the analytic catenary and the MATLAB reference
-results. GitHub Copilot's automated pull-request review was used to flag issues in some
-changes; its suggestions were evaluated and applied by the authors.
+*Software.* The tutorial examples in their original form, the first Python implementations
+and the re-usable tether component were written by the authors without AI assistance. The
+quasi-steady model was first ported from MATLAB to Julia by hand. Claude Code (Anthropic)
+was subsequently used as a coding assistant for four pieces of work: refactoring the
+quasi-steady port to the exported `init!`/`step!` API and the performance work on its
+nonlinear solve; giving the Julia examples an analytic sparse Jacobian and measuring what
+that is worth; rewriting the Python examples around CasADi, which replaced the Jacobians
+that had previously been derived by hand; and the benchmarks behind the comparison in the
+section above. Every AI-assisted change was reviewed by the authors. The results were
+verified by the test suite, which compares every Python example against its Julia
+counterpart and the quasi-steady model against the analytic catenary and the MATLAB
+reference results. GitHub Copilot's automated pull-request review was used to flag issues
+in some changes; its suggestions were evaluated and applied by the authors.
 
-*Documentation.* Parts of the documentation of the quasi-steady model were drafted with
-Claude Code and edited by the authors. The tutorial text and the derivation of the model
-were written by the authors.
+*Documentation.* Parts of the documentation of the quasi-steady model, and the comparison
+of the two ecosystems in `docs/julia_vs_python.md`, were drafted with Claude Code and
+edited by the authors. The tutorial text and the derivation of the model were written by
+the authors.
 
 *Paper.* The authors wrote this paper. Claude Code was used to update the summary and
-functionality sections after the quasi-steady model was added, to check citation metadata
-for consistency, and to draft this disclosure. All text was reviewed and edited by the
-authors, who take full responsibility for its content.
+functionality sections after the quasi-steady model was added, to rewrite the comparison
+section once both implementations used an analytic sparse Jacobian, to check citation
+metadata for consistency, and to draft this disclosure. All text was reviewed and edited by
+the authors, who take full responsibility for its content.
 
 # Acknowledgements
 

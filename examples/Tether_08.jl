@@ -4,7 +4,7 @@
 # given pair of endpoints, which is then used as the initial condition for the simulation.
 using ModelingToolkit, OrdinaryDiffEqCore, OrdinaryDiffEqBDF, SteadyStateDiffEq, LinearAlgebra, Timers, Parameters, MakieControlPlots
 using ModelingToolkit: t_nounits as t, D_nounits as D
-using ADTypes: AutoFiniteDiff, AutoForwardDiff
+using ADTypes: AutoFiniteDiff
 using Tethers: display_if_interactive
 
 """
@@ -257,9 +257,9 @@ function simulate(se, simple_sys)
     tol = 1e-6
     tspan = (0.0, se.duration)
     ts    = 0:dt:se.duration
-    prob = ODEProblem(simple_sys, nothing, tspan)
-    elapsed_time = @elapsed sol = solve(prob, FBDF(autodiff=AutoForwardDiff()); dt, abstol=tol, reltol=tol, saveat=ts)
-    elapsed_time = @elapsed sol = solve(prob, FBDF(autodiff=AutoForwardDiff()); dt, abstol=tol, reltol=tol, saveat=ts)
+    prob = ODEProblem(simple_sys, nothing, tspan; jac=true, sparse=true)
+    elapsed_time = @elapsed sol = solve(prob, FBDF(); dt, abstol=tol, reltol=tol, saveat=ts)
+    elapsed_time = @elapsed sol = solve(prob, FBDF(); dt, abstol=tol, reltol=tol, saveat=ts)
     sol, elapsed_time
 end
 

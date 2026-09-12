@@ -98,7 +98,7 @@ function simulate(se, simple_sys)
     tol = 1e-6
     tspan = (0.0, se.duration)
     ts    = 0:dt:se.duration
-    prob = ODEProblem(simple_sys, nothing, tspan)
+    prob = ODEProblem(simple_sys, nothing, tspan; jac=true, sparse=true)
     elapsed_time = @elapsed sol = solve(prob, FBDF(), dt=dt, abstol=tol, reltol=tol, saveat=ts)
     sol, elapsed_time
 end

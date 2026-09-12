@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 """
 Tutorial example simulating a falling mass, attached to a linear spring.
+
+The model is written as a CasADi expression graph and integrated with SUNDIALS' CVODES,
+which CasADi supplies with the exact Jacobian of the model.
 """
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-
-from assimulo.problem import Implicit_Problem # Imports the problem formulation from Assimulo
-from assimulo.solvers.sundials import IDA # Imports the solver IDA from Assimulo
+import casadi as ca
 
 G_EARTH  = np.array([0.0, 0.0, -9.81]) # gravitational acceleration
 C_SPRING =  50.0                       # spring constant [N/m]
@@ -15,46 +16,29 @@ DAMPING  =  0.5                        # damping [Ns/m]
 MASS     = 1.0                         # mass of the point-mass [kg]
 L_0      = 10.0                        # initial spring length [m]
 
-# Extend Assimulos problem definition
-class ExtendedProblem(Implicit_Problem):
-    # Set the initial conditions
-    t0  = 0.0                        # Initial time
-    pos_0 = np.array([0.0, 0.0, -L_0]) # Initial position of the mass
-    vel_0 = np.array([0.0, 0.0,  0.0]) # Initial velocity of the mass
-    acc_0 = np.array([0.0, 0.0, -9.81]) # Initial acceleration of the mass
-    y0  = np.append(pos_0, vel_0)    # Initial state vector
-    yd0 = np.append(vel_0, acc_0)    # Initial state vector derivative
-
-    # Falling mass, attached to a linear spring anchored at the origin
-    # State vector y   = mass.pos, mass.vel
-    # Derivative   yd  = mass.vel, mass.acc
-    # Residual     res = (y.vel - yd.pos), (yd.vel - acc)
-    def res(self, t, y, yd):
-        res_0 = y[3:6] - yd[0:3]   # the derivative of the position must be equal to the velocity
-        pos = y[0:3]
-        vel = y[3:6]
-        norm1 = np.linalg.norm(pos)
-        unit_vector = -pos / norm1                     # direction from point mass to origin
-        spring_vel = -np.dot(unit_vector, vel)
-        spring_force = (C_SPRING * (norm1 - abs(L_0)) + DAMPING * spring_vel) * unit_vector
-        acc = G_EARTH + spring_force / MASS
-        res_1 = yd[3:6] - acc      # the derivative of the velocity must be equal to the total acceleration
-        return np.append(res_0, res_1)
+# Falling mass, attached to a linear spring anchored at the origin
+# State vector y = mass.pos, mass.vel
+def build_model():
+    """ The mass and its spring as one CasADi expression graph. Returns the state vector
+        `y`, its derivative `ydot` and the initial state `y0`. """
+    y = ca.SX.sym('y', 6)
+    pos, vel = y[0:3], y[3:6]
+    norm1 = ca.norm_2(pos)
+    unit_vector = -pos / norm1                     # direction from point mass to origin
+    spring_vel = -ca.dot(unit_vector, vel)
+    spring_force = (C_SPRING * (norm1 - abs(L_0)) + DAMPING * spring_vel) * unit_vector
+    acc = G_EARTH + spring_force / MASS
+    y0 = np.array([0.0, 0.0, -L_0, 0.0, 0.0, 0.0])   # pos, vel
+    return y, ca.vertcat(vel, acc), y0
 
 def run_example():
-    # Create an instance of the problem
-    model = ExtendedProblem()   # Create the problem
-    model.name = 'Falling mass, linear spring' # Specifies the name of problem (optional)
-    sim = IDA(model)            # Create the solver
-    sim.verbosity = 30
-    # let the solver pick its own steps, then resample onto the same time grid
-    # as the Julia implementation (0:0.02:10) -- requesting communication points
-    # directly can make Assimulo silently drop a point close to t_final
-    raw_time, raw_y, raw_yd = sim.simulate(10.0)
-
+    y, ydot, y0 = build_model()
     time = np.linspace(0.0, 10.0, 501)
-    pos_z = np.interp(time, raw_time, raw_y[:,2])
-    vel_z = np.interp(time, raw_time, raw_y[:,5])
+    sim = ca.integrator('sim', 'cvodes', {'x': y, 'ode': ydot}, 0.0, time[1:],
+                        {'abstol': 1.0e-6, 'reltol': 1.0e-6})
+    y_sol = np.column_stack([y0, np.array(sim(x0=y0)['xf'])]).T
+    pos_z = y_sol[:, 2]
+    vel_z = y_sol[:, 5]
 
     # saving the result for comparison with the Julia implementation
     os.makedirs("output", exist_ok=True)

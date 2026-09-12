@@ -1,17 +1,21 @@
 # -*- coding: utf-8 -*-
 """
-Tutorial example simulating a 3D mass-spring system with a nonlinear spring (no spring forces
-for l < l_0). It uses five tether segments. The force coupling is now implemented
-correctly.
+Tutorial example simulating a 3D mass-spring system with a nonlinear spring (no spring
+force while a segment is loose) and five tether segments.
+
+The model is written as a CasADi expression graph and integrated with SUNDIALS' CVODES,
+which CasADi supplies with the exact Jacobian of the model.
+
+State vector y = pos0, pos1, vel1, ..., posN, velN (each a 3D vector). pos0 is the fixed
+attachment point, so its derivative is zero and it stays where it starts.
 """
-import numpy as np
-import matplotlib.pyplot as plt
 import math
 import os
 import time
 
-from assimulo.solvers.sundials import IDA     # Imports the solver IDA from Assimulo
-from assimulo.problem import Implicit_Problem # Imports the problem formulation from Assimulo
+import numpy as np
+import matplotlib.pyplot as plt
+import casadi as ca
 
 G_EARTH  = np.array([0.0, 0.0, -9.81]) # gravitational acceleration
 C_SPRING = 50.0                        # spring constant
@@ -20,18 +24,18 @@ L0      =  5.0                         # initial segment length     [m]
 V0       =  2.0                        # initial velocity of the lowest mass [m/s]
 ALPHA0   = math.pi/10                  # initial tether angle     [rad]
 SEGMENTS = 5
-MASS     = 0.5                         # mass per tether particle  [kg]   
+MASS     = 0.5                         # mass per tether particle  [kg]
 DURATION = 10                          # duration of the simulation [s]
-ZEROS  = np.array([0.0, 0.0, 0.0])
-RESULT = np.zeros(SEGMENTS * 6 + 3).reshape((-1, 3))
 NONLINEAR = True                       # if True, a loose segment exerts no spring force
+
 
 def calc_spring_constant(norm):
     """ Spring constant of one segment. A loose segment (norm <= L0) cannot push,
         therefore its spring constant is zero if NONLINEAR is True. """
-    if NONLINEAR and norm <= L0:
-        return 0.0
-    return C_SPRING
+    if not NONLINEAR:
+        return C_SPRING
+    return ca.if_else(norm > L0, C_SPRING, 0.0)
+
 
 def calc_spring_force(pos1, pos2, vel1, vel2):
     """ Spring and damping force of the segment between the masses at pos1 and pos2.
@@ -39,10 +43,11 @@ def calc_spring_force(pos1, pos2, vel1, vel2):
         along the segment, therefore the damping force uses the component of the
         relative velocity along the segment and not the full 3D vector. """
     segment     = pos2 - pos1
-    norm        = np.linalg.norm(segment)
+    norm        = ca.norm_2(segment)
     unit_vector = segment / norm
-    spring_vel  = np.dot(vel2 - vel1, unit_vector) # rate of change of the segment length
+    spring_vel  = ca.dot(vel2 - vel1, unit_vector) # rate of change of the segment length
     return (calc_spring_constant(norm) * (norm - L0) + DAMPING * spring_vel) * unit_vector
+
 
 def calc_particle_mass(i):
     """ Mass of particle i. The last particle is attached to one segment only and
@@ -51,74 +56,43 @@ def calc_particle_mass(i):
         return 0.5 * MASS
     return MASS
 
-def calc_acc(pos, vel):
-    """ Acceleration of each particle for the given state. Particle zero is fixed.
-        Used to calculate initial conditions that are physically consistent. """
-    force = [calc_spring_force(pos[i], pos[i+1], vel[i], vel[i+1]) for i in range(SEGMENTS)]
-    acc = [ZEROS]
-    for i in range(1, SEGMENTS + 1):
-        force_below = force[i] if i < SEGMENTS else ZEROS # no segment below the last particle
-        acc.append(G_EARTH + (force_below - force[i-1]) / calc_particle_mass(i))
-    return acc
 
-# State vector y   = mass0.pos, mass1.pos, mass1.vel
-# Derivative   yd  = mass0.vel, mass1.vel, mass1.acc
-# Residual     res = (yd.mass0.vel), (y.mass1.vel - yd.mass1.vel), (yd.mass1.acc - G_EARTH)     
+def pos_block(k):
+    """ Index, in 3-vector blocks of the state vector, of the position of mass k. """
+    return 0 if k == 0 else 2*k - 1
 
-# Extend Assimulos problem definition
-class ExtendedProblem(Implicit_Problem):
-    # Set the initial conditions
-    t0  = 0.0                   # Initial time
-    pos, vel = [], []
-    for i in range (SEGMENTS + 1):
-        l0 = -i*L0
-        v0 =  i*V0/SEGMENTS
-        pos.append(np.array([math.sin(ALPHA0) * l0, 0.0, math.cos(ALPHA0) * l0]))            
-        vel.append(np.array([math.sin(ALPHA0) * v0, 0.0, math.cos(ALPHA0) * v0]))
-    acc = calc_acc(pos, vel) # consistent initial accelerations for the given pos and vel
-    y0, yd0 = pos[0], vel[0]
-    for i in range (SEGMENTS):    
-        y0  = np.append(y0,  np.append(pos[i+1], vel[i+1])) # Initial state vector
-        yd0 = np.append(yd0, np.append(vel[i+1], acc[i+1])) # Initial state vector derivative          
-    print(y0)
-    print(yd0)
 
-    def res(self, t, y, yd):  
-        y1  = y.reshape((-1, 3)) # reshape the state vector such that we can access it per 3D-vector
-        yd1 = yd.reshape((-1, 3))
-        # mass0 is fixed: constrain its position. Its derivative yd1[0] is not
-        # determined by any residual and stays at the initial guess of zero.
-        RESULT[0] = y1[0]
-        last_force = ZEROS # later this shall be the kite force
-        
-        for i in range(SEGMENTS-2, -1, -1):    # count down from segments-2 to zero
-            # 1. calculate the force of the lowest spring (the spring next to the kite)   
-            res_3   =  y1[2*i+4] - yd1[2*i+3]  # the derivative of the position of mass1 must be equal to its velocity
-            # the force of the segment between the masses i+1 and i+2
-            force = calc_spring_force(y1[2*i+1], y1[2*i+3], yd1[2*i+1], yd1[2*i+3])
-            # 2. apply it to the lowest mass (the mass next to the kite)   
-            spring_forces = force - last_force    
-            last_force = force       
-            mass = calc_particle_mass(i+2)
-            acc1 = spring_forces / mass  # create the vector of the spring acceleration    
-            res_4 = yd1[2*i+4] - (G_EARTH - acc1) # the derivative of the velocity must be equal to the total acceleration  
-            RESULT[2*i+3] = res_3 
-            RESULT[2*i+4] = res_4                       
-    
-        # 3. calculate the force of the spring above    
-        res_1   = y1[2]  - yd1[1] # the derivative of the position of mass1 must be equal to its velocity
-        force = calc_spring_force(y1[0], y1[1], yd1[0], yd1[1])
-    
-        # 2. apply it to the next mass nearer to the winch
-        spring_forces = force - last_force    
-        mass = calc_particle_mass(1)
-        acc = spring_forces / mass  # create the vector of the spring acceleration
-        res_2 = yd1[2] - (G_EARTH - acc) # the derivative of the velocity must be equal to the total acceleration
-        
-        RESULT[1] = res_1 
-        RESULT[2] = res_2 
-        return RESULT.flatten()
-    
+def vel_block(k):
+    """ Index, in 3-vector blocks of the state vector, of the velocity of mass k (k >= 1). """
+    return 2*k
+
+
+def build_model():
+    """ The tether as one CasADi expression graph. Returns the state vector `y`, its
+        derivative `ydot` and the initial state `y0`. """
+    n = SEGMENTS
+    y = ca.SX.sym('y', 3 * (2*n + 1))
+    blocks = [y[3*i:3*i + 3] for i in range(2*n + 1)]
+    pos = [blocks[pos_block(k)] for k in range(n + 1)]
+    vel = [ca.SX.zeros(3)] + [blocks[vel_block(k)] for k in range(1, n + 1)]
+
+    force = [calc_spring_force(pos[k], pos[k+1], vel[k], vel[k+1]) for k in range(n)]
+    ydot = [ca.SX.zeros(3)] * (2*n + 1)
+    for k in range(1, n + 1):
+        # no segment below the last particle
+        below = force[k] if k < n else ca.SX.zeros(3)
+        ydot[pos_block(k)] = vel[k]
+        ydot[vel_block(k)] = G_EARTH + (below - force[k-1]) / calc_particle_mass(k)
+
+    y0 = np.zeros(3 * (2*n + 1))
+    for k in range(n + 1):
+        l, v = -k * L0, k * V0 / n
+        y0[3*pos_block(k):3*pos_block(k) + 3] = [math.sin(ALPHA0) * l, 0.0, math.cos(ALPHA0) * l]
+        if k > 0:
+            y0[3*vel_block(k):3*vel_block(k) + 3] = [math.sin(ALPHA0) * v, 0.0, math.cos(ALPHA0) * v]
+    return y, ca.vertcat(*ydot), y0
+
+
 def plot2d(fig, t_sol, y, reltime, segments, line, sc, txt):
     index = min(np.searchsorted(t_sol, reltime), len(t_sol) - 1)
     x, z = np.zeros(segments+1), np.zeros(segments+1)
@@ -162,22 +136,17 @@ def play(duration, t_sol, y):
         plt.show()
 
 def run_example():
-    # Create an instance of the problem
-    model = ExtendedProblem()  # Create the problem
-    model.name = 'Mass-Spring' # Specifies the name of problem (optional)
-
-    sim = IDA(model) # Create the solver
-    sim.verbosity = 30
-    sim.atol = 1.0e-6
-    sim.rtol = 1.0e-6
-
-    t_sol, y, yd = sim.simulate(DURATION, round(DURATION*50)) # 50 communication points per second
+    y, ydot, y0 = build_model()
+    t_sol = np.linspace(0.0, DURATION, round(DURATION*50) + 1)   # 50 points per second
+    sim = ca.integrator('sim', 'cvodes', {'x': y, 'ode': ydot}, 0.0, t_sol[1:],
+                        {'abstol': 1.0e-6, 'reltol': 1.0e-6})
+    y_sol = np.column_stack([y0, np.array(sim(x0=y0)['xf'])]).T
 
     # extract the z position and velocity of the lowest mass (mass SEGMENTS)
     pos_z_ix = 5 + (SEGMENTS - 1) * 6
     vel_z_ix = pos_z_ix + 3
-    pos_z = y[:, pos_z_ix]
-    vel_z = y[:, vel_z_ix]
+    pos_z = y_sol[:, pos_z_ix]
+    vel_z = y_sol[:, vel_z_ix]
 
     # saving the result for comparison with the Julia implementation
     os.makedirs("output", exist_ok=True)
@@ -186,7 +155,8 @@ def run_example():
         for t_i, pz_i, vz_i in zip(t_sol, pos_z, vel_z):
             f.write(f"{t_i},{pz_i},{vz_i}\n")
 
-    play(DURATION, t_sol, y)
-    
+    play(DURATION, t_sol, y_sol)
+
+
 if __name__ == '__main__':
     run_example()

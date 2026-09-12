@@ -126,7 +126,7 @@ From the Julia prompt execute:
 run_python("Tether_01")
 ```
 
-This will install Python, Matplotlib and Assimulo and execute the script `Tether_01.py`.
+This will install Python, Matplotlib, NumPy, SciPy and CasADi and execute the script `Tether_01.py`.
 
 **Python code:** [Tether_01.py](https://github.com/ufechner7/Tethers.jl/blob/main/examples/python/Tether_01.py)
 
@@ -142,35 +142,42 @@ at the Julia prompt.
 If you compare the Python and the Julia scripts you can see that:
 
 - the Julia script is shorter and easier to read
-- Julia is about 16 times faster when running the simulation  
+- both reach the same speed, but only once each is given an analytic, sparse Jacobian
 
-For a stiff, segmented tether (example 6 and 7) the Julia solvers are 13 to 30 times faster than Python.
+For a stiff, segmented tether the two are within about 20% of each other; see
+[docs/julia_vs_python.md](https://github.com/ufechner7/Tethers.jl/blob/main/docs/julia_vs_python.md)
+for the measurements and for what each ecosystem needs to get there.
 
 Have a look at the [Examples](https://ufechner7.github.io/Tethers.jl/dev/examples/) that teach you how to construct a full tether model step by step.
 
 ## Overall comparison
 
-Execution time for a simulation of 10s duration with logging the state every 20ms.
-Relative and absolute tolerance: $1.0^{-6}$. CPU: Ryzen 9 7950X.
-LOC counts exclude blank lines and comment lines.
+Lines of code, excluding blank lines and comment lines. Execution times, which depend on
+the Jacobian each side is given, are measured in
+[docs/julia_vs_python.md](https://github.com/ufechner7/Tethers.jl/blob/main/docs/julia_vs_python.md)
+rather than duplicated here.
 
-| Test-case                   | Lines of code (LOC) Julia | LOC Python | Time Julia [ms] | Time Python [ms] |
-|:----------------------------------|:-------------------:|:----------:|:---------------:|:---:|
-|Falling mass (1)                   |     36              | 49         | 0.17            | 2.6 |
-|Non-linear Spring damper (3)       |     45              | 80         | 0.64            | 20  |
-|ditto with callbacks (3b, 3c)      |     53              | 97         | 1.0             | 25  |
-|swinging tether, 5 segments (5)    |    103              | 153        | 2.7             | 47  |
-|Dyneema tether, reeling out (6)    |    115              | 240        | 2.4             | 37   |
-|ditto with callbacks       (6c)    |    201              | 271        | 4.2             | 56   |
-|Dyneema, reeling out with drag (7) |    169              | 282        | 2.4             | 70   |  
+| Test-case                          | LOC Julia | LOC Python |
+|:-----------------------------------|:---------:|:----------:|
+|Falling mass (1)                    |     36    |     48     |
+|Non-linear Spring damper (3)        |     45    |     68     |
+|ditto with callbacks (3b)           |     53    |    108     |
+|swinging tether, 5 segments (5)     |    102    |    130     |
+|Dyneema tether, reeling out (6)     |    115    |    154     |
+|ditto with callbacks       (6c)     |    201    |    180     |
+|Dyneema, reeling out with drag (7)  |    168    |    173     |
 
 **Tradeoff Julia vs Python:** In Julia, the code is compiled before it is executed, which can cause about 5 to 30 seconds delay when running a simulation the first time, but speeds up the execution a lot afterward. In addition,
 the Julia code is much more compact and better readable due to the use of symbolic differential equations.
 
-In Python, the IDA solver needs an analytic Jacobian to handle a simulation with the very
-stiff Dyneema tether at all, which increases code size and complexity. Even then, the Julia solvers achieve 13 to 30 times the performance. On the other hand, installing the required packages in Python takes less
-than a minute, while installing and compiling the Julia software might take half an hour. The reason is,
-that currently Julia packages are only distributed as source code and have to be compiled locally.
+Both sides need an exact, sparse Jacobian to handle the very stiff Dyneema tether at all.
+Julia gets one from ModelingToolkit with `jac=true, sparse=true`; Python gets one from CasADi,
+which differentiates the model expression and finds its sparsity by itself. With both compiled
+and sparse the two land within about 20% of each other - see
+[docs/julia_vs_python.md](https://github.com/ufechner7/Tethers.jl/blob/main/docs/julia_vs_python.md).
+The remaining trade-off is setup: installing the required packages in Python takes less than a
+minute, while installing and compiling the Julia software might take half an hour, because Julia
+packages are distributed as source code and have to be compiled locally.
 
 See also: [Why Julia?](https://ufechner7.github.io/2022/08/13/why-julia.html) and read the [documentation](https://ufechner7.github.io/Tethers.jl/dev/) or go straight to the [examples](https://ufechner7.github.io/Tethers.jl/dev/examples/).
 

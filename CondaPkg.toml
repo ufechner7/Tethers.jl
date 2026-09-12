@@ -1,5 +1,6 @@
 [deps]
 ipython = ""
-assimulo = "==3.4.3"
+casadi = ""
 matplotlib = "==3.8.2"
 numpy = ""
+scipy = ""

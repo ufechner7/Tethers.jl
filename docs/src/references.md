@@ -1,8 +1,10 @@
 # References
 
 ## Python
-[Assimulo](https://jmodelica.org/assimulo/) offers 14 solvers
-with good documentation for explicit and implicit problems.
+[CasADi](https://web.casadi.org/) is a symbolic framework for algorithmic differentiation and
+numeric optimization. The Python examples use it to write each model once, derive its exact
+Jacobian and sparsity pattern automatically, and integrate it with the bundled
+[SUNDIALS](https://computing.llnl.gov/projects/sundials) solvers CVODES and IDAS.
 
 ## Julia
 - [DifferentialEquations.jl](https://docs.sciml.ai/DiffEqDocs/stable/) offers a unified interface to about 300 different solvers from about a dozen different categories for a large range of problems. It wraps many existing open-source and commercial solvers, that have been implemented in C++ or Fortran and adds a growing number of native Julia solvers, many of them state-of-the-art.

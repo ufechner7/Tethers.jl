@@ -1,3 +1,81 @@
+### Tethers v2.1.0 (unreleased)
+
+#### Added
+
+- `examples/python/bench_casadi.py`, deriving the Jacobian of the `Tether_08`
+  model with `ca.jacobian` instead of by hand, checking it against the
+  hand-derived `calc_acc_jac` of `Tether_08.py`, and timing the SUNDIALS
+  integrators CasADi ships; needs `pip install casadi` and is not part of the
+  tutorial
+- `examples/quasisteady/benchmark_scaling.jl` and
+  `docs/images/qsm_vs_dynamic.png`, comparing the cost of the quasi-steady model
+  against the dynamic one over 4 to 32 tether segments, both per simulated
+  second; the quasi-steady solve is 5.6x cheaper at four segments and 49x at
+  thirty-two
+- `.github/workflows/draft-paper.yml`, building the JOSS paper with the
+  journal's own `openjournals/inara` image on every push that touches `paper/`
+  and uploading it as the `paper` artifact, so no local Docker or LaTeX
+  toolchain is needed
+- Bart van de Lint as a third author of the JOSS paper, and Andrea Bertozzi to
+  `.zenodo.json`, which listed only one creator
+
+#### Changed
+
+- every example's time simulation now builds its `ODEProblem` with
+  `jac=true, sparse=true`, so ModelingToolkit generates and compiles the
+  analytic, sparse Jacobian ahead of time instead of the solver rebuilding a
+  dense one by automatic differentiation at every step; the `autodiff=` keyword
+  these solves passed to `FBDF` is now redundant and was dropped, and with it
+  the `ADTypes` import where nothing else used it
+- `examples/Tether_11.jl` keeps its finite-difference Jacobian: with a forward-mode or an analytic one, `FBDF` drives dt below eps at t = 0 and returns `Unstable`. This predates the change - plain `FBDF()` with no Jacobian at all already fails there - so the example is left as it was
+- the steady-state solves are unchanged; only the time simulations were touched
+- the Python examples no longer use Assimulo. Each model is now written once as
+  a CasADi expression graph, CasADi derives its exact Jacobian and sparsity, and
+  SUNDIALS' CVODES integrates it with a sparse Newton solve - the same
+  fixed-leading-coefficient BDF family as the Julia examples' `FBDF`. The
+  hand-written Jacobians of `Tether_06.py`, `Tether_06c.py`, `Tether_07.py` and
+  `Tether_08.py`, 86 to 150 lines of calculus each, are gone; the ten examples
+  lost about 700 lines between them. All ten still reproduce the Julia
+  trajectories within the tolerances `test/test_tether_*.jl` apply
+- `CondaPkg.toml` swaps `assimulo` for `casadi` and adds `scipy`, which
+  `Tether_08.py`'s steady-state solve uses
+- `examples/python/bench_casadi.py` now imports the model from `Tether_08.py`
+  instead of defining its own copy
+- `Tether_03b.py` locates the taut/slack crossings itself, by bisection between
+  output points: CasADi's event detection (a `zero` entry in the DAE dictionary)
+  is experimental and aborts on this model with "tout too far back in direction
+  of integration". `Tether_06c.py`, whose events fire once per segment, uses it
+  successfully
+- `paper/paper.md` describes what the package now does: the Python examples use
+  CasADi and SUNDIALS rather than Assimulo's IDA, both implementations use an
+  analytic sparse Jacobian, and the performance comparison reports them within
+  about 20% of each other instead of the earlier 13-30x, with an explanation of
+  where that number came from. The AI usage disclosure covers the Jacobian and
+  CasADi work
+- `paper/paper.bib` cites CasADi [Andersson2019] instead of Assimulo, which the
+  examples no longer use
+- `paper/build` no longer needs a container. It used the third-party
+  `openbases/openbases-pdf` image, which does not produce the journal's layout
+  anyway; it now builds a readable PDF with pandoc and a local LaTeX
+  installation in a couple of seconds, and points at the CI workflow for the
+  journal's own layout
+- `docs/julia_vs_python.md` and `paper/paper.md` record what CasADi's `jit=True`
+  is worth: it compiles the expression tape to machine code instead of walking
+  it inside `libcasadi`, gains a further 1.7-1.9x with bit-identical
+  trajectories, and costs 0.6 to 7.3 s of compilation. The examples leave it
+  off, since a tutorial example is run once
+- `README.md` and `docs/src/index.md` claimed Julia was "about 16 times faster"
+  and "13 to 30 times faster" than Python, and carried a comparison table whose
+  Python timings predate the CasADi rewrite. The claims are corrected and the
+  table now gives lines of code only, with the timings measured in one place
+  instead of duplicated
+- the benchmarks in `docs/` were labelled as run on a Ryzen 9 7950X, which is
+  the machine the older numbers in `README.md` came from; the ones added here
+  were run on an Intel Core i7-11850H
+- `docs/julia_vs_python.md` now compares like with like: both sides get an
+  analytic sparse Jacobian and a BDF integrator, which closes most of the gap it
+  used to report
+
 ### Tethers v2.0.0 2026-09-11
 #### Added
 - `examples/Project.toml` and `test/Project.toml`, joined to the root package as workspace members on Julia 1.12, so the example and test dependencies no longer bloat the main `Project.toml`

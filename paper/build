@@ -1,6 +1,21 @@
 #!/usr/bin/env bash
-# Build paper.pdf from paper.md using the openbases-pdf Docker image.
-# Run this script from within the paper/ directory.
+# Build paper.pdf locally with pandoc and the LaTeX installation you already have.
+# Takes a couple of seconds and needs no container.
+#
+# This is for proofreading - prose, maths, the figure and the citations. It does not
+# reproduce the journal's layout: .github/workflows/draft-paper.yml does that with the
+# journal's own image on every push that touches paper/, and uploads the result as the
+# "paper" artifact. Fetch it with:
+#
+#     gh run download -n paper
 set -euo pipefail
+cd "$(dirname "$0")"
 
-docker run --rm -v "$PWD":/data openbases/openbases-pdf paper.md
+pandoc paper.md \
+    --citeproc --bibliography=paper.bib \
+    --pdf-engine=xelatex \
+    --variable=geometry:margin=25mm \
+    --variable=linkcolor:blue \
+    --output=paper.pdf
+
+echo "wrote $PWD/paper.pdf"

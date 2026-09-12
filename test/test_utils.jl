@@ -13,8 +13,8 @@ end
 
 # linearly interpolate y(t_src) onto t_query; t_src must be sorted ascending.
 # Used to compare series that were saved on different time grids, e.g. because
-# an event-triggered solver (Python/Assimulo) inserts extra points that a
-# fixed-grid solver (Julia, saveat) does not.
+# an event-triggered solver inserts extra points that a fixed-grid solver
+# (Julia, saveat) does not.
 @isdefined(interp_at) || function interp_at(t_src, y_src, t_query)
     y = zeros(length(t_query))
     j = 1
