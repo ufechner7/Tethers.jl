@@ -5,8 +5,8 @@ generated, sparse Jacobian, and neither is fast without one. This page compares
 them on the `Tether_08` model (ten segments unless stated otherwise, tether
 drag, reel-out, one fixed and one free end point), over 10 s, sampled every 20
 ms, at a relative and absolute tolerance of $10^{-6}$, from a straight-line
-initial condition. CPU: Ryzen 9 7950X, Julia 1.13, ModelingToolkit 11, CasADi
-3.8.
+initial condition. CPU: Intel Core i7-11850H; Julia 1.13, ModelingToolkit 11,
+CasADi 3.8.
 
 |            | Julia                          | Python                                           |
 | ---------- | ------------------------------ | ------------------------------------------------ |
@@ -25,12 +25,25 @@ examples use CVODES.
 Solve time in ms, median and interquartile range over the samples
 `BenchmarkTools` fits into twelve seconds per configuration:
 
-| segments | states | Julia AD, dense |   Julia `jac` | Julia `jac+sparse` | CasADi CVODES sparse |
-| -------: | -----: | --------------: | ------------: | -----------------: | -------------------: |
-|        5 |     36 |       13.0 ±0.4 |     12.7 ±0.7 |           9.1 ±1.0 |            12.3 ±0.5 |
-|       10 |     66 |       31.9 ±1.1 |     27.9 ±0.2 |          17.1 ±1.9 |            20.7 ±0.2 |
-|       20 |    126 |      485.0 ±6.1 |    438.4 ±6.1 |        177.9 ±31.6 |           170.0 ±4.9 |
-|       40 |    246 |    4332.9 ±22.5 | 3765.9 ±154.5 |        603.1 ±10.5 |          617.1 ±13.8 |
+| segments | states |     Julia AD |   Julia `jac` | Julia `jac+sparse` | CasADi sparse | CasADi sparse + `jit` |
+| -------: | -----: | -----------: | ------------: | -----------------: | ------------: | --------------------: |
+|        5 |     36 |    13.0 ±0.4 |     12.7 ±0.7 |           9.1 ±1.0 |     12.4 ±1.2 |              7.2 ±0.5 |
+|       10 |     66 |    31.9 ±1.1 |     27.9 ±0.2 |          17.1 ±1.9 |     20.4 ±1.5 |             11.9 ±0.7 |
+|       20 |    126 |   485.0 ±6.1 |    438.4 ±6.1 |        177.9 ±31.6 |    164.8 ±1.6 |             90.6 ±2.0 |
+|       40 |    246 | 4332.9 ±22.5 | 3765.9 ±154.5 |        603.1 ±10.5 |    560.5 ±8.7 |            299.5 ±2.0 |
+
+`jit=True` makes CasADi emit C for its expression tape and compile it with gcc,
+instead of walking the tape inside `libcasadi`. It is worth a further 1.7-1.9x
+and the trajectories come out bit-identical, but it needs a C compiler at run
+time and costs 0.6 s of compilation at five segments and 7.3 s at forty, so the
+examples leave it off: they are run once, and the compilation costs more than
+the solve saves. Turn it on for a model that is solved repeatedly:
+
+```python
+sim = ca.integrator('sim', 'cvodes', dae, 0.0, grid, {
+    'jit': True, 'compiler': 'shell',
+    'jit_options': {'flags': ['-O3'], 'compiler': 'gcc'}, ...})
+```
 
 CasADi with a dense linear solver instead costs 13.9, 28.7, 1037.2 and 4551.8
 ms, so the sparse factorization is worth 7.4x at forty segments there. The Julia

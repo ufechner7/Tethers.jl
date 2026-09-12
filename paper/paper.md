@@ -106,26 +106,46 @@ model expression and finds its sparsity. That sparsity is what matters most: the
 is block-tridiagonal, 4% dense at forty segments, and exploiting it gains far more than the
 analytic derivative does on its own.
 
-| Segments | States | Julia, AD | Julia, analytic | Julia, analytic + sparse | Python, analytic + sparse |
-| -------: | -----: | --------: | --------------: | -----------------------: | ------------------------: |
-|        5 |     36 |      13.0 |            12.7 |                      9.1 |                      12.3 |
-|       10 |     66 |      31.9 |            27.9 |                     17.1 |                      20.7 |
-|       20 |    126 |       485 |             438 |                      178 |                       170 |
-|       40 |    246 |      4333 |            3766 |                      603 |                       617 |
+| Segments | States | Julia AD | Julia analytic | Julia sparse | Python sparse | Python sparse, JIT |
+| -------: | -----: | -------: | -------------: | -----------: | ------------: | -----------------: |
+|        5 |     36 |     13.0 |           12.7 |          9.1 |          12.4 |                7.2 |
+|       10 |     66 |     31.9 |           27.9 |         17.1 |          20.4 |               11.9 |
+|       20 |    126 |      485 |            438 |          178 |           165 |                 91 |
+|       40 |    246 |     4333 |           3766 |          603 |           561 |                300 |
 
 Table: Solve time in ms for a ten-second simulation of the tether with drag and reel-out,
-sampled every 20 ms at a relative and absolute tolerance of $10^{-6}$, on an AMD Ryzen 9
-7950X. \label{tab:speed}
+sampled every 20 ms at a relative and absolute tolerance of $10^{-6}$, on an Intel Core
+i7-11850H. \label{tab:speed}
 
 With an analytic sparse Jacobian on both sides the two implementations are within about 20%
-of each other, and the differences between the ecosystems lie elsewhere. The Julia examples
-are roughly half the length in lines of code and never write a Jacobian at all. Julia pays
-a one-time compilation cost of seconds to tens of seconds, part of it for the symbolic
-Jacobian, so a script that solves once pays more than it saves, and installing the Julia
-stack takes considerably longer than installing the Python one. Event handling favours
-Julia: a `ContinuousCallback` is four lines, while CasADi's event support is experimental
-and fails on one of the two examples that need it, which locates the taut/slack crossing by
-bisection instead. Presenting both sides lets readers make an informed choice instead of
+of each other. CasADi evaluates the model as a tape of elementary operations inside its own
+compiled library; asking it to compile that tape to machine code instead, with `jit=True`,
+takes a further factor of 1.8 and produces bit-identical trajectories, at the cost of a C
+compiler at run time and a compilation step of its own, 0.6 s at five segments and 7.3 s at
+forty. The examples leave it off, because a tutorial example is run once and the
+compilation costs more than the solve saves.
+
+Raw speed is not the whole comparison, and the rest of it runs the other way. A CasADi
+model is a closed expression graph: everything in it has to be a CasADi expression, so
+arbitrary host-language code cannot appear inside the model, and the graph is handed to one
+of the four integrators CasADi ships with. A ModelingToolkit model is a symbolic object
+that any of the solvers of DifferentialEquations.jl can consume, and it can be simplified
+before it is solved: the ten-segment model is written as 386 equations and `mtkcompile`
+reduces it to the 66 that are actually integrated, which in the CasADi version the author
+has to do by hand. It can also be composed, which is what the tether component of this
+package is for, and CasADi has no acausal equivalent. The trade-off is therefore a real
+one rather than a verdict: CasADi is the better tool when the model is fixed and the next
+step is optimal control or deployment as generated C, and ModelingToolkit is the better
+tool when the model itself is still being built.
+
+The differences that remain are practical ones. The Julia examples are roughly half the
+length in lines of code and never write a Jacobian at all. Julia pays a one-time
+compilation cost of seconds to tens of seconds, part of it for the symbolic Jacobian, so a
+script that solves once pays more than it saves, and installing the Julia stack takes
+considerably longer than installing the Python one. Event handling favours Julia: a
+`ContinuousCallback` is four lines, while CasADi's event support is experimental and fails
+on one of the two examples that need it, which locates the taut/slack crossing by bisection
+instead. Presenting both sides lets readers make an informed choice instead of
 taking the benchmark on faith.
 
 # Functionality

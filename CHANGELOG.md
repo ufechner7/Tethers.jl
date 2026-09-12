@@ -59,6 +59,19 @@
   anyway; it now builds a readable PDF with pandoc and a local LaTeX
   installation in a couple of seconds, and points at the CI workflow for the
   journal's own layout
+- `docs/julia_vs_python.md` and `paper/paper.md` record what CasADi's `jit=True`
+  is worth: it compiles the expression tape to machine code instead of walking
+  it inside `libcasadi`, gains a further 1.7-1.9x with bit-identical
+  trajectories, and costs 0.6 to 7.3 s of compilation. The examples leave it
+  off, since a tutorial example is run once
+- `README.md` and `docs/src/index.md` claimed Julia was "about 16 times faster"
+  and "13 to 30 times faster" than Python, and carried a comparison table whose
+  Python timings predate the CasADi rewrite. The claims are corrected and the
+  table now gives lines of code only, with the timings measured in one place
+  instead of duplicated
+- the benchmarks in `docs/` were labelled as run on a Ryzen 9 7950X, which is
+  the machine the older numbers in `README.md` came from; the ones added here
+  were run on an Intel Core i7-11850H
 - `docs/julia_vs_python.md` now compares like with like: both sides get an
   analytic sparse Jacobian and a BDF integrator, which closes most of the gap it
   used to report
