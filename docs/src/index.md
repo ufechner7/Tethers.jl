@@ -40,6 +40,7 @@ cd bin
 ./install
 ./create_sys_image
 ```
+This does NOT work using Julia 1.13 on Windows, so stick with Julia 1.12 if you are using Windows for now.
 
 ### Alternative: install as a package
 
@@ -58,7 +59,7 @@ using Pkg
 pkg"add Tethers"
 ```
 
-Copy the example scripts and the `bin` helper scripts to your project with:
+Copy the example scripts and the helper scripts from the `bin` folder to your project with:
 
 ```julia
 using Tethers
@@ -71,7 +72,7 @@ This also adds the extra packages needed by the example scripts. You can now run
 include("examples/menu.jl")
 ```
 
-For a faster start of the examples, build a system image (this takes a while and needs a lot of memory):
+For a faster start of the examples, build a system image (this takes a while and needs a lot of memory). This does NOT work using Julia 1.13 on Windows, so stick with Julia 1.12 if you are using Windows for now.
 
 ```bash
 cd bin
