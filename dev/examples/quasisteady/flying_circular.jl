@@ -61,9 +61,6 @@ function main()
     acc_z = 0.0.*gamma*gamma_dot^2 # + terms with gamma_ddot = 0
     acc   = [acc_x'; acc_y'; acc_z']
 
-
-
-
     rot_mat = [1 0 0; 0 cos(avg_el) -sin(avg_el); 0 sin(avg_el) cos(avg_el)] 
 
     for ii = 1:size(traj)[2]
@@ -128,7 +125,6 @@ function main()
     lz = GLMakie.lines!(ax, gamma, all_Ft_kite[3, :]./1000)
     GLMakie.Legend(fig2[1, 2], [lx, ly, lz], [L"F_x", L"F_y", L"F_z"])
     show_fig(fig2, "Tether force at the kite")
-    
 
     fig3 = GLMakie.Figure()
     ax = GLMakie.Axis3(fig3[1, 1]; title="3D view", xlabel="X [m]", ylabel="Y [m]", zlabel="Z [m]", aspect=:data)
