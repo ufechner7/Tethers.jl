@@ -118,7 +118,7 @@ function main()
     finally
         GC.enable(true)
     end
-    println("Elapsed time: $(elapsed_time) s, speed: $(round(duration/elapsed_time)) times real-time")
+    println("Elapsed time: $(elapsed_time) s, speed: $(round(duration/elapsed_time)) times real-time, simulations: $(length(gamma))")
 
     fig2 = GLMakie.Figure()
     ax = GLMakie.Axis(fig2[1, 1]; title="Tether force components at kite during a circular trajectory",
