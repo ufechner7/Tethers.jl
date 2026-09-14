@@ -2478,10 +2478,10 @@ version = "1.4.0"
 
 [[deps.PureKLU]]
 deps = ["LinearAlgebra", "PrecompileTools", "SparseArrays"]
-git-tree-sha1 = "b2b06e2fb7882a1f097f47fb6909c35c251102f5"
+git-tree-sha1 = "ef341b8e734ffa12c0464a58ca1c8a214d7a4235"
 registries = "General"
 uuid = "0c0d3e7f-3a8b-4f7e-b6f1-9a4d2e7c1f01"
-version = "1.4.2"
+version = "1.4.1"
 weakdeps = ["ForwardDiff"]
 
     [deps.PureKLU.extensions]
@@ -3224,7 +3224,7 @@ version = "1.11.0"
 deps = ["ADTypes", "CondaPkg", "LinearAlgebra", "MAT", "ModelingToolkit", "NonlinearSolve", "Parameters", "Pkg", "StaticArrays", "Symbolics"]
 path = "."
 uuid = "9fc261b7-0902-4839-ada8-9390617e313c"
-version = "1.2.3"
+version = "2.0.0"
 
 [[deps.ThreadingUtilities]]
 deps = ["ManualMemory"]
