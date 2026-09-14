@@ -61,9 +61,6 @@ function main()
     acc_z = 0.0.*gamma*gamma_dot^2 # + terms with gamma_ddot = 0
     acc   = [acc_x'; acc_y'; acc_z']
 
-
-
-
     rot_mat = [1 0 0; 0 cos(avg_el) -sin(avg_el); 0 sin(avg_el) cos(avg_el)] 
 
     for ii = 1:size(traj)[2]
