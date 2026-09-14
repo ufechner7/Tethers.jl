@@ -32,13 +32,13 @@ te.state_vec .= (1.1302856641844843, -0.7853981636973135, 1.60941384e5)
 
 step!(te, kite_pos, kite_vel; tether_length, prn=true)
 
-@benchmark step!(te, kite_pos, kite_vel; tether_length)
-
 # `step!` reuses te.tether_pos/te.wind_vel across calls, unlike `simulate_tether` called
 # directly, which allocates a fresh (3, segments) matrix every time - see how many bytes
 # remain once that allocation is out of the picture.
 step!(te, kite_pos, kite_vel; tether_length)   # warm up / compile
 println("Bytes allocated per step!: ", @allocated(step!(te, kite_pos, kite_vel; tether_length)))
+
+@benchmark step!(te, kite_pos, kite_vel; tether_length)
 
 #= On Ryzen 7950X, `simulate_tether` directly (before the `Tether`/`step!` port, so this
 still includes the one (3, segments) matrix allocation that `step!` now avoids by reusing
