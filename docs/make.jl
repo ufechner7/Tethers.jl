@@ -9,6 +9,8 @@ src="examples"
 dst="docs/src/examples"
 mkpath(dst)
 cp(src, dst; force=true)
+condapkg_dir = joinpath(dst, ".CondaPkg")
+isdir(condapkg_dir) && rm(condapkg_dir; force=true, recursive=true)
 src="docs/images"
 dst="docs/src/docs/images"
 mkpath(dst)
