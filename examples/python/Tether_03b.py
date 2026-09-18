@@ -1,14 +1,30 @@
 # -*- coding: utf-8 -*-
 """
-Tutorial example simulating a 3D mass-spring system with a nonlinear spring (no spring forces
-for l < l_0).
+Tutorial example simulating a falling mass, attached to a non-linear spring
+(no spring force while the segment is loose), with a state event at the transition.
+
+The model is written as a CasADi expression graph and integrated with SUNDIALS' CVODES,
+which CasADi supplies with the exact Jacobian of the model.
+
+The taut/slack crossings are located by hand, which is where Python is genuinely behind
+Julia here. CasADi does have event detection - a `zero` entry in the DAE dictionary - but
+it is experimental, and on this model it aborts part way through with "tout too far back
+in direction of integration": after restarting at an event it can no longer interpolate
+back to the requested output point. So `run_example` walks the output grid itself,
+watches the sign of the segment length minus its rest length, bisects for the crossing
+and restarts the integrator there. No state has to change at the crossing: the switch is
+recomputed from the current position on every call. Placing an exact step boundary there
+is the whole point, and it is what `Tether_03b.jl` gets from a `ContinuousCallback` and
+what Assimulo gets from `state_events`.
+
+To advance by an arbitrary amount without rebuilding the integrator, the time is scaled:
+the solver integrates `tau` from 0 to 1 over an ODE multiplied by the step length `h`,
+which is passed as a parameter.
 """
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-
-from assimulo.problem import Implicit_Problem # Imports the problem formulation from Assimulo
-from assimulo.solvers.sundials import IDA # Imports the solver IDA from Assimulo
+import casadi as ca
 
 G_EARTH  = np.array([0.0, 0.0, -9.81]) # gravitational acceleration
 C_SPRING =  50                         # spring constant [N/m]; Dynema, 4mm: 200e3
@@ -17,82 +33,80 @@ MASS     = 1.0                         # mass per point-mass [kg]
 L_0      = 10.0                        # initial segment length [m]
 V0       = 4.0                         # initial velocity
 
-# Extend Assimulos problem definition
-class ExtendedProblem(Implicit_Problem):
-    # Set the initial conditions
-    t0  = 0.0                   # Initial time
-    pos_0 = np.array([0.0, 0.0, 0.0])     # Initial position of mass zero
-    vel_0 = np.array([0.0, 0.0, 0.0])     # Initial velocity of mass zero
-    pos_1 = np.array([0.0, 0.0,  -L_0])   # Initial position of mass one
-    vel_1 = np.array([0.0, 0.0,  V0])     # Initial velocity of mass one
-    acc_1 = np.array([0.0, 0.0, -9.81])   # Initial acceleration mass one
-    y0  = np.append(pos_0, np.append(pos_1, vel_1)) # Initial state vector
-    yd0 = np.append(vel_0, np.append(vel_1, acc_1)) # Initial state vector derivative
-    sw0 = [vel_1[2] > 0] # array of booleans; true means the tether segment is loose (l < l_0)
+# Falling mass, attached to a spring anchored at the origin
+# State vector y = mass0.pos, mass1.pos, mass1.vel
+def build_model():
+    """ The two masses and their spring as one CasADi expression graph. Mass 0 is fixed,
+        so its derivative is zero and it stays at the origin. Returns the state vector
+        `y`, its derivative `ydot`, the event indicator and the initial state `y0`. """
+    y = ca.SX.sym('y', 9)
+    segment = y[3:6] - y[0:3]       # the vector from mass0 to mass1
+    norm = ca.norm_2(segment)
+    unit_vector = segment / norm
+    rel_vel = y[6:9]                # mass0 is fixed, so this is mass1's velocity
+    # if the segment is loose (norm <= L_0) there is no spring force at all
+    c_spring = ca.if_else(norm > L_0, C_SPRING, 0.0)
+    # spring and damper act in parallel along the segment, therefore the damping
+    # force uses the component of the relative velocity along the segment
+    spring_vel = ca.dot(rel_vel, unit_vector)
+    force = (c_spring * (norm - L_0) + DAMPING * spring_vel) * unit_vector
+    acc = force / MASS
+    ydot = ca.vertcat(ca.SX.zeros(3), y[6:9], G_EARTH - acc)
+    y0 = np.array([0.0, 0.0, 0.0, 0.0, 0.0, -L_0, 0.0, 0.0, V0])
+    return y, ydot, norm - L_0, y0
 
-    # Falling mass, attached to a spring
-    # State vector y   = mass0.pos, mass1.pos, mass1.vel
-    # Derivative   yd  = mass0.vel, mass1.vel, mass1.acc
-    # Residual     res = (yd.mass0.vel), (y.mass1.vel - yd.mass1.vel), (yd.mass1.acc - G_EARTH)
-    def res(self, t, y, yd, sw):
-        res_0 = y[0:3]              # mass0 is fixed, its position must stay zero
-        res_1 = y[6:9]  - yd[3:6]   # the derivative of the position of mass1 must be equal to its velocity
-        rel_vel = yd[3:6] - yd[0:3] # calculate the relative velocity of mass1 with respect to mass 0
-        segment = y[3:6] - y[0:3]   # calculate the vector from mass0 to mass1
-        norm = np.linalg.norm(segment)
-        unit_vector = segment / norm
-        if norm > L_0:              # if the segment is not loose, calculate the spring force
-            c_spring = C_SPRING
-        else:
-            c_spring = 0.0
-        # spring and damper act in parallel along the segment, therefore the damping
-        # force uses the component of the relative velocity along the segment
-        spring_vel = np.dot(rel_vel, unit_vector)
-        force = (c_spring * (norm - L_0) + DAMPING * spring_vel) * unit_vector
-        acc = force / MASS                # create the vector of the spring acceleration
-        res_2 = yd[6:9] - (G_EARTH - acc) # the derivative of the velocity must be equal to the total acceleration
-        return np.append(res_0, np.append(res_1, res_2))
 
-    def state_events(self, t, y, yd, sw):
-        """
-        This is our function that keeps track of our events. When the sign
-        of any of the events has changed, we have an event.
-        """
-        # calculate the norm of the vector from mass1 to mass0 minus the initial segment length
-        event_0 = np.linalg.norm(y[3:6]) - L_0
-        return np.array([event_0])
-    
-    def handle_event(self, solver, event_info):
-        """
-        Event handling. This functions is called when Assimulo finds an event as
-        specified by the event functions.
-        """
-        state_info = event_info[0] # We are only interested in state events
-        if state_info[0] != 0:     # Check if the first event function has been triggered
-            if solver.sw[0]:      
-                print(solver.t)
+def c_spring_of(y_sol):
+    """ Spring constant at every sample, for the grey line in the plot. """
+    norm = np.linalg.norm(y_sol[:, 3:6] - y_sol[:, 0:3], axis=1)
+    return np.where(norm > L_0, C_SPRING, 0.0)
+
+
+def build_integrator():
+    """ An integrator that advances the state by an arbitrary step length `h`, and a
+        function evaluating the event indicator. Time is scaled so that the solver always
+        integrates tau from 0 to 1, with the step length as a parameter. """
+    y, ydot, event, y0 = build_model()
+    h = ca.SX.sym('h')
+    sim = ca.integrator('sim', 'cvodes', {'x': y, 'p': h, 'ode': h * ydot}, 0.0, 1.0,
+                        {'abstol': 1.0e-6, 'reltol': 1.0e-6})
+    return sim, ca.Function('indicator', [y], [event]), y0
+
 
 def run_example():
-    # Create an instance of the problem
-    model = ExtendedProblem()  # Create the problem
-    model.name = 'Mass-Spring' # Specifies the name of problem (optional)
-    sim = IDA(model)           # Create the solver
-    sim.verbosity = 30
-    time, y, yd = sim.simulate(10.0, 500) #Simulate 10 seconds with 500 communications points
-    print(len(time))
+    sim, indicator, y0 = build_integrator()
+
+    def step(state, dt):
+        return np.array(sim(x0=state, p=dt)['xf']).flatten()
+
+    time = np.linspace(0.0, 10.0, 501)
+    states, current, crossings = [y0], y0, 0
+    for k in range(len(time) - 1):
+        dt = time[k+1] - time[k]
+        before = float(indicator(current))
+        after = step(current, dt)
+        if before * float(indicator(after)) < 0.0:
+            # the segment changed between taut and slack inside this interval: bisect for
+            # the crossing and restart the integration exactly there
+            lo, hi = 0.0, dt
+            for _ in range(40):
+                mid = 0.5 * (lo + hi)
+                if before * float(indicator(step(current, mid))) < 0.0:
+                    hi = mid
+                else:
+                    lo = mid
+            current = step(step(current, hi), dt - hi)
+            crossings += 1
+        else:
+            current = after
+        states.append(current)
+    print("Number of state events:", crossings)
+    y_sol = np.array(states)
 
     # plot the result
-    pos_z = y[:,5]
-    vel_z = y[:,8]
-    C_SPRINGS = np.zeros(len(time))
-    for i in range(len(time)):
-        yi=y[i]
-        segment = yi[3:6] - yi[0:3]
-        if np.linalg.norm(segment) > L_0:               # if the segment is not loose, calculate spring and damping force
-            c_spring = C_SPRING
-        else:
-            c_spring = 0.0
-        C_SPRINGS[i] = c_spring
+    pos_z = y_sol[:, 5]
+    vel_z = y_sol[:, 8]
+    C_SPRINGS = c_spring_of(y_sol)
 
     # saving the result for comparison with the Julia implementation
     os.makedirs("output", exist_ok=True)
@@ -101,7 +115,7 @@ def run_example():
         for t_i, pz_i, vz_i in zip(time, pos_z, vel_z):
             f.write(f"{t_i},{pz_i},{vz_i}\n")
 
-    plt.gcf().canvas.manager.set_window_title("falling mass, non-linear spring, callback")
+    plt.gcf().canvas.manager.set_window_title("falling mass, non-linear spring")
     plt.ax1 = plt.subplot(111)
     plt.ax1.set_xlabel('time [s]')
     plt.plot(time, pos_z, color="green")
@@ -118,6 +132,7 @@ def run_example():
         plt.close('all')
     else:
         plt.show()
+
 
 if __name__ == '__main__':
     run_example()

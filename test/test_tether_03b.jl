@@ -24,7 +24,7 @@ include(joinpath(@__DIR__, "test_utils.jl"))
     t_jl, pos_z_jl, vel_z_jl = read_pos_vel_csv(joinpath(pkg_dir, "output", "Tether_03b_julia.csv"))
     t_py, pos_z_py, vel_z_py = read_pos_vel_csv(joinpath(pkg_dir, "output", "Tether_03b_python.csv"))
 
-    # Python/Assimulo inserts extra rows at each event crossing, so the two CSVs
+    # the Julia solver inserts extra rows at each event crossing, so the two CSVs
     # are not saved on the same time grid; interpolate the Python series onto
     # the Julia time grid before comparing.
     pos_z_py_interp = interp_at(t_py, pos_z_py, t_jl)

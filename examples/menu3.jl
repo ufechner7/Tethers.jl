@@ -9,7 +9,8 @@ quasisteady_examples = [("run_catenary",        "include(\"quasisteady/run_caten
                          ("run_catenary_matlab", "include(\"quasisteady/run_catenary_matlab.jl\")",      "Quasi-steady shape for the MATLAB reference case vs. analytic catenary"),
                          ("flying_circular",     "include(\"quasisteady/flying_circular.jl\"); main()",  "Tether shape and force while the kite flies a circular trajectory"),
                          ("force_plots",         "include(\"quasisteady/force_plots.jl\"); main()",      "Tether shape and force as a function of kite distance"),
-                         ("benchmark_qsm",       "include(\"quasisteady/benchmark_qsm.jl\")",            "Benchmark: quasi-steady model, elevation/azimuth angles")]
+                         ("benchmark_qsm",       "include(\"quasisteady/benchmark_qsm.jl\")",            "Benchmark: quasi-steady model, elevation/azimuth angles"),
+                         ("benchmark_scaling",   "include(\"quasisteady/benchmark_scaling.jl\")",        "Benchmark: quasi-steady vs. dynamic model against the segment count")]
 
 quasisteady_name_width = maximum(length(name) for (name, _, _) in quasisteady_examples)
 quasisteady_options = [rpad(name, quasisteady_name_width) * "  " * descr for (name, _, descr) in quasisteady_examples]

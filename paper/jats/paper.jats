@@ -1,0 +1,478 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE article PUBLIC "-//NLM//DTD JATS (Z39.96) Journal Publishing DTD v1.2 20190208//EN"
+                  "JATS-publishing1.dtd">
+<article xmlns:mml="http://www.w3.org/1998/Math/MathML" xmlns:xlink="http://www.w3.org/1999/xlink" dtd-version="1.2" article-type="other">
+<front>
+<journal-meta>
+<journal-id></journal-id>
+<journal-title-group>
+<journal-title>Journal of Open Source Software</journal-title>
+<abbrev-journal-title>JOSS</abbrev-journal-title>
+</journal-title-group>
+<issn publication-format="electronic">2475-9066</issn>
+<publisher>
+<publisher-name>Open Journals</publisher-name>
+</publisher>
+</journal-meta>
+<article-meta>
+<article-id pub-id-type="publisher-id">0</article-id>
+<article-id pub-id-type="doi">N/A</article-id>
+<title-group>
+<article-title>Tethers.jl: A tutorial and a re-usable component for the
+simulation of tethers and cables</article-title>
+</title-group>
+<contrib-group>
+<contrib contrib-type="author">
+<contrib-id contrib-id-type="orcid">https://orcid.org/0009-0008-2532-9458</contrib-id>
+<name>
+<surname>Fechner</surname>
+<given-names>Uwe</given-names>
+</name>
+<xref ref-type="aff" rid="aff-1"/>
+</contrib>
+<contrib contrib-type="author">
+<contrib-id contrib-id-type="orcid">https://orcid.org/0009-0005-1214-1737</contrib-id>
+<name>
+<surname>Bertozzi</surname>
+<given-names>Andrea</given-names>
+</name>
+<xref ref-type="aff" rid="aff-1"/>
+<xref ref-type="aff" rid="aff-2"/>
+</contrib>
+<contrib contrib-type="author">
+<name>
+<surname>van de Lint</surname>
+<given-names>Bart</given-names>
+</name>
+<xref ref-type="aff" rid="aff-3"/>
+</contrib>
+<aff id="aff-1">
+<institution-wrap>
+<institution>Delft University of Technology, The
+Netherlands</institution>
+</institution-wrap>
+</aff>
+<aff id="aff-2">
+<institution-wrap>
+<institution>Politecnico di Milano, Italy</institution>
+</institution-wrap>
+</aff>
+<aff id="aff-3">
+<institution-wrap>
+<institution>Open Source AWE</institution>
+</institution-wrap>
+</aff>
+</contrib-group>
+<pub-date date-type="pub" publication-format="electronic" iso-8601-date="2026-09-08">
+<day>8</day>
+<month>9</month>
+<year>2026</year>
+</pub-date>
+<volume>¿VOL?</volume>
+<issue>¿ISSUE?</issue>
+<fpage>¿PAGE?</fpage>
+<permissions>
+<copyright-statement>Authors of papers retain copyright and release the
+work under a Creative Commons Attribution 4.0 International License (CC
+BY 4.0)</copyright-statement>
+<copyright-year>1970</copyright-year>
+<copyright-holder>The article authors</copyright-holder>
+<license license-type="open-access" xlink:href="https://creativecommons.org/licenses/by/4.0/">
+<license-p>Authors of papers retain copyright and release the work under
+a Creative Commons Attribution 4.0 International License (CC BY
+4.0)</license-p>
+</license>
+</permissions>
+<kwd-group kwd-group-type="author">
+<kwd>Julia</kwd>
+<kwd>tether</kwd>
+<kwd>cable</kwd>
+<kwd>mooring line</kwd>
+<kwd>multibody dynamics</kwd>
+<kwd>differential-algebraic equations</kwd>
+<kwd>airborne wind energy</kwd>
+</kwd-group>
+</article-meta>
+</front>
+<body>
+<sec id="summary">
+  <title>Summary</title>
+  <p>Tethers, cables and ropes appear in many engineering problems:
+  cranes, undersea cables, the mooring lines of floating wind turbines,
+  the launching of sailplanes and airborne wind energy systems.
+  Simulating them is harder than the simple picture of “a chain of
+  masses and springs” suggests. A modern high-modulus rope such as
+  Dyneema is extremely stiff in tension and almost incapable of carrying
+  compression, which turns the equations of motion into a stiff,
+  non-smooth system that many general-purpose simulation environments
+  handle badly or not at all.</p>
+  <p><monospace>Tethers.jl</monospace> addresses this in three ways.
+  First, it is a tutorial: a graded series of runnable examples that
+  starts with a point mass thrown upwards and ends with a segmented,
+  reeling tether with aerodynamic drag and free end points. Each example
+  is a short, self-contained script, and most of them come with a
+  matching Python implementation, so that the modelling choices, the
+  solver behaviour, the code size and the runtime can be compared
+  directly between the two ecosystems. Second, the package exports a
+  re-usable, acausal tether component built with ModelingToolkit.jl
+  (<xref alt="Ma et al., 2021" rid="ref-Ma2021" ref-type="bibr">Ma et
+  al., 2021</xref>), which can be connected to other components of a
+  larger model instead of being re-derived by hand for every new
+  application. Third, it provides a quasi-steady tether model after
+  Williams
+  (<xref alt="2017" rid="ref-Williams2017" ref-type="bibr">2017</xref>),
+  which replaces the time integration of the tether dynamics by a small
+  nonlinear solve for the tether shape and the forces at both ends,
+  given the position and velocity of the far end. It runs in tens of
+  microseconds per step and is validated against the analytic catenary
+  and against reference results from the original MATLAB implementation.
+  The dynamic and the quasi-steady models share the same physical
+  parameters, and an example that flies a kite on a circular trajectory
+  with both models allows their results to be compared directly.</p>
+  <fig>
+    <caption><p>A five-segment tether, hanging from a fixed point and
+    swinging under gravity, as produced by one of the tutorial
+    examples.<styled-content id="figU003Atether"></styled-content></p></caption>
+    <graphic mimetype="image" mime-subtype="png" xlink:href="tether_5segments.png" />
+  </fig>
+</sec>
+<sec id="statement-of-need">
+  <title>Statement of need</title>
+  <p>Tether models are a recurring building block in research on
+  airborne wind energy, marine systems and cable-driven machines, but
+  they are usually written from scratch inside a larger,
+  application-specific code base and are rarely published on their own
+  (<xref alt="Duda et al., 2022" rid="ref-Duda2022" ref-type="bibr">Duda
+  et al., 2022</xref>;
+  <xref alt="Fechner et al., 2015" rid="ref-Fechner2015" ref-type="bibr">Fechner
+  et al., 2015</xref>). Researchers who need a tether therefore face two
+  problems: there is little material that explains <italic>how</italic>
+  such a model is derived and why the naive formulations fail, and there
+  is no small, well-tested component they can simply attach to their own
+  model.</p>
+  <p><monospace>Tethers.jl</monospace> was written to fill both gaps.
+  The tutorial part makes the derivation explicit and incremental. The
+  model is a chain of <inline-formula><alternatives>
+  <tex-math><![CDATA[n]]></tex-math>
+  <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mi>n</mml:mi></mml:math></alternatives></inline-formula>
+  spring-damper segments connecting <inline-formula><alternatives>
+  <tex-math><![CDATA[n+1]]></tex-math>
+  <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:mrow><mml:mi>n</mml:mi><mml:mo>+</mml:mo><mml:mn>1</mml:mn></mml:mrow></mml:math></alternatives></inline-formula>
+  point masses. Reeling in or out changes the unstretched segment
+  length, and with it the segment stiffness, the segment damping and the
+  particle mass, which is a common source of errors in hand-written
+  models. Slackness is represented by giving a compressed segment a much
+  smaller stiffness than a taut one, controlled by a relative
+  compression stiffness parameter. Only the component of the apparent
+  wind perpendicular to a segment produces drag, and half of a segment’s
+  drag is applied to each of its two particles. All of this is
+  documented as equations alongside the code, so the tutorial can be
+  followed by readers who intend to implement the model in a different
+  language.</p>
+  <p>The component part packages the same physics for re-use. The
+  connector <monospace>Point3D</monospace> carries the position as its
+  across variable and the force as its flow variable; a
+  <monospace>Tether</monospace> component with two such connectors is
+  joined to a <monospace>FixedEnd</monospace> or a
+  <monospace>FreeEnd</monospace>, and two tethers can be chained by
+  connecting both to the same <monospace>FreeEnd</monospace>. The wind
+  velocity, the anchor position and the tether cross section are model
+  parameters rather than literals, so a compiled model can be re-solved
+  for a different wind speed, anchor position or tether diameter without
+  repeating the symbolic compilation step. The same algorithms, in a
+  hand-written form, are used by <monospace>KiteModels.jl</monospace>
+  (<xref alt="Fechner, 2026" rid="ref-KiteModels" ref-type="bibr">Fechner,
+  2026</xref>) for airborne wind energy simulations.</p>
+</sec>
+<sec id="julia-and-python-side-by-side">
+  <title>Julia and Python side by side</title>
+  <p>Every tutorial example exists twice: as a Julia script using
+  ModelingToolkit.jl and the solvers of DifferentialEquations.jl
+  (<xref alt="Bezanson et al., 2017" rid="ref-Bezanson2017" ref-type="bibr">Bezanson
+  et al., 2017</xref>;
+  <xref alt="Rackauckas &amp; Nie, 2017" rid="ref-Rackauckas2017" ref-type="bibr">Rackauckas
+  &amp; Nie, 2017</xref>), and as a Python script using CasADi
+  (<xref alt="Andersson et al., 2019" rid="ref-Andersson2019" ref-type="bibr">Andersson
+  et al., 2019</xref>) and the SUNDIALS solvers it ships with
+  (<xref alt="Hindmarsh et al., 2005" rid="ref-Hindmarsh2005" ref-type="bibr">Hindmarsh
+  et al., 2005</xref>). The test suite checks that the two produce the
+  same trajectories, which makes the comparison a controlled one rather
+  than an anecdote.</p>
+  <p>Making that comparison fair took some care, and the naive version
+  of it is misleading. A stiff tether needs an exact, sparse Jacobian on
+  both sides, and neither ecosystem supplies one by default. In Julia,
+  <monospace>ODEProblem(sys, ...; jac=true, sparse=true)</monospace>
+  makes ModelingToolkit generate and compile the analytic Jacobian ahead
+  of time; without those two keywords the solver rebuilds a dense one by
+  automatic differentiation at every step, which costs a factor of 1.4
+  at five segments and 7.2 at forty. In Python,
+  <monospace>ca.jacobian</monospace> derives the same Jacobian from the
+  model expression and finds its block-tridiagonal sparsity
+  automatically. The Jacobian of the forty-segment model has 2391
+  non-zeros out of 60516, and exploiting that matters more than the
+  analytic derivative itself: at forty segments the analytic Jacobian
+  alone gains about 15% over automatic differentiation, because a dense
+  factorisation then dominates the cost, while adding sparsity gains a
+  factor of 7.2.</p>
+  <p>With both sides compiled, analytic and sparse, a ten-second
+  simulation of the ten-segment model, sampled every 20 ms at a relative
+  and absolute tolerance of <inline-formula><alternatives>
+  <tex-math><![CDATA[10^{-6}]]></tex-math>
+  <mml:math display="inline" xmlns:mml="http://www.w3.org/1998/Math/MathML"><mml:msup><mml:mn>10</mml:mn><mml:mrow><mml:mi>−</mml:mi><mml:mn>6</mml:mn></mml:mrow></mml:msup></mml:math></alternatives></inline-formula>,
+  takes 17.1 ms in Julia and 20.7 ms in Python; at forty segments, 603
+  ms and 617 ms. The two are within about 20% of each other in either
+  direction. Earlier versions of this package reported Julia as 13 to 30
+  times faster, and that number is worth explaining rather than quietly
+  dropping: it compared compiled Julia against a Jacobian derived by
+  hand and evaluated in interpreted NumPy, which costs 707 µs per call
+  against 33 µs for the same Jacobian as a compiled CasADi function. It
+  measured the language binding, not the language.</p>
+  <p>What does differ is everything around the solve. The Julia examples
+  are roughly half the length, and they never write a Jacobian at all;
+  replacing the hand-derived Jacobians of the Python examples with
+  <monospace>ca.jacobian</monospace> removed 614 lines. Julia pays a
+  one-time compilation cost of seconds to tens of seconds, of which 0.4
+  to 4.1 seconds is the symbolic Jacobian alone, so a script that solves
+  once pays more than it saves and only repeated solves get the speed
+  back. Installing the Julia stack takes considerably longer than
+  installing the Python one. Event handling is the one place where the
+  Python side is clearly behind: Julia’s
+  <monospace>ContinuousCallback</monospace> is four lines, while
+  CasADi’s event support is experimental and fails on one of the two
+  examples that need it, which therefore locates the taut/slack crossing
+  by bisection instead. Presenting both sides, including the parts that
+  do not favour Julia, lets readers make an informed choice instead of
+  taking the benchmark on faith.</p>
+</sec>
+<sec id="functionality">
+  <title>Functionality</title>
+  <p>The package provides fifteen Julia examples and ten matching Python
+  versions, reachable from an interactive menu, plus five examples for
+  the quasi-steady model in a second menu; the
+  <monospace>TetherComponents</monospace> submodule with the
+  <monospace>Point3D</monospace>, <monospace>Tether</monospace>,
+  <monospace>FixedEnd</monospace>, <monospace>FreeEnd</monospace> and
+  <monospace>MovingEnd</monospace> components and the
+  <monospace>TetherSettings</monospace> parameter struct; the
+  <monospace>QuasiSteady</monospace> submodule with the
+  <monospace>StaticSettings</monospace> parameter struct, the
+  <monospace>Tether</monospace> state and the
+  <monospace>init!</monospace> and <monospace>step!</monospace>
+  functions; helper functions to copy the examples and launcher scripts
+  into a user’s own project; and a test suite that compares the Julia
+  and Python results, checks the component against analytic results for
+  the steady state, the drag and the catenary shape, and checks the
+  quasi-steady model against the analytic catenary and MATLAB reference
+  data; and benchmarks for the Jacobian strategies of both ecosystems
+  and for the cost of the quasi-steady model against the dynamic one as
+  the segment count grows. Documentation, including the full derivation
+  and all examples, is published online.</p>
+</sec>
+<sec id="ai-usage-disclosure">
+  <title>AI usage disclosure</title>
+  <p>Generative AI tools were used in the development of this software
+  and in the preparation of this paper, as follows.</p>
+  <p><italic>Software.</italic> The tutorial examples in their original
+  form, the first Python implementations and the re-usable tether
+  component were written by the authors without AI assistance. The
+  quasi-steady model was first ported from MATLAB to Julia by hand.
+  Claude Code (Anthropic) was subsequently used as a coding assistant
+  for four pieces of work: refactoring the quasi-steady port to the
+  exported <monospace>init!</monospace>/<monospace>step!</monospace> API
+  and the performance work on its nonlinear solve; giving the Julia
+  examples an analytic sparse Jacobian and measuring what that is worth;
+  rewriting the Python examples around CasADi, which replaced the
+  Jacobians that had previously been derived by hand; and the benchmarks
+  behind the comparison in the section above. Every AI-assisted change
+  was reviewed by the authors. The results were verified by the test
+  suite, which compares every Python example against its Julia
+  counterpart and the quasi-steady model against the analytic catenary
+  and the MATLAB reference results. GitHub Copilot’s automated
+  pull-request review was used to flag issues in some changes; its
+  suggestions were evaluated and applied by the authors.</p>
+  <p><italic>Documentation.</italic> Parts of the documentation of the
+  quasi-steady model, and the comparison of the two ecosystems in
+  <monospace>docs/julia_vs_python.md</monospace>, were drafted with
+  Claude Code and edited by the authors. The tutorial text and the
+  derivation of the model were written by the authors.</p>
+  <p><italic>Paper.</italic> The authors wrote this paper. Claude Code
+  was used to update the summary and functionality sections after the
+  quasi-steady model was added, to rewrite the comparison section once
+  both implementations used an analytic sparse Jacobian, to check
+  citation metadata for consistency, and to draft this disclosure. All
+  text was reviewed and edited by the authors, who take full
+  responsibility for its content.</p>
+</sec>
+<sec id="acknowledgements">
+  <title>Acknowledgements</title>
+  <p>The tether model implemented here originates in earlier work on
+  kite power systems at Delft University of Technology. The authors
+  thank the developers of ModelingToolkit.jl and the wider SciML
+  ecosystem, on which this package depends.</p>
+  <p>This work has been supported by the MERIDIONAL project, which
+  receives funding from the European Union’s Horizon Europe Program
+  under the grant agreement no.
+  <ext-link ext-link-type="uri" xlink:href="https://doi.org/10.3030/101084216">101084216</ext-link>.
+  The opinions expressed in this document reflect only the author’s view
+  and reflects in no way the European Commission’s opinions. The
+  European Commission is not responsible for any use that may be made of
+  the information it contains.</p>
+</sec>
+</body>
+<back>
+<ref-list>
+  <title></title>
+  <ref id="ref-Bezanson2017">
+    <element-citation publication-type="article-journal">
+      <person-group person-group-type="author">
+        <name><surname>Bezanson</surname><given-names>Jeff</given-names></name>
+        <name><surname>Edelman</surname><given-names>Alan</given-names></name>
+        <name><surname>Karpinski</surname><given-names>Stefan</given-names></name>
+        <name><surname>Shah</surname><given-names>Viral B.</given-names></name>
+      </person-group>
+      <article-title>Julia: A fresh approach to numerical computing</article-title>
+      <source>SIAM Review</source>
+      <year iso-8601-date="2017">2017</year>
+      <volume>59</volume>
+      <issue>1</issue>
+      <pub-id pub-id-type="doi">10.1137/141000671</pub-id>
+      <fpage>65</fpage>
+      <lpage>98</lpage>
+    </element-citation>
+  </ref>
+  <ref id="ref-Rackauckas2017">
+    <element-citation publication-type="article-journal">
+      <person-group person-group-type="author">
+        <name><surname>Rackauckas</surname><given-names>Christopher</given-names></name>
+        <name><surname>Nie</surname><given-names>Qing</given-names></name>
+      </person-group>
+      <article-title>DifferentialEquations.jl – a performant and feature-rich ecosystem for solving differential equations in Julia</article-title>
+      <source>Journal of Open Research Software</source>
+      <year iso-8601-date="2017">2017</year>
+      <volume>5</volume>
+      <issue>1</issue>
+      <pub-id pub-id-type="doi">10.5334/jors.151</pub-id>
+      <fpage>15</fpage>
+      <lpage></lpage>
+    </element-citation>
+  </ref>
+  <ref id="ref-Ma2021">
+    <element-citation>
+      <person-group person-group-type="author">
+        <name><surname>Ma</surname><given-names>Yingbo</given-names></name>
+        <name><surname>Gowda</surname><given-names>Shashi</given-names></name>
+        <name><surname>Anantharaman</surname><given-names>Ranjan</given-names></name>
+        <name><surname>Laughman</surname><given-names>Chris</given-names></name>
+        <name><surname>Shah</surname><given-names>Viral</given-names></name>
+        <name><surname>Rackauckas</surname><given-names>Chris</given-names></name>
+      </person-group>
+      <article-title>ModelingToolkit: A composable graph transformation system for equation-based modeling</article-title>
+      <year iso-8601-date="2021">2021</year>
+      <uri>https://arxiv.org/abs/2103.05244</uri>
+      <pub-id pub-id-type="doi">10.48550/arXiv.2103.05244</pub-id>
+    </element-citation>
+  </ref>
+  <ref id="ref-Fechner2015">
+    <element-citation publication-type="article-journal">
+      <person-group person-group-type="author">
+        <name><surname>Fechner</surname><given-names>Uwe</given-names></name>
+        <name><surname>Vlugt</surname><given-names>Rolf van der</given-names></name>
+        <name><surname>Schreuder</surname><given-names>Edwin</given-names></name>
+        <name><surname>Schmehl</surname><given-names>Roland</given-names></name>
+      </person-group>
+      <article-title>Dynamic model of a pumping kite power system</article-title>
+      <source>Renewable Energy</source>
+      <year iso-8601-date="2015">2015</year>
+      <volume>83</volume>
+      <pub-id pub-id-type="doi">10.1016/j.renene.2015.04.028</pub-id>
+      <fpage>705</fpage>
+      <lpage>716</lpage>
+    </element-citation>
+  </ref>
+  <ref id="ref-Duda2022">
+    <element-citation publication-type="article-journal">
+      <person-group person-group-type="author">
+        <name><surname>Duda</surname><given-names>D. F.</given-names></name>
+        <name><surname>Fuest</surname><given-names>H.</given-names></name>
+        <name><surname>Islam</surname><given-names>T.</given-names></name>
+        <name><surname>Ostermann</surname><given-names>T.</given-names></name>
+        <name><surname>Moormann</surname><given-names>D.</given-names></name>
+      </person-group>
+      <article-title>Hybrid modeling approach for the tether of an airborne wind energy system</article-title>
+      <source>CEAS Aeronautical Journal</source>
+      <year iso-8601-date="2022">2022</year>
+      <volume>13</volume>
+      <issue>3</issue>
+      <pub-id pub-id-type="doi">10.1007/s13272-022-00581-7</pub-id>
+      <fpage>627</fpage>
+      <lpage>637</lpage>
+    </element-citation>
+  </ref>
+  <ref id="ref-Williams2017">
+    <element-citation publication-type="article-journal">
+      <person-group person-group-type="author">
+        <name><surname>Williams</surname><given-names>Paul</given-names></name>
+      </person-group>
+      <article-title>Cable modeling approximations for rapid simulation</article-title>
+      <source>Journal of Guidance, Control, and Dynamics</source>
+      <year iso-8601-date="2017">2017</year>
+      <volume>40</volume>
+      <issue>7</issue>
+      <pub-id pub-id-type="doi">10.2514/1.G002354</pub-id>
+      <fpage>1779</fpage>
+      <lpage>1788</lpage>
+    </element-citation>
+  </ref>
+  <ref id="ref-Andersson2019">
+    <element-citation publication-type="article-journal">
+      <person-group person-group-type="author">
+        <name><surname>Andersson</surname><given-names>Joel A. E.</given-names></name>
+        <name><surname>Gillis</surname><given-names>Joris</given-names></name>
+        <name><surname>Horn</surname><given-names>Greg</given-names></name>
+        <name><surname>Rawlings</surname><given-names>James B.</given-names></name>
+        <name><surname>Diehl</surname><given-names>Moritz</given-names></name>
+      </person-group>
+      <article-title>CasADi: A software framework for nonlinear optimization and optimal control</article-title>
+      <source>Mathematical Programming Computation</source>
+      <year iso-8601-date="2019">2019</year>
+      <volume>11</volume>
+      <issue>1</issue>
+      <pub-id pub-id-type="doi">10.1007/s12532-018-0139-4</pub-id>
+      <fpage>1</fpage>
+      <lpage>36</lpage>
+    </element-citation>
+  </ref>
+  <ref id="ref-Hindmarsh2005">
+    <element-citation publication-type="article-journal">
+      <person-group person-group-type="author">
+        <name><surname>Hindmarsh</surname><given-names>Alan C.</given-names></name>
+        <name><surname>Brown</surname><given-names>Peter N.</given-names></name>
+        <name><surname>Grant</surname><given-names>Keith E.</given-names></name>
+        <name><surname>Lee</surname><given-names>Steven L.</given-names></name>
+        <name><surname>Serban</surname><given-names>Radu</given-names></name>
+        <name><surname>Shumaker</surname><given-names>Dan E.</given-names></name>
+        <name><surname>Woodward</surname><given-names>Carol S.</given-names></name>
+      </person-group>
+      <article-title>SUNDIALS: Suite of nonlinear and differential/algebraic equation solvers</article-title>
+      <source>ACM Transactions on Mathematical Software</source>
+      <year iso-8601-date="2005">2005</year>
+      <volume>31</volume>
+      <issue>3</issue>
+      <pub-id pub-id-type="doi">10.1145/1089014.1089020</pub-id>
+      <fpage>363</fpage>
+      <lpage>396</lpage>
+    </element-citation>
+  </ref>
+  <ref id="ref-KiteModels">
+    <element-citation publication-type="software">
+      <person-group person-group-type="author">
+        <name><surname>Fechner</surname><given-names>Uwe</given-names></name>
+      </person-group>
+      <article-title>KiteModels.jl: Models of kites and tethers for airborne wind energy systems</article-title>
+      <year iso-8601-date="2026">2026</year>
+      <uri>https://github.com/ufechner7/KiteModels.jl</uri>
+    </element-citation>
+  </ref>
+</ref-list>
+</back>
+</article>

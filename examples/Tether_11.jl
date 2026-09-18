@@ -165,6 +165,8 @@ function simulate(se, simple_sys)
     tol = 1e-4
     tspan = (0.0, se.duration)
     ts = 0:dt:se.duration
+    # this model only integrates with a finite-difference Jacobian: with a forward-mode or
+    # an analytic one, FBDF drives dt below eps at t = 0 and returns Unstable
     prob = ODEProblem(simple_sys, nothing, tspan)
     toc()
     elapsed_time = @elapsed sol = solve(prob, FBDF(autodiff=AutoFiniteDiff()); dt, abstol=tol, reltol=tol, saveat=ts)

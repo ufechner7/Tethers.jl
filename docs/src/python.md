@@ -37,7 +37,7 @@ julia> np.zeros(3)
 ```
 If the package is not yet installed, you can use the notation:
 ```
-as = pyimport_conda("assimulo", "assimulo")
+ca = pyimport_conda("casadi", "casadi")
 ```
 If the command `using PyCall` should fail, you can execute:
 ```

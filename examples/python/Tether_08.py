@@ -3,35 +3,27 @@
 Tutorial example simulating a 3D mass-spring system with a nonlinear spring (1% stiffness
 for l < l_0), n tether segments, tether drag and reel-in and reel-out.
 
-New feature: instead of ModelingToolkit's symbolic steady-state machinery (used by
-Tether_08.jl), the initial tether shape for a given pair of endpoints is found directly
-with scipy.optimize.least_squares, solving for the positions at which the acceleration of
-every free particle is zero (with velocities zero and v_ro = 0). That steady-state shape is
-then used as the initial condition for the time simulation.
+The model is written once as a CasADi expression graph. CasADi differentiates it to get
+the exact Jacobian and finds its sparsity; the same expression serves the steady-state
+solve and the time integration, so the physics has a single definition. SUNDIALS' CVODES
+integrates it with a BDF formula and a sparse Newton solve - the same
+fixed-leading-coefficient BDF that the FBDF solver of Tether_08.jl uses.
 
-The time simulation uses Assimulo's IDA, the same solver as Tether_06.py and Tether_07.py,
-with an analytic Jacobian. Both the steady-state solver and IDA are handed the analytic
-derivatives of the particle accelerations w.r.t. the positions and velocities, which is
-what makes this stiff system tractable: the spring stiffness is many orders of magnitude
-larger than the gravity and drag forces, so finite differences are both slow (a residual
-evaluation per state) and inaccurate here.
+Like Tether_08.jl, the initial tether shape for a given pair of endpoints is found first,
+here with scipy.optimize.least_squares, by solving for the positions at which the
+acceleration of every free particle is zero (with velocities zero and v_ro = 0).
 
-State vector y  = pos[0..n], vel[0..n]   (each particle contributes a 3D-vector)
-Derivative   yd = vel[0..n], acc[0..n]
-Residual    res = (yd.pos - vel), (yd.vel - acc)
+State vector y = pos[0..n], vel[0..n] (each particle contributes a 3D vector).
 """
-import os
 import math
+import os
 import time as time_module
-
-import numpy as np
-from scipy.optimize import least_squares
-import matplotlib.pyplot as plt
-
 from dataclasses import dataclass, field
 
-from assimulo.solvers.sundials import IDA     # Imports the solver IDA from Assimulo
-from assimulo.problem import Implicit_Problem # Imports the problem formulation from Assimulo
+import numpy as np
+import casadi as ca
+import matplotlib.pyplot as plt
+from scipy.optimize import least_squares
 
 
 @dataclass
@@ -129,190 +121,98 @@ def add_initial_sag(se, pos0):
     return pos
 
 
-def calc_segment_props(se, t, v_ro):
-    """ Unstretched segment length, segment spring constant, segment damping constant and
-        the mass of an interior tether particle at the time t, for the reel-out speed
-        `v_ro`. All of them change while the tether is reeled in or out. """
+def accelerations(t, pos, vel, se, fix_p1, fix_p2, v_ro):
+    """ Acceleration of every tether particle, as a list of CasADi 3-vectors, given the
+        positions `pos` and velocities `vel` (lists of 3-vectors), the reel-out speed
+        `v_ro` and whether the two endpoints are held fixed. Mirrors the equations built
+        by Tether_08.jl's `model` function.
+
+        The spring is nonlinear: a taut segment (length > l_spring) uses the full
+        stiffness, a slack one only se.rel_compression_stiffness of it. `if_else` is
+        differentiated on the active branch, so the Jacobian is the one of the branch the
+        segment is currently on. Only the component of the apparent wind perpendicular to
+        a segment produces drag, and half of a segment's drag acts on each of its ends. """
     n = se.segments
     l_spring = (se.l0 + v_ro * t) / n
     c_spring = se.c_spring / l_spring
     damping = se.damping / l_spring
-    mass_per_meter = se.rho_tether * math.pi * (se.d_tether / 2000.0) ** 2
-    return l_spring, c_spring, damping, mass_per_meter * l_spring
+    m_particle = se.rho_tether * math.pi * (se.d_tether / 2000.0) ** 2 * l_spring
 
+    force = [ca.SX.zeros(3) for _ in range(n + 1)]
+    for j in range(n):
+        segment = pos[j + 1] - pos[j]
+        length = ca.norm_2(segment)
+        e = segment / length                              # unit vector, j towards j+1
+        spring_vel = ca.dot(e, vel[j + 1] - vel[j])       # rate of change of the length
+        rcs = se.rel_compression_stiffness
+        c_spr = c_spring / (1.0 + rcs) * (rcs + ca.if_else(length > l_spring, 1.0, 0.0))
+        fs = (c_spr * (length - l_spring) + damping * spring_vel) * e
 
-def calc_masses(se, m_tether_particle):
-    """ Mass of each particle. The two end particles are attached to one segment only and
-        therefore carry half of the mass of an interior particle. """
-    mass = np.full(se.segments + 1, m_tether_particle)
-    mass[0] = mass[se.segments] = 0.5 * m_tether_particle
-    return mass
+        v_app = se.v_wind_tether - (vel[j] + vel[j + 1]) / 2.0
+        v_app_perp = v_app - ca.dot(v_app, e) * e
+        drag = (0.25 * se.rho * se.cd_tether * ca.norm_2(v_app_perp)
+                * length * se.d_tether / 1000.0) * v_app_perp
+        force[j] = force[j] + fs + drag       # segment j pulls particle j towards j+1 ...
+        force[j + 1] = force[j + 1] - fs + drag   # ... and particle j+1 towards particle j
 
-
-def calc_segment_forces(se, pos, vel, l_spring, c_spring, damping):
-    """ For every segment j (between the particles j and j+1) the tension force `fs[j]`,
-        pulling particle j towards particle j+1, and `drag[j]`, one half of the
-        aerodynamic drag force of the segment, which is applied to both of its ends.
-
-        The spring is nonlinear: a taut segment (length > l_spring) uses the full
-        stiffness, a slack one only se.rel_compression_stiffness of it. Spring and damper
-        act in parallel along the segment, therefore the damping force uses the component
-        of the relative velocity along the segment and not the full 3D vector. """
-    segment = pos[1:] - pos[:-1]                              # (n, 3)
-    length = np.linalg.norm(segment, axis=1)                  # (n,)
-    e = segment / length[:, None]                             # unit vector, j towards j+1
-    rel_vel = vel[1:] - vel[:-1]
-    spring_vel = np.einsum('ij,ij->i', e, rel_vel)            # rate of change of the length
-    rcs = se.rel_compression_stiffness
-    c_spr = c_spring / (1.0 + rcs) * (rcs + (length > l_spring))
-    fs = (c_spr * (length - l_spring) + damping * spring_vel)[:, None] * e
-
-    v_app = se.v_wind_tether - (vel[:-1] + vel[1:]) / 2.0     # apparent wind velocity
-    v_app_perp = v_app - np.einsum('ij,ij->i', v_app, e)[:, None] * e
-    norm_v_app = np.linalg.norm(v_app_perp, axis=1)
-    drag = (0.25 * se.rho * se.cd_tether * norm_v_app
-            * length * se.d_tether / 1000.0)[:, None] * v_app_perp
-    return fs, drag
-
-
-def calc_accelerations(t, pos, vel, se, fix_p1, fix_p2, v_ro):
-    """ Acceleration of every tether particle, given the current positions `pos` and
-        velocities `vel` (each a (segments+1) x 3 array), the reel-out speed `v_ro` and
-        whether the two endpoints are held fixed. Mirrors the equations built by
-        Tether_08.jl's `model` function. """
-    n = se.segments
-    l_spring, c_spring, damping, m_tether_particle = calc_segment_props(se, t, v_ro)
-    fs, drag = calc_segment_forces(se, pos, vel, l_spring, c_spring, damping)
-
-    force = np.zeros_like(pos)
-    force[:-1] += fs + drag        # segment j pulls particle j towards particle j+1 ...
-    force[1:] += -fs + drag        # ... and particle j+1 towards particle j
-    acc = se.g_earth + force / calc_masses(se, m_tether_particle)[:, None]
-    if fix_p1:
-        acc[0] = 0.0
-    if fix_p2:
-        acc[n] = 0.0
+    acc = []
+    for i in range(n + 1):
+        if (i == 0 and fix_p1) or (i == n and fix_p2):
+            acc.append(ca.SX.zeros(3))
+        else:
+            # the two end particles are attached to one segment only and carry half the mass
+            mass = 0.5 * m_particle if i in (0, n) else m_particle
+            acc.append(se.g_earth + force[i] / mass)
     return acc
 
 
-def calc_segment_force_jac(se, pa, pb, va, vb, l_spring, c_spring, damping):
-    """ Tension force `fs` and half drag force `drag` of the segment between the particles
-        at pa and pb (as in calc_segment_forces), plus their analytic Jacobians, each a
-        3x3 matrix dF_i/dx_j:
-
-        - `dfs_dpb` = d(fs)/d(pb) = -d(fs)/d(pa)
-        - `dfs_dvb` = d(fs)/d(vb) = -d(fs)/d(va)
-        - `dd_dpa`, `dd_dpb` = d(drag)/d(pa), d(drag)/d(pb)
-        - `dd_dv`   = d(drag)/d(va) = d(drag)/d(vb); the drag depends on the mean of the
-          two velocities only, therefore it is the same matrix for both.
-
-        The stiffness jumps at length == l_spring (the nonlinear spring is a hard step,
-        as in Tether_08.jl); that jump is ignored here, so the Jacobian is the one of the
-        currently active branch. """
-    eye = np.eye(3)
-    s = pb - pa
-    length = np.linalg.norm(s)
-    e = s / length
-    p_mat = (eye - np.outer(e, e)) / length     # d(e)/d(pb) = -d(e)/d(pa), symmetric
-
-    rel_vel = vb - va
-    spring_vel = e @ rel_vel
-    rcs = se.rel_compression_stiffness
-    c_spr = c_spring / (1.0 + rcs) * (rcs + (1.0 if length > l_spring else 0.0))
-    f_mag = c_spr * (length - l_spring) + damping * spring_vel
-    fs = f_mag * e
-    # d(f_mag)/d(pb), a row vector: the length grows with e, the damping term with the
-    # rotation of the segment (p_mat is symmetric, so rel_vel^T p_mat = p_mat @ rel_vel)
-    d_fmag_dpb = c_spr * e + damping * (p_mat @ rel_vel)
-    dfs_dpb = np.outer(e, d_fmag_dpb) + f_mag * p_mat
-    dfs_dvb = damping * np.outer(e, e)
-
-    v_app = se.v_wind_tether - (va + vb) / 2.0
-    v_app_along = v_app @ e
-    v_app_perp = v_app - v_app_along * e
-    norm_v_app = np.linalg.norm(v_app_perp)
-    k_drag = 0.25 * se.rho * se.cd_tether * se.d_tether / 1000.0
-    drag = k_drag * length * norm_v_app * v_app_perp
-    if norm_v_app > 0.0:
-        # d(norm_v_app * v_app_perp)/d(v_app_perp)
-        g_mat = norm_v_app * eye + np.outer(v_app_perp, v_app_perp) / norm_v_app
-        # -d(v_app_perp)/d(pb) = d(v_app_perp)/d(pa)
-        a_mat = np.outer(e, p_mat @ v_app) + v_app_along * p_mat
-        # the drag grows with the segment length (d(length)/d(pb) = e) and changes with
-        # the direction of the segment, which turns v_app_perp
-        dd_dpb = k_drag * (np.outer(norm_v_app * v_app_perp, e) - length * (g_mat @ a_mat))
-        dd_dpa = k_drag * (-np.outer(norm_v_app * v_app_perp, e) + length * (g_mat @ a_mat))
-        # d(v_app_perp)/d(va) = d(v_app_perp)/d(vb) = -(I - e e^T)/2
-        dd_dv = -0.5 * k_drag * length * (g_mat @ (eye - np.outer(e, e)))
-    else:
-        # d(norm_v_app * v_app_perp) vanishes together with v_app_perp
-        dd_dpa = dd_dpb = dd_dv = np.zeros((3, 3))
-    return fs, drag, dfs_dpb, dfs_dvb, dd_dpa, dd_dpb, dd_dv
-
-
-def calc_acc_jac(t, pos, vel, se, fix_p1, fix_p2, v_ro):
-    """ Analytic Jacobian of the accelerations returned by calc_accelerations, as the pair
-        (d(acc)/d(pos), d(acc)/d(vel)), each of shape (3*(n+1), 3*(n+1)) with the particles
-        in the same order as in the flattened `pos` and `vel` arrays. """
+def build_model(se, fix_p1, fix_p2, v_ro):
+    """ The tether as one CasADi expression graph. Returns the symbolic time `t`, the
+        state vector `y` = (pos, vel) and its derivative `ydot`. """
     n = se.segments
-    l_spring, c_spring, damping, m_tether_particle = calc_segment_props(se, t, v_ro)
-    mass = calc_masses(se, m_tether_particle)
-    size = 3 * (n + 1)
-    dacc_dpos = np.zeros((size, size))
-    dacc_dvel = np.zeros((size, size))
-    fixed = [(i == 0 and fix_p1) or (i == n and fix_p2) for i in range(n + 1)]
-
-    def blk(i):
-        return slice(3 * i, 3 * i + 3)
-
-    for j in range(n):
-        _, _, dfs_dpb, dfs_dvb, dd_dpa, dd_dpb, dd_dv = calc_segment_force_jac(
-            se, pos[j], pos[j + 1], vel[j], vel[j + 1], l_spring, c_spring, damping)
-        # the segment pushes/pulls particle j with (fs + drag) and particle j+1 with
-        # (-fs + drag), so both get the same drag and opposite tension contributions
-        for i, sign in ((j, 1.0), (j + 1, -1.0)):
-            if fixed[i]:
-                continue
-            inv_m = 1.0 / mass[i]
-            dacc_dpos[blk(i), blk(j + 1)] += inv_m * (sign * dfs_dpb + dd_dpb)
-            dacc_dpos[blk(i), blk(j)] += inv_m * (-sign * dfs_dpb + dd_dpa)
-            dacc_dvel[blk(i), blk(j + 1)] += inv_m * (sign * dfs_dvb + dd_dv)
-            dacc_dvel[blk(i), blk(j)] += inv_m * (-sign * dfs_dvb + dd_dv)
-    return dacc_dpos, dacc_dvel
+    split = 3 * (n + 1)                        # start of the velocities in y
+    t = ca.SX.sym('t')
+    y = ca.SX.sym('y', 2 * split)
+    pos = [y[3*i:3*i + 3] for i in range(n + 1)]
+    vel = [y[split + 3*i:split + 3*i + 3] for i in range(n + 1)]
+    acc = accelerations(t, pos, vel, se, fix_p1, fix_p2, v_ro)
+    return t, y, ca.vertcat(*vel, *acc)
 
 
 def find_steady_state(se, fix_p1, fix_p2, pos0):
     """ Find the steady-state tether shape for v_ro = 0 with scipy.optimize.least_squares:
         solve for the positions of the non-fixed particles such that their acceleration
         (with all velocities zero) is zero. `pos0` supplies the initial guess and the
-        (unchanged) positions of the fixed endpoint(s). The analytic Jacobian of
-        calc_acc_jac is passed to the solver.
+        (unchanged) positions of the fixed endpoint(s). CasADi supplies the Jacobian.
 
         least_squares (trust-region, x_scale='jac') is used rather than root(method='hybr'):
         the huge spread between c_spring's magnitude and typical position values makes the
         problem badly scaled, and hybr's fixed internal scaling fails to converge on it,
         while least_squares' automatic Jacobian-based scaling handles it reliably. """
     n = se.segments
+    split = 3 * (n + 1)
     free_idx = [i for i in range(n + 1) if not ((i == 0 and fix_p1) or (i == n and fix_p2))]
     free_dof = np.concatenate([np.arange(3 * i, 3 * i + 3) for i in free_idx])
+
+    t, y, ydot = build_model(se, fix_p1, fix_p2, 0.0)
+    acc_sym = ydot[split:]
+    f_acc = ca.Function('acc', [y], [acc_sym])
+    f_jac = ca.Function('acc_jac', [y], [ca.jacobian(acc_sym, y[:split])])
+
     # start from a sagging shape, not from the straight line, so that the solver converges
     # to the stable hanging equilibrium rather than to the unstable arch (see add_initial_sag)
     x0 = add_initial_sag(se, pos0)[free_idx].flatten()
 
-    def positions(x):
+    def state(x):
         pos = pos0.copy()
         pos[free_idx] = x.reshape(len(free_idx), 3)
-        return pos
+        return np.concatenate([pos.flatten(), np.zeros(split)])
 
     def residual(x):
-        pos = positions(x)
-        acc = calc_accelerations(0.0, pos, np.zeros_like(pos), se, fix_p1, fix_p2, 0.0)
-        return acc[free_idx].flatten()
+        return np.array(f_acc(state(x))).flatten()[free_dof]
 
     def jacobian(x):
-        pos = positions(x)
-        dacc_dpos, _ = calc_acc_jac(0.0, pos, np.zeros_like(pos), se, fix_p1, fix_p2, 0.0)
-        return dacc_dpos[np.ix_(free_dof, free_dof)]
+        return np.array(f_jac(state(x)))[np.ix_(free_dof, free_dof)]
 
     # the axial spring stiffness is many orders of magnitude larger than the gravity/drag
     # forces that bend the tether out of a straight line, which makes this system badly
@@ -321,74 +221,31 @@ def find_steady_state(se, fix_p1, fix_p2, pos0):
                         xtol=1e-14, ftol=1e-14, gtol=1e-14, max_nfev=200_000)
     if not sol.success or np.max(np.abs(sol.fun)) > 1e-6:
         raise RuntimeError(f"Steady state solver failed: {sol.message}")
-    return positions(sol.x)
-
-
-# Extend Assimulos problem definition
-class ExtendedProblem(Implicit_Problem):
-    """ The tether model as an implicit DAE res(t, y, yd) = 0 for Assimulo's IDA. All
-        states are differential here: the fixed endpoints are not enforced with an
-        algebraic constraint, their acceleration is simply set to zero (they start at
-        rest, therefore they stay where they are). """
-
-    def __init__(self, se, pos0, vel0, fix_p1, fix_p2):
-        self.se, self.fix_p1, self.fix_p2 = se, fix_p1, fix_p2
-        self.split = 3 * (se.segments + 1)          # start of the velocities in y
-        acc0 = calc_accelerations(0.0, pos0, vel0, se, fix_p1, fix_p2, se.v_ro)
-        Implicit_Problem.__init__(self,
-                                  y0=np.concatenate([pos0.flatten(), vel0.flatten()]),
-                                  yd0=np.concatenate([vel0.flatten(), acc0.flatten()]),
-                                  t0=0.0)
-        self.name = 'Tether with drag and reel-out'
-
-    def _unpack(self, y):
-        return y[:self.split].reshape(-1, 3), y[self.split:].reshape(-1, 3)
-
-    def res(self, t, y, yd):
-        pos, vel = self._unpack(y)
-        posd, veld = self._unpack(yd)
-        acc = calc_accelerations(t, pos, vel, self.se, self.fix_p1, self.fix_p2, self.se.v_ro)
-        return np.concatenate([(posd - vel).flatten(), (veld - acc).flatten()])
-
-    def jac(self, c, t, y, yd):
-        """ Analytic Jacobian J = d(res)/dy + c * d(res)/dyd, replacing the
-            finite-difference approximation IDA would otherwise use. """
-        pos, vel = self._unpack(y)
-        m = self.split
-        eye = np.eye(m)
-        dacc_dpos, dacc_dvel = calc_acc_jac(t, pos, vel, self.se, self.fix_p1,
-                                            self.fix_p2, self.se.v_ro)
-        j_mat = np.zeros((2 * m, 2 * m))
-        j_mat[:m, :m] = c * eye              # d(posd - vel)/d(pos), via yd
-        j_mat[:m, m:] = -eye                 # d(posd - vel)/d(vel)
-        j_mat[m:, :m] = -dacc_dpos           # d(veld - acc)/d(pos)
-        j_mat[m:, m:] = c * eye - dacc_dvel  # d(veld - acc)/d(vel), plus the yd part
-        return j_mat
+    pos = pos0.copy()
+    pos[free_idx] = sol.x.reshape(len(free_idx), 3)
+    return pos
 
 
 def simulate(se, pos0, vel0, fix_p1, fix_p2):
     """ Simulate the tether model from the initial condition (pos0, vel0) over the
-        duration se.duration with Assimulo's IDA and an analytic Jacobian, storing the
-        result on a 0.02 s grid. Returns (t_sol, y, elapsed_time). """
+        duration se.duration with CVODES and CasADi's analytic sparse Jacobian, storing
+        the result on a 0.02 s grid. Returns (t_sol, y, elapsed_time). """
     dt = 0.02
-    model = ExtendedProblem(se, pos0, vel0, fix_p1, fix_p2)
-    sim = IDA(model)  # Create the solver, using the default dense direct linear solver
-    sim.verbosity = 0
-    sim.atol = 1.0e-6
-    sim.rtol = 1.0e-6
-    sim.algvar = np.ones(2 * model.split)   # all states are differential
-    sim.usejac = True
-
-    start = time_module.time()
-    t_raw, y_raw, _ = sim.simulate(se.duration, round(se.duration / dt))
-    elapsed = time_module.time() - start
-
-    # IDA's chosen output points can silently land off the shared 0.02 s grid. Resample the
-    # full state onto the exact grid Tether_08.jl uses (ts=0:dt:duration), so the two CSVs
-    # are directly comparable and play() gets a consistent (t_sol, y) pair.
+    t, y, ydot = build_model(se, fix_p1, fix_p2, se.v_ro)
+    y0 = np.concatenate([pos0.flatten(), vel0.flatten()])
     t_sol = np.linspace(0.0, se.duration, round(se.duration / dt) + 1)
-    y = np.column_stack([np.interp(t_sol, t_raw, y_raw[:, j]) for j in range(y_raw.shape[1])])
-    return t_sol, y, elapsed
+    # 'csparse' factorises the Jacobian CasADi derived from the model; its sparsity is
+    # found by CasADi and is block-tridiagonal, so the dense solver would do most of its
+    # work on structural zeros
+    sim = ca.integrator('sim', 'cvodes', {'x': y, 't': t, 'ode': ydot}, 0.0, t_sol[1:],
+                        {'abstol': 1.0e-6, 'reltol': 1.0e-6,
+                         'linear_multistep_method': 'bdf',
+                         'nonlinear_solver_iteration': 'newton',
+                         'linear_solver': 'csparse'})
+    start = time_module.time()
+    xf = np.array(sim(x0=y0)['xf'])
+    elapsed = time_module.time() - start
+    return t_sol, np.column_stack([y0, xf]).T, elapsed
 
 
 def plot2d(fig, pos, t, se, line, sc, txt):
