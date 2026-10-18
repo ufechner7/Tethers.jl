@@ -1,3 +1,11 @@
+### Unreleased
+#### Added
+- `bin/install` options `--update` (regenerate the manifest with `Pkg.update()` instead of instantiating the pinned one), `--test` (run the tests after installing) and `--version <ver>`/`+<ver>` (use that Julia version without changing the juliaup default)
+- `bin/update_default_manifests`, regenerating `Manifest-v<ver>.toml.default` for each supported Julia version, only if the install and the tests succeed
+
+#### Breaking
+- dropped support for Julia 1.11; Julia 1.12 and 1.13 are supported
+
 ### Tethers v2.0.0 2026-09-11
 #### Added
 - `examples/Project.toml` and `test/Project.toml`, joined to the root package as workspace members on Julia 1.12, so the example and test dependencies no longer bloat the main `Project.toml`

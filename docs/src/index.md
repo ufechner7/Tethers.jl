@@ -40,7 +40,16 @@ cd bin
 ./install
 ./create_sys_image
 ```
-This does NOT work using Julia 1.13 on Windows, so stick with Julia 1.12 if you are using Windows for now.
+Julia 1.12 and 1.13 are supported; `./install` asks which one to use and makes it the `juliaup` default.
+
+`./install` takes the following options:
+
+- `-y`, `--yes`: do not ask questions, use the defaults
+- `--version 1.12`, `+1.12`: use this Julia version without changing the `juliaup` default
+- `--update`: update all packages instead of installing the tested versions from `Manifest-v<version>.toml.default`
+- `--test`: run the tests after the installation
+
+Maintainers can regenerate the `Manifest-v<version>.toml.default` files for all supported Julia versions with `./update_default_manifests`; a file is only replaced if the installation and the tests succeed.
 
 ### Alternative: install as a package
 
@@ -72,7 +81,7 @@ This also adds the extra packages needed by the example scripts. You can now run
 include("examples/menu.jl")
 ```
 
-For a faster start of the examples, build a system image (this takes a while and needs a lot of memory). This does NOT work using Julia 1.13 on Windows, so stick with Julia 1.12 if you are using Windows for now.
+For a faster start of the examples, build a system image (this takes a while and needs a lot of memory).
 
 ```bash
 cd bin

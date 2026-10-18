@@ -96,7 +96,11 @@ PackageCompiler.create_sysimage(
     pkgs;
     sysimage_path="kps-image_tmp.so",
     precompile_execution_file=joinpath("test", "test_for_precompile.jl"),
-    sysimage_build_args=build_args
+    sysimage_build_args=build_args,
+    # PackageCompiler 2.4.1+ defaults to the multi-target CPU list of the Julia binary on
+    # Julia 1.13+, which compiles every function several times and needs more than twice
+    # the memory and time (JuliaLang/julia#63141); build for this machine only, as on 1.12
+    cpu_target="native"
 )
 
 let size_gib = filesize("kps-image_tmp.so") / 1024^3
