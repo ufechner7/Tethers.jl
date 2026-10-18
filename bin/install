@@ -8,12 +8,60 @@ fi
 
 export JULIA_PKG_SERVER_REGISTRY_PREFERENCE="eager"
 
+print_usage() {
+    echo "Usage:"
+    echo "./install"
+    echo "./install --update"
+    echo "./install -y"
+    echo "./install --yes"
+    echo "./install --update -y"
+    echo "./install --test"
+    echo "./install --update -y --test"
+    echo "./install --version 1.12 | --version 1.13 | +1.12 | +1.13"
+    echo "./install -h"
+    echo "./install --help"
+}
+
 # Parse flags
 _yes=false
-for _arg in "$@"; do
-    case "$_arg" in
-        -y|--yes) _yes=true ;;
-        *) echo "Unknown option: $_arg"; exit 1 ;;
+update=false
+run_tests=false
+_desired_julia=""
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -h|--help)
+            print_usage
+            exit 0
+            ;;
+        --update)
+            update=true
+            shift
+            ;;
+        -y|--yes)
+            _yes=true
+            shift
+            ;;
+        --test)
+            run_tests=true
+            shift
+            ;;
+        --version)
+            if [[ $# -lt 2 ]]; then
+                echo "Error: --version requires a value (e.g. --version 1.12)"
+                exit 1
+            fi
+            _desired_julia="$2"
+            shift 2
+            ;;
+        +*)
+            _desired_julia="${1#+}"
+            shift
+            ;;
+        *)
+            echo "Unknown option: $1"
+            print_usage
+            exit 1
+            ;;
     esac
 done
 # Also treat CI environments as non-interactive
@@ -28,45 +76,49 @@ if ! command -v juliaup &> /dev/null; then
     exit 1
 fi
 
-# Ask which Julia version to use
-_default_julia="1.13"
-
-echo "Which Julia version do you want to use?"
-echo "  1) Julia 1.11"
-echo "  2) Julia 1.12"
-echo "  3) Julia 1.13"
-if [[ "$_yes" == "true" ]]; then
-    _julia_choice=""
-    echo "Non-interactive mode: using default (${_default_julia})"
+if [[ -n "$_desired_julia" ]]; then
+    # Explicit version: use it for this run only, leave the juliaup default unchanged
+    echo "Installing Julia ${_desired_julia} (juliaup default left unchanged)..."
+    juliaup add "${_desired_julia}"
+    echo
 else
-    read -rp "Enter 1, 2 or 3 [default: ${_default_julia}]: " _julia_choice
+    # Ask which Julia version to use
+    _default_julia="1.13"
+
+    echo "Which Julia version do you want to use?"
+    echo "  1) Julia 1.12"
+    echo "  2) Julia 1.13"
+    if [[ "$_yes" == "true" ]]; then
+        _julia_choice=""
+        echo "Non-interactive mode: using default (${_default_julia})"
+    else
+        read -rp "Enter 1 or 2 [default: ${_default_julia}]: " _julia_choice
+    fi
+    case "${_julia_choice}" in
+        1)
+            _desired_julia="1.12"
+            ;;
+        2)
+            _desired_julia="1.13"
+            ;;
+        "")
+            _desired_julia="${_default_julia}"
+            ;;
+        *)
+            echo "Invalid choice: '${_julia_choice}'. Please enter 1 or 2."
+            exit 1
+            ;;
+    esac
+    echo "Installing and activating Julia ${_desired_julia}..."
+    juliaup add "${_desired_julia}"
+    juliaup default "${_desired_julia}"
+    echo "Julia ${_desired_julia} is now the default."
+    echo
 fi
-case "${_julia_choice}" in
-    1)
-        _desired_julia="1.11"
-        ;;
-    2)
-        _desired_julia="1.12"
-        ;;
-    3)
-        _desired_julia="1.13"
-        ;;
-    "")
-        _desired_julia="${_default_julia}"
-        ;;
-    *)
-        echo "Invalid choice: '${_julia_choice}'. Please enter 1, 2 or 3."
-        exit 1
-        ;;
-esac
-echo "Installing and activating Julia ${_desired_julia}..."
-juliaup add "${_desired_julia}"
-juliaup default "${_desired_julia}"
-echo "Julia ${_desired_julia} is now the default."
-echo
+JULIA="julia +${_desired_julia}"
 
 # Detect Julia version
-julia_version=$(julia --version | awk '{print($3)}')
+julia_version=$($JULIA --version | awk '{print($3)}')
 julia_major=${julia_version:0:3}
 if [[ $julia_major == "1.1" ]]; then
     julia_major=${julia_version:0:4}
@@ -74,27 +126,33 @@ fi
 
 echo "Detected Julia version: $julia_version (major: $julia_major)"
 
-# Only accept Julia 1.11, 1.12 and 1.13
-if [[ $julia_major != "1.11" ]] && [[ $julia_major != "1.12" ]] && [[ $julia_major != "1.13" ]]; then
-    echo "Error: Julia $julia_major is not supported. Only Julia 1.11, 1.12 and 1.13 are supported."
-    echo "You can install Julia 1.11 with the following commands:"
-    echo "juliaup add 1.11"
-    echo "juliaup default 1.11"
+# Only accept Julia 1.12 and 1.13
+if [[ $julia_major != "1.12" ]] && [[ $julia_major != "1.13" ]]; then
+    echo "Error: Julia $julia_major is not supported. Only Julia 1.12 and 1.13 are supported."
+    echo "You can install Julia 1.12 with the following commands:"
+    echo "juliaup add 1.12"
+    echo "juliaup default 1.12"
     exit 1
 fi
 
 echo "Updating Julia registry..."
-julia -e 'using Pkg; Pkg.Registry.update()'
+$JULIA -e 'using Pkg; Pkg.Registry.update()'
 
-# Copy the appropriate default manifest
 DEFAULT_MANIFEST="Manifest-v${julia_major}.toml.default"
 VERSIONED_MANIFEST="Manifest-v${julia_major}.toml"
 
-if [ -f "$DEFAULT_MANIFEST" ]; then
-    cp "$DEFAULT_MANIFEST" "$VERSIONED_MANIFEST"
-    echo "Copied $DEFAULT_MANIFEST to $VERSIONED_MANIFEST"
+if [[ $update == false ]]; then
+    # Copy the appropriate default manifest
+    if [ -f "$DEFAULT_MANIFEST" ]; then
+        cp "$DEFAULT_MANIFEST" "$VERSIONED_MANIFEST"
+        echo "Copied $DEFAULT_MANIFEST to $VERSIONED_MANIFEST"
+    else
+        echo "Warning: $DEFAULT_MANIFEST not found, skipping copy."
+    fi
 else
-    echo "Warning: $DEFAULT_MANIFEST not found, skipping copy."
+    # Update mode: start from a clean state without a manifest and let Pkg.update() generate it
+    rm -f "$VERSIONED_MANIFEST"
+    echo "--update selected: removed existing manifests for Julia ${julia_major}"
 fi
 
 # Delete any existing custom system image for this Julia version
@@ -113,34 +171,39 @@ elif [ -f "Manifest.toml" ]; then
     echo "Removed stale Manifest.toml"
 fi
 
-# Instantiate the project; on failure, delete the manifest and run Pkg.update()
-echo "Instantiating project..."
-_ec=0
-julia --project -e '
-using Pkg
-try
-    Pkg.instantiate()
-catch e
-    @warn "Pkg.instantiate() failed, falling back to Pkg.update()..." exception=e
-    proj_dir = dirname(Base.active_project())
-    for f in readdir(proj_dir)
-        if startswith(f, "Manifest") && endswith(f, ".toml") && !endswith(f, ".default")
-            rm(joinpath(proj_dir, f), force=true)
-            @info "Deleted $f"
-        end
-    end
-    Pkg.update()
-    exit(2)
-end
-' || _ec=$?
-
-if [[ $_ec -eq 2 ]]; then
-    echo "Pkg.instantiate() failed; project updated successfully via Pkg.update()."
-elif [[ $_ec -eq 0 ]]; then
-    echo "Pkg.instantiate() of default manifest succeeded."
+if [[ $update == true ]]; then
+    echo "Updating project..."
+    $JULIA --project -e 'using Pkg; Pkg.update()'
 else
-    echo "Error: Installation failed with exit code $_ec."
-    exit $_ec
+    # Instantiate the project; on failure, delete the manifest and run Pkg.update()
+    echo "Instantiating project..."
+    _ec=0
+    $JULIA --project -e '
+    using Pkg
+    try
+        Pkg.instantiate()
+    catch e
+        @warn "Pkg.instantiate() failed, falling back to Pkg.update()..." exception=e
+        proj_dir = dirname(Base.active_project())
+        for f in readdir(proj_dir)
+            if startswith(f, "Manifest") && endswith(f, ".toml") && !endswith(f, ".default")
+                rm(joinpath(proj_dir, f), force=true)
+                @info "Deleted $f"
+            end
+        end
+        Pkg.update()
+        exit(2)
+    end
+    ' || _ec=$?
+
+    if [[ $_ec -eq 2 ]]; then
+        echo "Pkg.instantiate() failed; project updated successfully via Pkg.update()."
+    elif [[ $_ec -eq 0 ]]; then
+        echo "Pkg.instantiate() of default manifest succeeded."
+    else
+        echo "Error: Installation failed with exit code $_ec."
+        exit $_ec
+    fi
 fi
 
 # If Julia 1.12 or later created a plain Manifest.toml, rename it to the versioned name
@@ -149,31 +212,27 @@ if [ -f "Manifest.toml" ]; then
     echo "Renamed Manifest.toml to $VERSIONED_MANIFEST"
 fi
 
-# Julia 1.11's Pkg does not understand the root [workspace] section, so examples/, test/
-# and docs/ are resolved as fully independent projects there instead of sharing the root
-# manifest (Julia 1.12 and later share the manifest natively and need none of this).
-#
-# docs/ has a small, non-conflicting dependency set, so seeding it from the pinned root
-# manifest keeps versions aligned with root and speeds up its resolve. examples/ and test/
-# pull in a much larger, disjoint dependency tree (e.g. OrdinaryDiffEq, GLMakie); seeding
-# them the same way fixes root's leftover transitive versions in place and can make their
-# resolve unsatisfiable, so they are left to resolve fresh instead.
-if [[ $julia_major == "1.11" ]] && [ -f "$VERSIONED_MANIFEST" ]; then
-    cp "$VERSIONED_MANIFEST" "docs/Manifest-v1.11.toml"
-    echo "Copied $VERSIONED_MANIFEST to docs/Manifest-v1.11.toml"
-fi
-
 echo "Instantiating docs subproject..."
-julia --project=docs -e 'using Pkg; Pkg.resolve(); Pkg.instantiate(); Pkg.precompile()'
+$JULIA --project=docs -e 'using Pkg; Pkg.resolve(); Pkg.instantiate(); Pkg.precompile()'
 
 echo "Instantiating examples subproject..."
-julia --project=examples -e 'using Pkg; Pkg.resolve(); Pkg.instantiate(); Pkg.precompile()'
+$JULIA --project=examples -e 'using Pkg; Pkg.resolve(); Pkg.instantiate(); Pkg.precompile()'
 
 echo "Instantiating test subproject..."
-julia --project=test -e 'using Pkg; Pkg.resolve(); Pkg.instantiate(); Pkg.precompile()'
+$JULIA --project=test -e 'using Pkg; Pkg.resolve(); Pkg.instantiate(); Pkg.precompile()'
 
 echo "Precompiling..."
-julia --project -e 'using Pkg; Pkg.precompile()'
+$JULIA --project -e 'using Pkg; Pkg.precompile()'
+
+if [[ $run_tests == true ]]; then
+    # Not Pkg.test(): its sandbox breaks the `[sources]` path in test/Project.toml,
+    # so run the tests in place, as CI does
+    echo "Running the tests..."
+    if ! $JULIA --project=test test/runtests.jl; then
+        echo "ERROR: Tests failed. Aborting install."
+        exit 1
+    fi
+fi
 
 echo ""
 echo "Installation completed successfully."
