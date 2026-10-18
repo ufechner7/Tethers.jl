@@ -17,7 +17,7 @@ include(joinpath(@__DIR__, "test_utils.jl"))
             MakieControlPlots.close("all")
         end
         # Python implementation: the steady state is found directly with
-        # scipy.optimize.least_squares, the time simulation uses SciPy's BDF
+        # scipy.optimize.least_squares, the time simulation uses Assimulo's IDA
         withenv("TETHERS_BRIEF_PLOT" => "1") do
             run_python("Tether_08")
         end

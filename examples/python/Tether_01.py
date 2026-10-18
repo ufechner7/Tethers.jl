@@ -32,7 +32,7 @@ def run_example():
     model = Implicit_Problem(res1, y0, yd0, t0) # Create an Assimulo problem
     model.name = 'Falling mass' # Specifies the name of problem (optional)
 
-    sim = Radau5DAE(model)      # Create the IDA solver
+    sim = Radau5DAE(model)      # Create the Radau5 solver
         
     tfinal = 10.0           # Specify the final time
     ncp    = 500            # Number of communication points (number of return points)
