@@ -75,10 +75,8 @@ else
         # Windows: use wmic or PowerShell
         echo "Checking system memory on Windows..."
         totalmem=$(powershell.exe -Command "(Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1MB" 2>/dev/null | awk '{printf "%i", $1}')
-        if [[ -z "$totalmem" || $totalmem -lt 27000 ]]; then
-            echo "Warning: Less than 27GB of memory detected on Windows. Using only one thread for sysimage compilation."
-            export JULIA_IMAGE_THREADS=1
-        fi
+        # The number of threads is chosen in test/create_sys_image.jl, which also counts the
+        # size the pagefile can grow to
     elif [[ "$OSTYPE" == darwin* ]]; then
         # macOS: use sysctl
         echo "Checking system memory on macOS..."

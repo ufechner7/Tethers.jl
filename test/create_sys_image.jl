@@ -27,6 +27,29 @@ end
 # restriction to invalidate. Reproduced on Julia 1.12.7.
 build_args = ``
 
+using Base64
+
+# Upper limit of RAM + pagefile in MB that the pagefile can grow to. A pagefile without a
+# maximum ("System managed", or a setting with MaximumSize 0) grows up to 3 x RAM or 4 GB,
+# whichever is larger, but at most 1/8 of the size of its volume.
+const PAGEFILE_MAX_PS = raw"""
+$cs = Get-CimInstance Win32_ComputerSystem
+$ram = [math]::Floor($cs.TotalPhysicalMemory / 1MB)
+function AutoMax($drive) {
+    $vol = Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='$drive'"
+    [math]::Min([math]::Max(3 * $ram, 4096), [math]::Floor($vol.Size / 1MB / 8))
+}
+$max = 0
+if ($cs.AutomaticManagedPagefile) {
+    $max = AutoMax $env:SystemDrive
+} else {
+    foreach ($s in @(Get-CimInstance Win32_PageFileSetting)) {
+        if ($s.MaximumSize -gt 0) { $max += $s.MaximumSize } else { $max += AutoMax $s.Name.Substring(0, 2) }
+    }
+}
+$ram + $max
+"""
+
 function total_ram_swap_gb()
     if Sys.iswindows()
         # MEMORYSTATUSEX layout (x64): dwLength(u32), dwMemoryLoad(u32), then 7 x UInt64
@@ -34,8 +57,17 @@ function total_ram_swap_gb()
         unsafe_store!(Ptr{UInt32}(pointer(buf)), UInt32(64))
         ok = ccall((:GlobalMemoryStatusEx, "kernel32"), stdcall, Cint, (Ptr{UInt8},), buf)
         ok == 0 && error("GlobalMemoryStatusEx failed")
-        total_pagefile = unsafe_load(Ptr{UInt64}(pointer(buf) + 24)) # ullTotalPageFile: RAM + pagefile
-        total_pagefile / 1_073_741_824  # -> GiB
+        # ullTotalPageFile: RAM + the pagefile at its current size, which may still grow
+        current = unsafe_load(Ptr{UInt64}(pointer(buf) + 24)) / 1_073_741_824  # -> GiB
+        max_gb = try
+            # -EncodedCommand (Base64 of UTF-16LE) avoids quoting problems on the command line
+            script = Base64.base64encode(reinterpret(UInt8, transcode(UInt16, PAGEFILE_MAX_PS)))
+            parse(Float64, strip(read(`powershell.exe -NoProfile -EncodedCommand $script`, String))) / 1024
+        catch e
+            @warn "Could not determine the maximum pagefile size, using its current size" exception=e
+            0.0
+        end
+        max(current, max_gb)
     else
         info = read("/proc/meminfo", String)
         memtotal = parse(Int, match(r"MemTotal:\s+(\d+)", info).captures[1])   # kB
@@ -50,9 +82,9 @@ let total = total_ram_swap_gb()
         msg = "At least 34 GB of RAM + swap is recommended to create a system image, " *
               "but only $(round(total; digits=1)) GB is available."
         if Sys.iswindows()
-            # Windows' pagefile is commonly "System managed" and can grow on demand,
-            # so a low reading here isn't necessarily a hard limit.
-            @warn msg * " Windows may grow the pagefile automatically; increase it manually if the build fails."
+            # The total includes the size the pagefile can grow to, but that is only an
+            # estimate, so don't refuse to try.
+            @warn msg * " Increase the maximum size of the pagefile if the build fails."
         else
             error(msg * " Increase your swap file and retry.")
         end
@@ -60,6 +92,13 @@ let total = total_ram_swap_gb()
 
     if haskey(ENV, "JULIA_IMAGE_THREADS")
         @info "JULIA_IMAGE_THREADS already set to $(ENV["JULIA_IMAGE_THREADS"]), leaving as is"
+    elseif Sys.iswindows()
+        # Measured peak of RAM + swap: about 27 GB with one thread, 33 GB with two, so
+        # each extra thread needs about 6 GB. Capped at Julia's default of CPU_THREADS / 2.
+        threads = total > 47 ? 4 : total > 41 ? 3 : total >= 35 ? 2 : 1
+        threads = min(threads, max(1, Sys.CPU_THREADS ÷ 2))
+        ENV["JULIA_IMAGE_THREADS"] = string(threads)
+        @info "Setting JULIA_IMAGE_THREADS=$threads based on $(round(total; digits=1)) GB total memory"
     else
         # Linear interpolation: 1 thread at 30 GB, 8 threads at 40 GB (empirically the
         # amount of memory each extra image-compilation thread needs), capped at 16 and
