@@ -20,8 +20,9 @@ jobs:
     name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ github.event_name }}
     runs-on: ${{ matrix.os }}
     # Windows precompilation (ModelingToolkit, Symbolics, GLMakie, ...) is much slower than on
-    # Linux/macOS, so it needs a bigger budget than the other platforms.
-    timeout-minutes: ${{ matrix.os == 'windows-latest' && 120 || 60 }}
+    # Linux/macOS, so it needs a bigger budget than the other platforms. Without a cache hit,
+    # the Julia 1.12 job on Linux needs more than 60 min (19 min instantiate, 40 min tests).
+    timeout-minutes: ${{ matrix.os == 'windows-latest' && 120 || 90 }}
     strategy:
       fail-fast: false
       matrix:
