@@ -193,8 +193,8 @@ If you use Tethers.jl in your research, please cite it using the metadata in [CI
   author  = {Fechner, Uwe and Bertozzi, Andrea},
   title   = {{Tethers.jl}},
   url     = {https://github.com/ufechner7/Tethers.jl},
-  version = {2.0.0},
-  date    = {2026-09-11},
+  version = {2.1.0},
+  date    = {2026-10-18},
   doi     = {10.5281/zenodo.19220562},
 }
 ```

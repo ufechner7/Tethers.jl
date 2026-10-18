@@ -1,10 +1,15 @@
-### Unreleased
+### Tethers v2.1.0 2026-10-18
 #### Added
 - `bin/install` options `--update` (regenerate the manifest with `Pkg.update()` instead of instantiating the pinned one), `--test` (run the tests after installing) and `--version <ver>`/`+<ver>` (use that Julia version without changing the juliaup default)
 - `bin/update_default_manifests`, regenerating `Manifest-v<ver>.toml.default` for each supported Julia version, only if the install and the tests succeed
+- documentation of `Tether_11.jl` in the examples section of the docs
 
-#### Breaking
+#### Changed
 - dropped support for Julia 1.11; Julia 1.12 and 1.13 are supported
+- the system image is built for the native CPU on Julia 1.13 too; the PackageCompiler default there compiles every function for several CPU targets, needing more than twice the memory and build time
+- building the system image works now on Windows with Julia 1.13
+- CI tests Julia 1.12 and 1.13 on Linux, and Julia 1.13 on Windows and macOS
+- regenerated the pinned `Manifest-v1.12.toml.default` and `Manifest-v1.13.toml.default`
 
 ### Tethers v2.0.0 2026-09-11
 #### Added
