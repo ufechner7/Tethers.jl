@@ -85,7 +85,7 @@ Copy `src_file` from the folder `relpath` of this package to `dst_file` in the f
 Used for the scripts that exist in a variant for a clone of this repository and in a
 variant for an installed package.
 """
-function copy_file(relpath, src_file, dst_file; overwrite=true)
+function copy_file(relpath::AbstractString, src_file::AbstractString, dst_file::AbstractString; overwrite=true)
     if ! isdir(relpath)
         mkdir(relpath)
     end
@@ -169,11 +169,8 @@ function install_examples(add_packages=true)
     end
 end
 
-function docu(build=true)
+function docu()
     @eval using LiveServer
-    # if build
-    #     include("docs/make.jl")
-    # end
     if Sys.islinux() && ! LAUNCH_BROWSER
         Base.run(`xdg-open "docs/build/index.html"`; wait=false)
     else

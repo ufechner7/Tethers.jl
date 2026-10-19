@@ -102,15 +102,8 @@ function model(se)
     eqs2 = vcat(eqs2, reduce(vcat, eqs))  
 
     if se.callbacks
-        local cb
-        for i in 1:se.segments
-            cbi = [norm([pos[1, i+1] - pos[1, i], pos[2, i+1] - pos[2, i], pos[3, i+1] - pos[3, i]]) ~ abs(se.l0)/se.segments]
-            if i == 1
-                cb = cbi
-            else
-                cb = vcat(cb, cbi)
-            end
-        end
+        cb = [norm([pos[1, i+1] - pos[1, i], pos[2, i+1] - pos[2, i], pos[3, i+1] - pos[3, i]]) ~ abs(se.l0)/se.segments
+              for i in 1:se.segments]
         @named sys = System(reduce(vcat, Symbolics.scalarize.(eqs2)), t; continuous_events = cb)
     else
         @named sys = System(reduce(vcat, Symbolics.scalarize.(eqs2)), t)
@@ -125,7 +118,7 @@ function simulate(se, simple_sys)
     ts    = 0:se.dt:se.duration
     prob = ODEProblem(simple_sys, nothing, tspan)
     solve_kwargs = (; dt=se.dt, abstol=tol, reltol=tol, saveat=ts)
-    sol = solve(prob, FBDF(autodiff=AutoFiniteDiff()); solve_kwargs...)
+    solve(prob, FBDF(autodiff=AutoFiniteDiff()); solve_kwargs...) # warm-up run, excludes compilation from the timing
     elapsed_time = @elapsed sol = solve(prob, FBDF(autodiff=AutoFiniteDiff()); solve_kwargs...)
     sol, elapsed_time
 end
@@ -196,10 +189,10 @@ function compare(se=Settings2())
     se.callbacks = false
     se.v_ro = 2
     se.v0 = 0
-    sol1, pos, vel = main(se, play_=false)
+    sol1, _, vel = main(se, play_=false)
     vel_z1 = stack(sol1[vel], dims=1)[:, 3, 5]
     se.callbacks = true
-    sol2, pos, vel = main(se, play_=false)
+    sol2, _, vel = main(se, play_=false)
     vel_z2 = stack(sol2[vel], dims=1)[:, 3, 5]
     i, j = 1, 1
     vel1, vel2 = Float64[], Float64[]
