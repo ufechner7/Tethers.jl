@@ -619,6 +619,39 @@ function get_initial_conditions(filename)
     return state_vec, kite_pos, kite_vel, wind_vel, tether_length, settings
 end
 
+# Solve the catenary equation for the tether shape between the origin and `kite_pos`, sampled at `nodes` points
+function solve_catenary(kite_pos, tether_length, nodes)
+    hvec = kite_pos[1:2]    
+    h = norm(hvec)
+    v = kite_pos[3]
+
+    # Function for nonlinear solver
+    function f!(res, coeff, param)    
+        l_t, v_t, h_t = param  
+        res[] = sqrt(l_t^2 - v_t^2) - (2 * sinh(coeff[] * h_t / 2) / coeff[])       
+    end
+
+    u0 = [0.1]  # Initial guess as a scalar in an array
+
+    # Define and solve nonlinear problem
+    param = (tether_length, v, h)
+    prob = NonlinearProblem(f!, u0, param)
+    coeff = solve(prob, NewtonRaphson(autodiff=AutoFiniteDiff()), show_trace=Val(false)) 
+    coeff_val = coeff[]  # Extract scalar value
+    
+    # Adjust catenary solution to specific case
+    X = LinRange(0, h, nodes)
+    angle1 = atan(hvec[1], hvec[2])
+    XY = [sin(angle1) * X'; cos(angle1) * X']
+    x_min = -(1 / 2) * (log((tether_length + v) / (tether_length - v)) / coeff_val - h)
+    bias = -cosh(-x_min * coeff_val) / coeff_val    
+    # Compute z-coordinates of catenary
+    z_catenary = cosh.((X .- x_min) .* coeff_val) ./ coeff_val .+ bias
+    x_catenary = XY[1, :]
+    y_catenary = XY[2, :]    
+    return x_catenary, y_catenary, z_catenary, coeff_val
+end
+
 """
     init_quasisteady(kite_pos, tether_length; kite_vel = nothing, segments = nothing, wind_vel = nothing, settings = nothing)
 
@@ -638,7 +671,7 @@ Initialize the quasi-steady tether model providing an initial guess for the stat
 """
 function init_quasisteady(kite_pos, tether_length; kite_vel = nothing, segments = nothing, wind_vel = nothing, settings = nothing)
     # Some basic checks
-    @assert isa(kite_pos, MVector{3}) || error("kite_pos must be a MVector of size (3,1)")
+    isa(kite_pos, MVector{3}) || error("kite_pos must be a MVector of size (3,1)")
     if isnothing(kite_vel) 
         kite_vel = MVector{3}([0.0, 0.0, 0.0])
     end
@@ -648,58 +681,24 @@ function init_quasisteady(kite_pos, tether_length; kite_vel = nothing, segments 
         segments = 8
         wind_vel = zeros(3, n_nodes(segments))
     elseif isnothing(segments) && !isnothing(wind_vel)
-        @assert size(wind_vel)[1] == 3 || error("wind_vel should have 3 rows!")
+        size(wind_vel)[1] == 3 || error("wind_vel should have 3 rows!")
         segments = size(wind_vel)[2] + 1
     elseif !isnothing(segments) && isnothing(wind_vel)
         wind_vel = zeros(3, n_nodes(segments))
     elseif !isnothing(segments) || !isnothing(wind_vel)
-        @assert size(wind_vel)[1] == 3 || error("wind_vel should have 3 rows!")
-        @assert size(wind_vel)[2] == n_nodes(segments) || error("wind_vel should have n_nodes(segments) columns!")
+        size(wind_vel)[1] == 3 || error("wind_vel should have 3 rows!")
+        size(wind_vel)[2] == n_nodes(segments) || error("wind_vel should have n_nodes(segments) columns!")
     end
 
     if isnothing(settings)
         settings = StaticSettings()
     else
-        @assert typeof(settings) == StaticSettings || error("settings should be of type StaticSettings!")
+        typeof(settings) == StaticSettings || error("settings should be of type StaticSettings!")
     end
-
-    kite_dist = norm(kite_pos)
 
     # azimuth angle calculation
     phi_init = atan(kite_pos[2], kite_pos[1])        
     
-    function solve_catenary(kite_pos, tether_length, nodes)
-        hvec = kite_pos[1:2]    
-        h = norm(hvec)
-        v = kite_pos[3]
-    
-        # Function for nonlinear solver
-        function f!(res, coeff, param)    
-            tether_length, v, h = param  
-            res[] = sqrt(tether_length^2 - v^2) - (2 * sinh(coeff[] * h / 2) / coeff[])       
-        end
-    
-        u0 = [0.1]  # Initial guess as a scalar in an array
-    
-        # Define and solve nonlinear problem
-        param = (tether_length, v, h)
-        prob = NonlinearProblem(f!, u0, param)
-        coeff = solve(prob, NewtonRaphson(autodiff=AutoFiniteDiff()), show_trace=Val(false)) 
-        coeff_val = coeff[]  # Extract scalar value
-        
-        # Adjust catenary solution to specific case
-        X = LinRange(0, h, nodes)
-        angle1 = atan(hvec[1], hvec[2])
-        XY = [sin(angle1) * X'; cos(angle1) * X']
-        x_min = -(1 / 2) * (log((tether_length + v) / (tether_length - v)) / coeff_val - h)
-        bias = -cosh(-x_min * coeff_val) / coeff_val    
-        # Compute z-coordinates of catenary
-        z_catenary = cosh.((X .- x_min) .* coeff_val) ./ coeff_val .+ bias
-        x_catenary = XY[1, :]
-        y_catenary = XY[2, :]    
-        return x_catenary, y_catenary, z_catenary, coeff_val
-    end
-
     # Solve the catenary equation
     x_catenary, y_catenary, z_catenary, coeff = solve_catenary(kite_pos, tether_length, n_nodes(segments))
     # Calculate the elevation angle

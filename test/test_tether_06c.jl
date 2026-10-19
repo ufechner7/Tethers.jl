@@ -16,7 +16,7 @@ const ELAPSED_TIME_LIMIT = get(ENV, "CI", "false") == "true" ? 2.0 : 1.0
     set = deepcopy(Settings2())
     set.duration = 10.0
     set.callbacks = false
-    simple_sys, pos, vel = model(set)
+    simple_sys, pos, _ = model(set)
     sol, elapsed_time = simulate(set, simple_sys)
     @test elapsed_time < ELAPSED_TIME_LIMIT
     l_tether_theoretical = set.l0 + set.v_ro * set.duration
@@ -26,7 +26,7 @@ const ELAPSED_TIME_LIMIT = get(ENV, "CI", "false") == "true" ? 2.0 : 1.0
 
     # with callbacks
     set.callbacks = true
-    simple_sys, pos, vel = model(set)
+    simple_sys, pos, _ = model(set)
     sol, elapsed_time = simulate(set, simple_sys)
     @test elapsed_time < ELAPSED_TIME_LIMIT
     l_tether_theoretical = set.l0 + set.v_ro * set.duration

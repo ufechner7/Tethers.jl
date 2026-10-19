@@ -57,17 +57,17 @@ end
 
 function model(se; p1=[0,0,0], p2=nothing, fix_p1=true, fix_p2=false)
     if ! isnothing(p1)
-        @assert isa(p1, AbstractVector) || error("p1 must be a vector")
-        @assert (length(p1) == 3)       || error("p1 must have length 3")
+        isa(p1, AbstractVector) || error("p1 must be a vector")
+        (length(p1) == 3)       || error("p1 must have length 3")
     else
-        @assert ! fix_p1                || error("if p1 undefined it cannot be fixed")
+        ! fix_p1                || error("if p1 undefined it cannot be fixed")
     end
 
     if ! isnothing(p2)
-        @assert isa(p2, AbstractVector) || error("p2 must be a vector")
-        @assert (length(p2) == 3)       || error("p2 must have length 3")
+        isa(p2, AbstractVector) || error("p2 must be a vector")
+        (length(p2) == 3)       || error("p2 must have length 3")
     else
-        @assert ! fix_p2                || error("if p2 undefined it cannot be fixed")
+        ! fix_p2                || error("if p2 undefined it cannot be fixed")
     end
     # straight line approximation for the tether
     POS0, VEL0 = calc_initial_state(se; p1, p2)

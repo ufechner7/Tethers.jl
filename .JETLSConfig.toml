@@ -17,3 +17,12 @@ match_by = "message"
 match_type = "regex"
 severity = "off"
 path = "examples/Tether_06c.jl"
+
+# The tests include an example script and then use the globals (results, settings types, functions
+# and the loaded MakieControlPlots module) that it defines at runtime, which the analysis cannot see.
+[[diagnostic.patterns]]
+pattern = "^`(sol|ts|pos|vel|Settings3|TetherSettings|set_diameter!|model2|simulate|MakieControlPlots)` is not defined$"
+match_by = "message"
+match_type = "regex"
+severity = "off"
+path = "test/test_tether_*.jl"
