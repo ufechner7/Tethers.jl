@@ -170,11 +170,11 @@ function install_examples(add_packages=true)
 end
 
 function docu()
-    @eval using LiveServer
+    live_server = Base.require(@__MODULE__, :LiveServer)
     if Sys.islinux() && ! LAUNCH_BROWSER
         Base.run(`xdg-open "docs/build/index.html"`; wait=false)
     else
-        Base.invokelatest(LiveServer.servedocs; skip_dir="docs", launch_browser=true)
+        Base.invokelatest(live_server.servedocs; skip_dir="docs", launch_browser=true)
     end
 end
 
