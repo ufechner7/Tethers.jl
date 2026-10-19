@@ -160,20 +160,20 @@ if ! julia --startup-file=no --project=test -e "$_instantiate_jl"; then
     exit 1
 fi
 
-if ! julia --project=test -t auto -e "using Pkg; Pkg.precompile()"; then
+if ! julia --startup-file=no --project=test -t auto -e "using Pkg; Pkg.precompile()"; then
     echo "Precompiling the test project failed." >&2
     restore_backup
     exit 1
 fi
 
-if ! julia --project=test -t auto --heap-size-hint=${heap_hint}M -e "include(\"./test/create_sys_image.jl\");"; then
+if ! julia --startup-file=no --project=test -t auto --heap-size-hint=${heap_hint}M -e "include(\"./test/create_sys_image.jl\");"; then
     echo "Building the system image failed." >&2
     restore_backup
     exit 1
 fi
 
 mv kps-image_tmp.so bin/kps-image-${julia_major}.so
-if ! julia --project=examples -J bin/kps-image-${julia_major}.so -e "using Pkg; Pkg.precompile(); using Parameters"; then
+if ! julia --startup-file=no --project=examples -J bin/kps-image-${julia_major}.so -e "using Pkg; Pkg.precompile(); using Parameters"; then
     echo "The new system image cannot be loaded; removing it." >&2
     rm -f bin/kps-image-${julia_major}.so
     restore_backup
