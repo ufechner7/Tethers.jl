@@ -1,0 +1,19 @@
+# JETLS configuration, see https://aviatesk.github.io/JETLS.jl/release/configuration/
+
+# The type inference of JETLS cannot see through the @variables/@parameters macros of
+# Symbolics/ModelingToolkit and reports false method errors in the examples.
+[[diagnostic.patterns]]
+pattern = "inference/method-error"
+match_by = "code"
+match_type = "literal"
+severity = "off"
+path = "examples/**/*.jl"
+
+# `sol` and `vel` are assigned and used inside the same top-level `if` block, which the analysis
+# does not track for globals.
+[[diagnostic.patterns]]
+pattern = "^`(sol|vel)` may be undefined$"
+match_by = "message"
+match_type = "regex"
+severity = "off"
+path = "examples/Tether_06c.jl"
