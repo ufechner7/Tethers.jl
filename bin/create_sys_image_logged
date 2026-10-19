@@ -1,0 +1,10 @@
+#!/bin/bash
+# Build the system image non-interactively while logging RAM, swap, zram and CPU usage
+# every 30 s. The output, including the peak memory demand, is also written to sysimage.log.
+# Extra arguments are passed on to create_sys_image.
+if [[ $(basename $(pwd)) == "bin" ]]; then
+    cd ..
+fi
+
+./bin/mem_monitor -i 30 ./bin/create_sys_image -y "$@" |& tee sysimage.log
+exit ${PIPESTATUS[0]}

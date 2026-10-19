@@ -1,0 +1,82 @@
+#!/bin/bash -u
+# SPDX-FileCopyrightText: 2026 Uwe Fechner
+# SPDX-License-Identifier: MIT
+#
+# Monitor memory, swap, zram and CPU load like the CI workflows do.
+#
+# Usage: mem_monitor [-i SECONDS] [COMMAND [ARGS...]]
+#
+# Prints a log line every SECONDS (default 60) and samples the memory demand every 2 s.
+# With a COMMAND, runs it and stops when it finishes, returning its exit code; without
+# one, runs until Ctrl-C. At the end it prints the peak memory demand: RAM used + swap used
+# minus the RAM used by zram itself (used + swap would count the compressed pages twice).
+
+interval=60
+if [[ "${1:-}" == "-i" ]]; then
+    interval=${2:?"-i needs a number of seconds"}
+    shift 2
+fi
+(( interval >= 6 )) || { echo "The interval must be at least 6 s." >&2; exit 1; }
+
+peak_file=$(mktemp)
+trap 'rm -f "$peak_file"' EXIT
+
+zram_stat=""
+for dev in /sys/block/zram*/mm_stat; do
+    [[ -r "$dev" ]] && zram_stat="$zram_stat $dev"
+done
+
+# Log memory, swap and CPU activity (si/so = swap in/out in KB/s, cpu = 100% - idle over 5 s)
+log_loop() {
+    while true; do
+        local zram=""
+        if [[ -n "$zram_stat" ]]; then
+            # mm_stat: orig_data_size compr_data_size mem_used_total ... (bytes)
+            zram=" zram=$(cat $zram_stat | awk '{o+=$1; c+=$3} END{printf "%.1fG->%.1fG", o/2^30, c/2^30}')"
+        fi
+        echo "[mem $(date +%H:%M:%S)] $(free -m | awk '/^Mem/{printf "used=%dMB avail=%dMB", $3, $7} /^Swap/{printf " swap=%dMB", $3}')$zram $(vmstat 5 2 | awk 'END{printf "si=%s so=%s cpu=%d%%", $7, $8, 100-$15}')"
+        sleep $(( interval - 5 ))
+    done
+}
+
+# Track the peak memory demand every 2 s
+peak_loop() {
+    local peak=0 d z
+    while true; do
+        d=$(awk '/^MemTotal:/{t=$2} /^MemAvailable:/{a=$2} /^SwapTotal:/{st=$2} /^SwapFree:/{sf=$2} END{print int((t-a+st-sf)/1024)}' /proc/meminfo)
+        z=0
+        [[ -n "$zram_stat" ]] && z=$(cat $zram_stat | awk '{s+=$3} END{print int(s/1048576)}')
+        d=$(( d - z ))
+        if (( d > peak )); then
+            peak=$d
+            echo "${peak}MB at $(date +%H:%M:%S)" > "$peak_file"
+        fi
+        sleep 2
+    done
+}
+
+log_loop &
+log_pid=$!
+peak_loop &
+peak_pid=$!
+
+finish() {
+    kill $log_pid $peak_pid 2>/dev/null
+    wait $log_pid $peak_pid 2>/dev/null
+    local peak
+    peak=$(cat "$peak_file" 2>/dev/null)
+    echo "[mem peak] RAM + swap demand: ${peak:-no sample taken}"
+    rm -f "$peak_file"
+}
+
+if (( $# > 0 )); then
+    trap 'finish; exit 130' INT TERM
+    "$@"
+    status=$?
+    finish
+    exit $status
+else
+    echo "Monitoring memory every ${interval} s; press Ctrl-C to stop."
+    trap 'echo; finish; exit 0' INT TERM
+    wait
+fi

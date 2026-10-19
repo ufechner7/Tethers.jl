@@ -96,6 +96,10 @@ cd bin
 
 `./bin/run_julia` picks it up automatically. Use `./bin/create_sys_image --update` to update all packages before building it.
 
+To see how much memory the build needs, use `./bin/create_sys_image_logged` instead. It logs RAM, swap,
+zram and CPU usage every 30 s, prints the peak memory demand at the end and saves the output in
+`sysimage.log`. To monitor any other command, use `./bin/mem_monitor -i 30 <command>`.
+
 ## Basic example
 
 Use the provided script to start Julia from the `Tethers.jl` folder:
