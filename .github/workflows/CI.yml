@@ -46,6 +46,17 @@ jobs:
         with:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
+      # Without JULIA_CPU_TARGET, packages are compiled for the CPU of the runner, and a cache
+      # built on a newer CPU (e.g. AMD EPYC 9V45 with AVX-512) is rejected on an older one
+      # (e.g. EPYC 7763), so almost everything is recompiled. x86-64-v3 (AVX2) runs on all
+      # current x64 runners.
+      - name: Print the CPU and set a portable CPU target (x64 only)
+        shell: bash
+        run: |
+          julia -e 'println("CPU: ", Sys.cpu_info()[1].model, " (", Sys.CPU_THREADS, " threads)")'
+          if [ "${{ matrix.arch }}" = "x64" ]; then
+            echo "JULIA_CPU_TARGET=x86-64-v3" >> "$GITHUB_ENV"
+          fi
       # Caches the whole depot (packages, compiled images, artifacts, registries), not just
       # artifacts, so cached runs don't have to recompile the full ModelingToolkit/Symbolics/
       # GLMakie dependency stack from scratch.
