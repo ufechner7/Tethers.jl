@@ -1,6 +1,8 @@
 #!/bin/bash
 # Print the peak RAM, swap and total (RAM+swap) usage seen since this script started.
 # Samples /proc/meminfo once per second; press Enter to stop.
+# The total excludes the RAM used by zram itself, because the swap usage already counts
+# the pages stored in zram.
 
 peak_ram=0
 peak_swap=0
@@ -18,7 +20,12 @@ while true; do
 
     ram_used_kb=$(( mem_total - mem_avail ))
     swap_used_kb=$(( swap_total - swap_free ))
-    total_used_kb=$(( ram_used_kb + swap_used_kb ))
+    zram_kb=0
+    for stat in /sys/block/zram*/mm_stat; do
+        # mm_stat: orig_data_size compr_data_size mem_used_total ... (bytes)
+        [[ -r "$stat" ]] && zram_kb=$(( zram_kb + $(awk '{print int($3/1024)}' "$stat") ))
+    done
+    total_used_kb=$(( ram_used_kb + swap_used_kb - zram_kb ))
 
     (( ram_used_kb > peak_ram )) && peak_ram=$ram_used_kb
     (( swap_used_kb > peak_swap )) && peak_swap=$swap_used_kb
