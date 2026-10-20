@@ -70,9 +70,10 @@ function total_ram_swap_gb()
         max(current, max_gb)
     elseif Sys.isapple()
         # macOS has no fixed swap: it creates swap files in the VM volume as needed, until
-        # the disk is full, so count the free space of that volume as swap
+        # the disk is full, so count the free space of that volume minus 5 GB as swap
         vm = isdir("/System/Volumes/VM") ? "/System/Volumes/VM" : "/"
-        (Sys.total_memory() + diskstat(vm).available) / 1_073_741_824  # -> GiB
+        swap = max(0, diskstat(vm).available - 5 * 1_073_741_824)
+        (Sys.total_memory() + swap) / 1_073_741_824  # -> GiB
     else
         info = read("/proc/meminfo", String)
         memtotal = parse(Int, match(r"MemTotal:\s+(\d+)", info).captures[1])   # kB
@@ -81,38 +82,35 @@ function total_ram_swap_gb()
     end
 end
 
+# The rules for the memory checks and the number of image threads are documented in
+# docs/sysimage.md
 let total = total_ram_swap_gb()
     @info "Total RAM + swap: $(round(total; digits=1)) GB"
-    # Measured peak demand with one image thread: about 26 GB, plus a few GB for the OS
+    # Measured peak demand with one image thread: about 26 GB, plus a few GB of margin
     if total < 30
         error("At least 30 GB of RAM + swap is needed to create a system image even with " *
               "one thread, but only $(round(total; digits=1)) GB is available. " *
               (Sys.iswindows() ? "Increase the maximum size of the pagefile and retry." :
                Sys.isapple()   ? "Free some disk space and retry." :
                                  "Increase your swap file and retry."))
-    elseif total < 34
-        msg = "At least 34 GB of RAM + swap is recommended to create a system image, " *
-              "but only $(round(total; digits=1)) GB is available."
-        if Sys.iswindows()
-            # The total includes the size the pagefile can grow to, but that is only an
-            # estimate, so don't refuse to try.
-            @warn msg * " Increase the maximum size of the pagefile if the build fails."
-        elseif Sys.isapple()
-            # The swap is estimated from the free disk space, which other programs use too
-            @warn msg * " Free some disk space if the build fails."
-        else
-            error(msg * " Increase your swap file and retry.")
-        end
     end
 
-    if haskey(ENV, "JULIA_IMAGE_THREADS")
+    # Set by the shell script if it chose the number of threads itself; otherwise a value
+    # of JULIA_IMAGE_THREADS was set by the caller
+    auto = get(ENV, "SYSIMAGE_THREADS_AUTO", "false") == "true"
+    if haskey(ENV, "JULIA_IMAGE_THREADS") && !auto
         @info "JULIA_IMAGE_THREADS already set to $(ENV["JULIA_IMAGE_THREADS"]), leaving as is"
+    elseif total < 34
+        # Measured peak of RAM + swap with two threads: about 30 GB
+        ENV["JULIA_IMAGE_THREADS"] = "1"
+        @info "Setting JULIA_IMAGE_THREADS=1 based on $(round(total; digits=1)) GB total memory"
+    elseif haskey(ENV, "JULIA_IMAGE_THREADS")
+        @info "Using JULIA_IMAGE_THREADS=$(ENV["JULIA_IMAGE_THREADS"]) as chosen by the shell script"
     else
         # Measured peak of RAM + swap: about 26 GB with one thread, 30 GB with two, and
         # about the same up to 16 threads, so more than two threads cost no extra memory.
-        # Use Julia's default of CPU_THREADS / 2 (capped at 16, the most measured) as soon
-        # as two threads fit.
-        threads = total >= 35 ? clamp(Sys.CPU_THREADS ÷ 2, 1, 16) : 1
+        # Use Julia's default of CPU_THREADS / 2, capped at 16, the most measured.
+        threads = clamp(Sys.CPU_THREADS ÷ 2, 1, 16)
         ENV["JULIA_IMAGE_THREADS"] = string(threads)
         @info "Setting JULIA_IMAGE_THREADS=$threads based on $(round(total; digits=1)) GB total memory"
     end

@@ -1,19 +1,21 @@
 ### Tethers unreleased
 #### Added
+- `docs/sysimage.md`, documenting the rules by which `create_sys_image` checks the memory and chooses the number of image threads, and the peak memory measured in the AWEMeta.jl workflows
 - `bin/mem_monitor`, logging RAM, swap, zram and CPU usage while a command runs and printing its peak memory demand, on Linux and in Git Bash on Windows; it replaces `bin/peak_mem`
 - `bin/create_sys_image_logged`, building the system image under `mem_monitor` and saving the output, the peak memory demand and the total run time in `sysimage.log`
 - `.JETLSConfig.toml.default`, the JETLS configuration; `bin/install` copies it to `.JETLSConfig.toml` if that does not exist
 
 #### Changed
-- the number of threads for compiling the system image no longer grows with the memory: measurements showed that more than two threads need no extra memory, so with at least 35 GB of RAM + swap (including the size the pagefile can grow to on Windows) half of the CPU threads are used, at most 16, otherwise one; on Linux and macOS, machines with 16 to 27 GB of RAM use two threads instead of one (one if they have fewer than 4 CPU threads), and only machines with less than 16 GB of RAM are limited to one thread
-- `create_sys_image` stops with an error on all platforms, including Windows, if there is less than 30 GB of RAM + swap, which is not enough even for one thread; on Linux the bash script checks this before doing anything else
+- the number of threads for compiling the system image no longer grows with the memory: measurements showed that more than two threads need no extra memory, so with at least 34 GB of RAM + swap (including the size the pagefile can grow to on Windows) half of the CPU threads are used, at most 16, otherwise one; machines with 15 to 27 GB of RAM use two threads instead of one (one if they have fewer than 4 CPU threads), on all platforms
+- `create_sys_image` stops with an error on all platforms if there is less than 15 GB of RAM or less than 30 GB of RAM + swap; the bash script checks the RAM, and on Linux also RAM + swap, before doing anything else
+- `create_sys_image` no longer passes `--heap-size-hint` to Julia: it limited only the Julia process that drives PackageCompiler, not the processes that compile the system image
 - `create_sys_image` respects `JULIA_IMAGE_THREADS` when it is set by the caller
 - `create_sys_image` runs all `julia` calls with `--startup-file=no`
 - CI prints the CPU and compiles for the portable CPU target `x86-64-v3` on x64, so a package cache built on a newer runner CPU is no longer rejected on an older one
 - fixed JETLS diagnostics in `src` and the examples
 
 #### Fixed
-- `create_sys_image` failed on macOS while checking the memory, because it read `/proc/meminfo`; there it now counts the RAM and the free space of the volume that macOS creates its swap files on
+- `create_sys_image` failed on macOS while checking the memory, because it read `/proc/meminfo`; there it now counts the RAM and the free space of the volume that macOS creates its swap files on, minus 5 GB
 
 ### Tethers v2.1.0 2026-10-18
 #### Added
