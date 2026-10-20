@@ -221,6 +221,20 @@ $JULIA --project=examples -e 'using Pkg; Pkg.resolve(); Pkg.instantiate(); Pkg.p
 echo "Instantiating test subproject..."
 $JULIA --project=test -e 'using Pkg; Pkg.resolve(); Pkg.instantiate(); Pkg.precompile()'
 
+# Handle .JETLSConfig.toml configuration file
+_jetls_warning=0
+if [ ! -f ".JETLSConfig.toml" ]; then
+    if [ -f ".JETLSConfig.toml.default" ]; then
+        cp .JETLSConfig.toml.default .JETLSConfig.toml
+        echo "Copied .JETLSConfig.toml.default to .JETLSConfig.toml"
+    else
+        echo "Warning: .JETLSConfig.toml.default not found"
+    fi
+elif [ -f ".JETLSConfig.toml.default" ] && ! cmp -s ".JETLSConfig.toml" ".JETLSConfig.toml.default"; then
+    # Only warn if the files differ
+    _jetls_warning=1
+fi
+
 echo "Precompiling..."
 $JULIA --project -e 'using Pkg; Pkg.precompile()'
 
@@ -236,3 +250,9 @@ fi
 
 echo ""
 echo "Installation completed successfully."
+
+# Warn if .JETLSConfig.toml already existed
+if [[ $_jetls_warning -eq 1 ]]; then
+    echo "Warning: .JETLSConfig.toml already exists and was not overwritten."
+    echo "If you want to use the default configuration, delete it and run this script again."
+fi

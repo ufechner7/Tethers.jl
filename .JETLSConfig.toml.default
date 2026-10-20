@@ -1,5 +1,9 @@
 # JETLS configuration, see https://aviatesk.github.io/JETLS.jl/release/configuration/
 
+# Do not show the inferred types as inlay hints in the editor.
+[inlay_hint.types]
+enabled = false
+
 # The type inference of JETLS cannot see through the @variables/@parameters macros of
 # Symbolics/ModelingToolkit and reports false method errors in the examples.
 [[diagnostic.patterns]]
