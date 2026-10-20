@@ -6,8 +6,8 @@
 - `.JETLSConfig.toml.default`, the JETLS configuration; `bin/install` copies it to `.JETLSConfig.toml` if that does not exist
 
 #### Changed
-- the number of threads for compiling the system image no longer grows with the memory: measurements showed that more than two threads need no extra memory, so with at least 34 GB of RAM + swap (including the size the pagefile can grow to on Windows) half of the CPU threads are used, at most 16, otherwise one; machines with 15 to 27 GB of RAM use two threads instead of one (one if they have fewer than 4 CPU threads), on all platforms
-- `create_sys_image` stops with an error on all platforms if there is less than 15 GB of RAM or less than 30 GB of RAM + swap; the bash script checks the RAM, and on Linux also RAM + swap, before doing anything else
+- the number of threads for compiling the system image no longer grows with the memory: measurements showed that more than two threads need no extra memory, so with at least 34 GB of RAM + swap (including the size the pagefile can grow to on Windows) half of the CPU threads are used, at most 16, otherwise one; machines with less than 27 GB of RAM use two threads instead of one (one if they have fewer than 4 CPU threads), on all platforms
+- `create_sys_image` stops with an error on all platforms if there is less than 15 GB of RAM (7 GB on macOS) or less than 30 GB of RAM + swap; the bash script checks the RAM, and on Linux also RAM + swap, before doing anything else
 - `create_sys_image` no longer passes `--heap-size-hint` to Julia: it limited only the Julia process that drives PackageCompiler, not the processes that compile the system image
 - `create_sys_image` respects `JULIA_IMAGE_THREADS` when it is set by the caller
 - `create_sys_image` runs all `julia` calls with `--startup-file=no`
