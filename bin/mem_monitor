@@ -2,7 +2,8 @@
 # SPDX-FileCopyrightText: 2026 Uwe Fechner
 # SPDX-License-Identifier: MIT
 #
-# Monitor memory, swap, zram and CPU load like the CI workflows do.
+# Monitor memory, swap, zram and CPU load like the CI workflows do. Works on Linux and in
+# Git Bash on Windows.
 #
 # Usage: mem_monitor [-i SECONDS] [COMMAND [ARGS...]]
 #
@@ -26,24 +27,50 @@ for dev in /sys/block/zram*/mm_stat; do
     [[ -r "$dev" ]] && zram_stat="$zram_stat $dev"
 done
 
-# Log memory, swap and CPU activity (si/so = swap in/out in KB/s, cpu = 100% - idle over 5 s)
+# RAM used, RAM available and swap used in MB from /proc/meminfo, which Git Bash on Windows
+# provides too. It has no MemAvailable there, but its MemFree is Windows' available memory,
+# and its swap is the pagefile, so used + swap is the commit charge.
+meminfo_mb() {
+    awk '/^MemTotal:/{t=$2} /^MemFree:/{f=$2} /^MemAvailable:/{a=$2} /^SwapTotal:/{st=$2} /^SwapFree:/{sf=$2}
+         END{if (a == "") a = f; printf "%d %d %d", (t-a)/1024, a/1024, (st-sf)/1024}' /proc/meminfo
+}
+
+# Swap in/out in KB/s and CPU load in % over 5 s. Without vmstat (Git Bash) only the CPU
+# load is measured, from /proc/stat.
+activity_5s() {
+    if command -v vmstat >/dev/null; then
+        vmstat 5 2 | awk 'END{printf "si=%s so=%s cpu=%d%%", $7, $8, 100-$15}'
+    else
+        local a b
+        # /proc/stat: cpu user nice system idle ... (ticks); total = sum of all fields
+        a=$(awk '/^cpu /{for (i = 2; i <= NF; i++) t += $i; print t, $5}' /proc/stat)
+        sleep 5
+        b=$(awk '/^cpu /{for (i = 2; i <= NF; i++) t += $i; print t, $5}' /proc/stat)
+        awk -v a="$a" -v b="$b" 'BEGIN{split(a, x, " "); split(b, y, " "); t = y[1]-x[1];
+            printf "cpu=%d%%", (t > 0 ? 100 - 100*(y[2]-x[2])/t : 0)}'
+    fi
+}
+
+# Log memory, swap and CPU activity
 log_loop() {
     while true; do
-        local zram=""
+        local zram="" used avail swap
         if [[ -n "$zram_stat" ]]; then
             # mm_stat: orig_data_size compr_data_size mem_used_total ... (bytes)
             zram=" zram=$(cat $zram_stat | awk '{o+=$1; c+=$3} END{printf "%.1fG->%.1fG", o/2^30, c/2^30}')"
         fi
-        echo "[mem $(date +%H:%M:%S)] $(free -m | awk '/^Mem/{printf "used=%dMB avail=%dMB", $3, $7} /^Swap/{printf " swap=%dMB", $3}')$zram $(vmstat 5 2 | awk 'END{printf "si=%s so=%s cpu=%d%%", $7, $8, 100-$15}')"
+        read -r used avail swap <<< "$(meminfo_mb)"
+        echo "[mem $(date +%H:%M:%S)] used=${used}MB avail=${avail}MB swap=${swap}MB$zram $(activity_5s)"
         sleep $(( interval - 5 ))
     done
 }
 
 # Track the peak memory demand every 2 s
 peak_loop() {
-    local peak=0 d z
+    local peak=0 d z used avail swap
     while true; do
-        d=$(awk '/^MemTotal:/{t=$2} /^MemAvailable:/{a=$2} /^SwapTotal:/{st=$2} /^SwapFree:/{sf=$2} END{print int((t-a+st-sf)/1024)}' /proc/meminfo)
+        read -r used avail swap <<< "$(meminfo_mb)"
+        d=$(( used + swap ))
         z=0
         [[ -n "$zram_stat" ]] && z=$(cat $zram_stat | awk '{s+=$3} END{print int(s/1048576)}')
         d=$(( d - z ))

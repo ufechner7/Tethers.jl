@@ -1,6 +1,6 @@
 ### Tethers unreleased
 #### Added
-- `bin/mem_monitor`, logging RAM, swap, zram and CPU usage while a command runs and printing its peak memory demand; it replaces `bin/peak_mem`
+- `bin/mem_monitor`, logging RAM, swap, zram and CPU usage while a command runs and printing its peak memory demand, on Linux and in Git Bash on Windows; it replaces `bin/peak_mem`
 - `bin/create_sys_image_logged`, building the system image under `mem_monitor` and saving the output, the peak memory demand and the total run time in `sysimage.log`
 - `.JETLSConfig.toml.default`, the JETLS configuration; `bin/install` copies it to `.JETLSConfig.toml` if that does not exist
 
