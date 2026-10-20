@@ -1,3 +1,20 @@
+### Tethers unreleased
+#### Added
+- `bin/mem_monitor`, logging RAM, swap, zram and CPU usage while a command runs and printing its peak memory demand; it replaces `bin/peak_mem`
+- `bin/create_sys_image_logged`, building the system image under `mem_monitor` and saving the output, the peak memory demand and the total run time in `sysimage.log`
+- `.JETLSConfig.toml.default`, the JETLS configuration; `bin/install` copies it to `.JETLSConfig.toml` if that does not exist
+
+#### Changed
+- the number of threads for compiling the system image no longer grows with the memory: measurements showed that more than two threads need no extra memory, so with at least 35 GB of RAM + swap (including the size the pagefile can grow to on Windows) half of the CPU threads are used, at most 16, otherwise one; on Linux and macOS, machines with 16 to 27 GB of RAM use two threads instead of one (one if they have fewer than 4 CPU threads), and only machines with less than 16 GB of RAM are limited to one thread
+- `create_sys_image` stops with an error on all platforms, including Windows, if there is less than 30 GB of RAM + swap, which is not enough even for one thread; on Linux the bash script checks this before doing anything else
+- `create_sys_image` respects `JULIA_IMAGE_THREADS` when it is set by the caller
+- `create_sys_image` runs all `julia` calls with `--startup-file=no`
+- CI prints the CPU and compiles for the portable CPU target `x86-64-v3` on x64, so a package cache built on a newer runner CPU is no longer rejected on an older one
+- fixed JETLS diagnostics in `src` and the examples
+
+#### Fixed
+- `create_sys_image` failed on macOS while checking the memory, because it read `/proc/meminfo`; there it now counts the RAM and the free space of the volume that macOS creates its swap files on
+
 ### Tethers v2.1.0 2026-10-18
 #### Added
 - `bin/install` options `--update` (regenerate the manifest with `Pkg.update()` instead of instantiating the pinned one), `--test` (run the tests after installing) and `--version <ver>`/`+<ver>` (use that Julia version without changing the juliaup default)

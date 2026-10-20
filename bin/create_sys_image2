@@ -28,6 +28,19 @@ if [[ $(basename $(pwd)) == "bin" ]]; then
     cd ..
 fi
 
+# Stop right away if RAM + swap is not enough for a build with even one image thread
+# (measured peak about 26 GB, plus a few GB for the OS). Only on Linux, where both are
+# fixed; on Windows the pagefile and on macOS the swap can grow, which test/create_sys_image.jl
+# takes into account.
+if [[ "$OSTYPE" == linux* ]]; then
+    _total_mb=$(awk '/^(MemTotal|SwapTotal):/ {s += $2} END {printf "%i", s / 1024}' /proc/meminfo)
+    if [[ $_total_mb -lt 30720 ]]; then
+        echo "Error: At least 30 GB of RAM + swap is needed to create a system image, but only $(( _total_mb / 1024 )) GB is available." >&2
+        echo "Increase your swap file and retry." >&2
+        exit 1
+    fi
+fi
+
 export QT_QPA_PLATFORM=xcb
 export KMP_DUPLICATE_LIB_OK=TRUE
 
@@ -44,7 +57,19 @@ if [[ "$julia_major" != "1.12" && "$julia_major" != "1.13" ]]; then
     exit 1
 fi
 
-# Check memory and limit threads if needed, unless JULIA_IMAGE_THREADS is set by the caller
+# Check memory and limit threads if needed, unless JULIA_IMAGE_THREADS is set by the caller.
+# The build needs about 26 GB with one image thread and about 30 GB with two or more, so
+# with 16 to 27 GB of RAM two threads (if there are at least 4 CPU threads) are used.
+limit_image_threads_to_two() {
+    local cpus
+    cpus=$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 2)
+    if [[ $cpus -ge 4 ]]; then
+        export JULIA_IMAGE_THREADS=2
+    else
+        export JULIA_IMAGE_THREADS=1
+    fi
+    echo "Less than 27GB of memory detected. Using $JULIA_IMAGE_THREADS thread(s) for sysimage compilation."
+}
 if [[ -n "${JULIA_IMAGE_THREADS:-}" ]]; then
     echo "JULIA_IMAGE_THREADS already set to $JULIA_IMAGE_THREADS, leaving as is"
 else
@@ -58,16 +83,21 @@ else
         # macOS: use sysctl
         echo "Checking system memory on macOS..."
         totalmem=$(sysctl -n hw.memsize 2>/dev/null | awk '{printf "%i", $1 / 1000000}')
-        if [[ -z "$totalmem" || $totalmem -lt 27000 ]]; then
-            echo "Warning: Less than 27GB of memory detected on macOS. Using only one thread for sysimage compilation."
+        if [[ -z "$totalmem" || $totalmem -lt 15000 ]]; then
+            echo "Warning: Less than 16GB of memory detected on macOS. Using only one thread for sysimage compilation."
             export JULIA_IMAGE_THREADS=1
+        elif [[ $totalmem -lt 27000 ]]; then
+            limit_image_threads_to_two
         fi
     else
         # Linux: use /proc/meminfo
         totalmem=$(grep MemTotal /proc/meminfo | awk '{printf "%i", $2 / 1024}')
-        if [[ $totalmem -lt 26674 ]]; then
-            echo "Warning: Less than 27GB of memory detected. Using only one thread for sysimage compilation."
+        # 15000 MiB, because the kernel reports a little less than 16 GiB on 16 GB machines
+        if [[ $totalmem -lt 15000 ]]; then
+            echo "Warning: Less than 16GB of memory detected. Using only one thread for sysimage compilation."
             export JULIA_IMAGE_THREADS=1
+        elif [[ $totalmem -lt 26674 ]]; then
+            limit_image_threads_to_two
         fi
     fi
 fi
