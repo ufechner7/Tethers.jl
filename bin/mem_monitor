@@ -10,7 +10,9 @@
 # Prints a log line every SECONDS (default 60) and samples the memory demand every 2 s.
 # With a COMMAND, runs it and stops when it finishes, returning its exit code; without
 # one, runs until Ctrl-C. At the end it prints the peak memory demand: RAM used + swap used
-# minus the RAM used by zram itself (used + swap would count the compressed pages twice).
+# minus the swap cache and the RAM used by zram itself (both would otherwise be counted
+# twice). It also prints the demand at startup and the increase over it, which is the
+# demand of COMMAND without the other processes running on the machine.
 
 interval=60
 if [[ "${1:-}" == "-i" ]]; then
@@ -33,6 +35,18 @@ done
 meminfo_mb() {
     awk '/^MemTotal:/{t=$2} /^MemFree:/{f=$2} /^MemAvailable:/{a=$2} /^SwapTotal:/{st=$2} /^SwapFree:/{sf=$2}
          END{if (a == "") a = f; printf "%d %d %d", (t-a)/1024, a/1024, (st-sf)/1024}' /proc/meminfo
+}
+
+# Memory demand in MB: RAM used + swap used - swap cache - RAM used by zram. Pages in the
+# swap cache are both in RAM and in swap, and the compressed zram pages are in RAM used,
+# while swap used counts them uncompressed.
+demand_mb() {
+    local d z=0
+    d=$(awk '/^MemTotal:/{t=$2} /^MemFree:/{f=$2} /^MemAvailable:/{a=$2} /^SwapTotal:/{st=$2}
+             /^SwapFree:/{sf=$2} /^SwapCached:/{sc=$2}
+             END{if (a == "") a = f; printf "%d", (t-a+st-sf-sc)/1024}' /proc/meminfo)
+    [[ -n "$zram_stat" ]] && z=$(cat $zram_stat | awk '{s+=$3} END{print int(s/1048576)}')
+    echo $(( d - z ))
 }
 
 # Swap in/out in KB/s and CPU load in % over 5 s. Without vmstat (Git Bash) only the CPU
@@ -67,13 +81,9 @@ log_loop() {
 
 # Track the peak memory demand every 2 s
 peak_loop() {
-    local peak=0 d z used avail swap
+    local peak=0 d
     while true; do
-        read -r used avail swap <<< "$(meminfo_mb)"
-        d=$(( used + swap ))
-        z=0
-        [[ -n "$zram_stat" ]] && z=$(cat $zram_stat | awk '{s+=$3} END{print int(s/1048576)}')
-        d=$(( d - z ))
+        d=$(demand_mb)
         if (( d > peak )); then
             peak=$d
             echo "${peak}MB at $(date +%H:%M:%S)" > "$peak_file"
@@ -81,6 +91,8 @@ peak_loop() {
         sleep 2
     done
 }
+
+baseline=$(demand_mb)
 
 log_loop &
 log_pid=$!
@@ -93,6 +105,9 @@ finish() {
     local peak
     peak=$(cat "$peak_file" 2>/dev/null)
     echo "[mem peak] RAM + swap demand: ${peak:-no sample taken}"
+    if [[ -n "$peak" ]]; then
+        echo "[mem peak] demand at start: ${baseline}MB, increase: $(( ${peak%%MB*} - baseline ))MB"
+    fi
     rm -f "$peak_file"
 }
 
