@@ -33,3 +33,4 @@ bin/kps-image-1.13.so.bak
 paper/paper_tether.pdf
 sysimage.log
 .JETLSConfig.toml
+sysimage_baseline.log
