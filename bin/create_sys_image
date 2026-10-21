@@ -204,3 +204,13 @@ if ! julia --startup-file=no --project=examples -J bin/kps-image-${julia_major}.
     restore_backup
     exit 1
 fi
+
+# Workaround for https://github.com/kahliburke/Kaimon.jl/issues/104: if KaimonGate is in the
+# global environment, precompile it and its dependency ZMQ for the new system image now. Loaded
+# later from startup.jl with --project, ZMQ would be compiled inside KaimonGate's precompile
+# process, which segfaults with a custom system image.
+if ! julia --startup-file=no --project=@v${julia_major} -J bin/kps-image-${julia_major}.so -e 'if Base.identify_package("KaimonGate") !== nothing
+        using Pkg; Pkg.precompile("KaimonGate")
+    end'; then
+    echo "Warning: Precompiling KaimonGate failed." >&2
+fi
