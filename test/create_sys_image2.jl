@@ -30,15 +30,6 @@ if FAST
     push!(pkgs, :GLMakie)
 end
 
-# Do NOT add `--strip-metadata` here to shrink the image. It does save a double-digit
-# percentage, but it leaves every `Base.Docs.META` binding in the image declared and
-# unassigned, which breaks the doc system beyond repair: evaluating any docstring then
-# fails with `UndefVarError: ##meta#NN`, both while precompiling packages against the image
-# (CairoMakie interpolates `$(Base.doc(...))` at load time) and in user code (`@with_kw` in
-# examples/Tether_08.jl attaches a docstring to `Main`). Re-seeding those bindings at
-# startup is not a way out either -- redefining one crashes with `UndefRefError` in
-# `invalidate_code_for_globalref!`, because the stripped binding partition has no
-# restriction to invalidate. Reproduced on Julia 1.12.7.
 build_args = ``
 
 using Base64
