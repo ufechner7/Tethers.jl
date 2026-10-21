@@ -29,7 +29,7 @@ A series of examples, from a simple falling mass towards a tether model, consist
 
 ## Installation
 
-Make sure you are running a `bash` terminal (shell) and you have at least 16GB RAM (MAC, Linux and Windows supported).  
+Make sure you are running a `bash` terminal (shell) and you have at least 16GB RAM, 8GB on macOS (MAC, Linux and Windows supported).  
    On Windows, you can use [git for windows](https://gitforwindows.org/) which provides git AND a bash shell, but for using Julia from a `bash` terminal you must also install either  [Installation and usage of VSCode](https://ufechner7.github.io/Tethers.jl/dev/vscode/) or [Windows Terminal](https://learn.microsoft.com/en-us/windows/terminal/install). `Windows Terminal` is the simple and clean solution, `VSCode` the comfortable, fancy solution.
 
 Check out from git:
@@ -87,7 +87,7 @@ This also adds the extra packages needed by the example scripts. You can now run
 include("examples/menu.jl")
 ```
 
-For a faster start of the examples, build a system image (this takes a while and needs a lot of memory).
+For a faster start of the examples, build a system image (this takes a while). Building it needs at least 16 GB of RAM (8 GB on macOS) and at least 30 GB of RAM + swap.
 
 ```bash
 cd bin
@@ -95,10 +95,6 @@ cd bin
 ```
 
 `./bin/run_julia` picks it up automatically. Use `./bin/create_sys_image --update` to update all packages before building it.
-
-To see how much memory the build needs, use `./bin/create_sys_image_logged` instead. It logs RAM, swap,
-zram and CPU usage every 30 s, prints the peak memory demand at the end and saves the output in
-`sysimage.log`. To monitor any other command, use `./bin/mem_monitor -i 30 <command>`.
 
 ## Basic example
 
