@@ -1,11 +1,47 @@
 #!/bin/bash
 # Build the system image non-interactively while logging RAM, swap, zram and CPU usage
 # every 30 s. The output, including the peak memory demand and the total run time, is also
-# written to sysimage.log.
+# written to output/sysimage_<date>_<time>.log.
+# With --fresh-depot, the build uses a new, empty Julia depot in output/depot_<date>_<time>,
+# which is deleted afterwards; the user depot (~/.julia) is then not used.
 # Extra arguments are passed on to create_sys_image.
 if [[ $(basename $(pwd)) == "bin" ]]; then
     cd ..
 fi
 
-{ time ./bin/mem_monitor -i 30 ./bin/create_sys_image -y "$@"; } |& tee sysimage.log
+_fresh_depot=false
+_args=()
+for _arg in "$@"; do
+    case "$_arg" in
+        --fresh-depot) _fresh_depot=true ;;
+        *) _args+=("$_arg") ;;
+    esac
+done
+
+mkdir -p output
+_timestamp=$(date +%Y-%m-%d_%H-%M-%S)
+LOGFILE=output/sysimage_${_timestamp}.log
+
+if [[ "$_fresh_depot" == "true" ]]; then
+    _depot="$(pwd)/output/depot_${_timestamp}"
+    mkdir -p "$_depot"
+    trap 'rm -rf "$_depot"' EXIT
+    _sep=":"
+    if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "win32" ]]; then
+        _sep=";"
+        _depot_jl=$(cygpath -w "$_depot")
+    else
+        _depot_jl="$_depot"
+    fi
+    # juliaup keeps its Julia versions in the first depot, so point it to the old one
+    if [[ -z "${JULIAUP_DEPOT_PATH:-}" ]]; then
+        _old_depot="${JULIA_DEPOT_PATH%%${_sep}*}"
+        export JULIAUP_DEPOT_PATH="${_old_depot:-$HOME/.julia}"
+    fi
+    # The trailing separator adds the depots bundled with Julia, but not the user depot
+    export JULIA_DEPOT_PATH="${_depot_jl}${_sep}"
+    echo "Using the fresh Julia depot $_depot" | tee $LOGFILE
+fi
+
+{ time ./bin/mem_monitor -i 30 ./bin/create_sys_image -y "${_args[@]}"; } |& tee -a $LOGFILE
 exit ${PIPESTATUS[0]}

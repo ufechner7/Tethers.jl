@@ -92,7 +92,9 @@ cd bin
 
 To see how much memory the build needs, use `./bin/create_sys_image_logged` instead. It logs RAM, swap,
 zram and CPU usage every 30 s, prints the peak memory demand at the end and saves the output in
-`sysimage.log`. To monitor any other command, use `./bin/mem_monitor -i 30 <command>`.
+`output/sysimage_<date>_<time>.log`. With `--fresh-depot`, it builds with a new, empty Julia depot,
+which is deleted afterwards, to measure a build from scratch. To monitor any other command, use
+`./bin/mem_monitor -i 30 <command>`.
 
 ## Basic example
 

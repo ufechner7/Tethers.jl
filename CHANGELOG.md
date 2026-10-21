@@ -2,7 +2,7 @@
 #### Added
 - `docs/sysimage.md`, documenting the rules by which `create_sys_image` checks the memory and chooses the number of image threads, and the peak memory measured in the AWEMeta.jl workflows
 - `bin/mem_monitor`, logging RAM, swap, zram and CPU usage while a command runs and printing its peak memory demand, on Linux and in Git Bash on Windows; it replaces `bin/peak_mem`
-- `bin/create_sys_image_logged`, building the system image under `mem_monitor` and saving the output, the peak memory demand and the total run time in `sysimage.log`
+- `bin/create_sys_image_logged`, building the system image under `mem_monitor` and saving the output, the peak memory demand and the total run time in `output/sysimage_<date>_<time>.log`; with `--fresh-depot` it uses a new, empty Julia depot
 - `.JETLSConfig.toml.default`, the JETLS configuration; `bin/install` copies it to `.JETLSConfig.toml` if that does not exist
 
 #### Changed
