@@ -6,6 +6,7 @@
 - `.JETLSConfig.toml.default`, the JETLS configuration; `bin/install` copies it to `.JETLSConfig.toml` if that does not exist
 
 #### Changed
+- on macOS, `create_sys_image` counts twice the free disk space (minus 5 GB) as swap, because macOS writes compressed memory to its swap files (measured: 2.5 : 1); a Mac with 8 GB of RAM now needs about 16 GB of free disk space instead of 27 GB
 - the number of threads for compiling the system image no longer grows with the memory: measurements showed that more than two threads need no extra memory, so with at least 34 GB of RAM + swap (including the size the pagefile can grow to on Windows) half of the CPU threads are used, at most 16, otherwise one; machines with less than 27 GB of RAM use two threads instead of one (one if they have fewer than 4 CPU threads), on all platforms
 - `create_sys_image` stops with an error on all platforms if there is less than 15 GB of RAM (7 GB on macOS) or less than 30 GB of RAM + swap; the bash script checks the RAM, and on Linux also RAM + swap, before doing anything else
 - `create_sys_image` no longer passes `--heap-size-hint` to Julia: it limited only the Julia process that drives PackageCompiler, not the processes that compile the system image
