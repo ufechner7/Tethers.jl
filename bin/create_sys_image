@@ -214,3 +214,13 @@ if ! julia --startup-file=no --project=@v${julia_major} -J bin/kps-image-${julia
     end'; then
     echo "Warning: Precompiling KaimonGate failed." >&2
 fi
+
+# If Revise is in the global environment, precompile it and its extension DistributedExt for
+# the new system image now, so that loading it from startup.jl does not compile it first.
+# Loading Distributed together with Revise triggers the compilation of the extension.
+if ! julia --startup-file=no --project=@v${julia_major} -J bin/kps-image-${julia_major}.so -e 'if Base.identify_package("Revise") !== nothing
+        using Pkg; Pkg.precompile("Revise")
+        using Distributed, Revise
+    end'; then
+    echo "Warning: Precompiling Revise failed." >&2
+fi
